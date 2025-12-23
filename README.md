@@ -1,0 +1,164 @@
+# Kanata UI
+
+A visual keyboard configurator for [Kanata](https://github.com/jtroo/kanata) — the cross-platform software keyboard remapper.
+
+Build complex keyboard layouts with an intuitive GUI instead of writing Lisp configuration files by hand.
+
+![Kanata UI Screenshot](docs/screenshot.png)
+
+## Features
+
+- 🎹 **Visual Keyboard Editor** — Click keys to configure them, see your layout at a glance
+- 🔄 **Tap-Hold Actions** — Easily set up dual-function keys (e.g., Caps Lock → Escape on tap, Control on hold)
+- 📚 **Layer Management** — Create and switch between multiple keyboard layers
+- 🔍 **Key Autocomplete** — Searchable dropdown with all Kanata key codes organized by category
+- ⚡ **Live Reload** — Changes apply immediately when Kanata is running
+- 💾 **Auto-Save** — Configuration persists automatically
+- 🖥️ **Cross-Platform** — Works on macOS, Windows, and Linux
+
+## Installation
+
+### Download
+
+Download the latest release for your platform from the [Releases](https://github.com/YOUR_USERNAME/kanata-ui/releases) page.
+
+### macOS Setup
+
+Kanata requires elevated permissions on macOS to intercept keyboard input:
+
+1. **Install Karabiner Virtual HID Device** (required for Kanata to work):
+
+   ```bash
+   brew install --cask karabiner-elements
+   ```
+
+   You only need the driver — quit Karabiner-Elements after installation.
+
+2. **Grant Input Monitoring permission**:
+   - Open **System Settings → Privacy & Security → Input Monitoring**
+   - Click **+** and add the `kanata` binary from the app's Resources folder
+   - Or when you see a "not permitted" error, click the "Open Input Monitoring Settings" button in the app
+
+3. **Important**: Quit Karabiner-Elements before using Kanata UI — they can't both control the keyboard simultaneously.
+
+### Windows Setup
+
+No additional setup required. Run the app as Administrator for keyboard interception to work.
+
+### Linux Setup
+
+Add your user to the `input` group or run with elevated permissions:
+
+```bash
+sudo usermod -aG input $USER
+# Log out and back in for changes to take effect
+```
+
+## Usage
+
+1. **Launch Kanata UI**
+2. **Click "Stopped"** in the top-right to start Kanata (you'll be prompted for your password on macOS)
+3. **Click any key** on the visual keyboard to select it
+4. **Configure the key** in the right panel:
+   - **Simple**: Remap to another key
+   - **Tap-Hold**: Different action on tap vs. hold
+   - **Layer**: Activate a different layer
+5. **Click "Apply"** to save your changes
+
+### Layers
+
+Layers let you have multiple keyboard layouts you can switch between:
+
+1. Click **+ Add Layer** in the header
+2. Name your layer (e.g., "nav", "symbols")
+3. Configure a key to activate the layer:
+   - Select a key (e.g., Space)
+   - Choose **Tap-Hold** action
+   - Set **Tap Key** to `spc`
+   - Set **Hold Key**, click the dropdown and choose your layer
+4. Switch to your new layer tab and configure the keys
+
+## Configuration Files
+
+Kanata UI stores configuration in:
+
+- **macOS**: `~/Library/Application Support/kanata-ui/kanata/`
+- **Windows**: `%APPDATA%\kanata-ui\kanata\`
+- **Linux**: `~/.config/kanata-ui/kanata/`
+
+Files:
+
+- `config.json` — Your keyboard configuration (JSON format)
+- `kanata.kbd` — Generated Kanata config (Lisp format, auto-generated)
+
+## Development
+
+### Prerequisites
+
+- Node.js 18+
+- npm or pnpm
+
+### Setup
+
+```bash
+git clone https://github.com/YOUR_USERNAME/kanata-ui.git
+cd kanata-ui
+npm install
+```
+
+### Run in Development
+
+```bash
+npm start
+```
+
+### Build for Production
+
+```bash
+npm run make
+```
+
+Outputs are in the `out/make` folder.
+
+### Project Structure
+
+```
+kanata-ui/
+├── bin/                    # Kanata binaries for each platform
+├── src/
+│   ├── main.ts            # Electron main process
+│   ├── preload.ts         # IPC bridge
+│   ├── renderer.tsx       # React entry point
+│   ├── App.tsx            # Main React component
+│   ├── components/
+│   │   ├── keyboard/      # Visual keyboard components
+│   │   ├── editor/        # Key configuration editor
+│   │   └── status/        # Status indicator
+│   ├── contexts/          # React contexts for state
+│   ├── kanata/            # Kanata config generation & process management
+│   └── ipc/               # IPC handlers
+├── forge.config.ts        # Electron Forge config
+└── vite.*.config.ts       # Vite configs
+```
+
+## Tech Stack
+
+- **Electron** — Cross-platform desktop app
+- **React** — UI framework
+- **Vite** — Build tool
+- **Tailwind CSS** — Styling
+- **TypeScript** — Type safety
+- **cmdk** — Command palette / autocomplete
+
+## Contributing
+
+Contributions are welcome! Please open an issue first to discuss what you'd like to change.
+
+## License
+
+MIT License — see [LICENSE](LICENSE) for details.
+
+## Acknowledgments
+
+- [Kanata](https://github.com/jtroo/kanata) by jtroo — The amazing keyboard remapper this UI is built for
+- [Karabiner-Elements](https://karabiner-elements.pqrs.org/) — For the macOS virtual HID driver

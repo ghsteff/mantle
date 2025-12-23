@@ -1,7 +1,11 @@
 import { useState, useEffect } from "react";
 import { getKeyLabel } from "../keyboard/layout";
+import { KeyCombobox } from "./key-combobox";
+import { MultiKeyPicker } from "./multi-key-picker";
 
 type ActionType = "simple" | "tap-hold" | "layer";
+type KeyType = "key" | "multi";
+type HoldType = "key" | "multi" | "layer";
 
 interface ActionEditorProps {
   keyId: string;
@@ -11,31 +15,146 @@ interface ActionEditorProps {
 }
 
 /**
+ * Check if a value is a multi expression
+ */
+function isMultiExpression(value: string): boolean {
+  return value.startsWith("(multi ");
+}
+
+/**
  * Editor for configuring key actions.
  */
-export function ActionEditor({ keyId, currentAction, onSave, layers }: ActionEditorProps) {
+export function ActionEditor({
+  keyId,
+  currentAction,
+  onSave,
+  layers,
+}: ActionEditorProps) {
   const [actionType, setActionType] = useState<ActionType>("simple");
+
+  // Simple action state
+  const [simpleKeyType, setSimpleKeyType] = useState<KeyType>("key");
   const [simpleKey, setSimpleKey] = useState(keyId);
+  const [simpleMultiKeys, setSimpleMultiKeys] = useState("(multi lctl c)");
+
+  // Tap-hold state
+  const [tapKeyType, setTapKeyType] = useState<KeyType>("key");
   const [tapKey, setTapKey] = useState(keyId);
+  const [tapMultiKeys, setTapMultiKeys] = useState("(multi lctl c)");
+
+  const [holdType, setHoldType] = useState<HoldType>("key");
   const [holdKey, setHoldKey] = useState("lctl");
+  const [holdMultiKeys, setHoldMultiKeys] = useState("(multi lctl lsft lalt)");
+  const [holdLayer, setHoldLayer] = useState(layers[1] || layers[0] || "");
+  const [holdLayerMode, setHoldLayerMode] = useState<"momentary" | "toggle">(
+    "momentary"
+  );
   const [timeout, setTimeout] = useState(200);
+
+  // Layer action state
   const [layerName, setLayerName] = useState(layers[0] || "");
-  const [layerMode, setLayerMode] = useState<"momentary" | "toggle" | "one-shot">("momentary");
+  const [layerMode, setLayerMode] = useState<
+    "momentary" | "toggle" | "one-shot"
+  >("momentary");
 
   // Parse current action on mount
   useEffect(() => {
     if (currentAction === "_" || currentAction === keyId) {
       setActionType("simple");
+      setSimpleKeyType("key");
       setSimpleKey(currentAction);
       return;
     }
 
-    // Try to parse tap-hold: (tap-hold 200 200 esc lctl)
-    const tapHoldMatch = currentAction.match(/\(tap-hold\s+(\d+)\s+\d+\s+(\S+)\s+(\S+)\)/);
+    // Check if it's a simple multi expression (not inside tap-hold)
+    if (
+      isMultiExpression(currentAction) &&
+      !currentAction.includes("tap-hold")
+    ) {
+      setActionType("simple");
+      setSimpleKeyType("multi");
+      setSimpleMultiKeys(currentAction);
+      return;
+    }
+
+    // Try to parse tap-hold with layer: (tap-hold 200 200 spc (layer-while-held nav))
+    const tapHoldLayerMatch = currentAction.match(
+      /\(tap-hold\s+(\d+)\s+\d+\s+(\S+|\(multi[^)]+\))\s+\(layer-while-held\s+(\S+)\)\)/
+    );
+    if (tapHoldLayerMatch) {
+      setActionType("tap-hold");
+      setTimeout(parseInt(tapHoldLayerMatch[1]));
+      const tapValue = tapHoldLayerMatch[2];
+      if (isMultiExpression(tapValue)) {
+        setTapKeyType("multi");
+        setTapMultiKeys(tapValue);
+      } else {
+        setTapKeyType("key");
+        setTapKey(tapValue);
+      }
+      setHoldType("layer");
+      setHoldLayer(tapHoldLayerMatch[3]);
+      setHoldLayerMode("momentary");
+      return;
+    }
+
+    // Try to parse tap-hold with layer-toggle: (tap-hold 200 200 spc (layer-toggle nav))
+    const tapHoldToggleMatch = currentAction.match(
+      /\(tap-hold\s+(\d+)\s+\d+\s+(\S+|\(multi[^)]+\))\s+\(layer-toggle\s+(\S+)\)\)/
+    );
+    if (tapHoldToggleMatch) {
+      setActionType("tap-hold");
+      setTimeout(parseInt(tapHoldToggleMatch[1]));
+      const tapValue = tapHoldToggleMatch[2];
+      if (isMultiExpression(tapValue)) {
+        setTapKeyType("multi");
+        setTapMultiKeys(tapValue);
+      } else {
+        setTapKeyType("key");
+        setTapKey(tapValue);
+      }
+      setHoldType("layer");
+      setHoldLayer(tapHoldToggleMatch[3]);
+      setHoldLayerMode("toggle");
+      return;
+    }
+
+    // Try to parse tap-hold with multi hold: (tap-hold 200 200 esc (multi lctl lsft lalt))
+    const tapHoldMultiMatch = currentAction.match(
+      /\(tap-hold\s+(\d+)\s+\d+\s+(\S+|\(multi[^)]+\))\s+(\(multi\s+[^)]+\))\)/
+    );
+    if (tapHoldMultiMatch) {
+      setActionType("tap-hold");
+      setTimeout(parseInt(tapHoldMultiMatch[1]));
+      const tapValue = tapHoldMultiMatch[2];
+      if (isMultiExpression(tapValue)) {
+        setTapKeyType("multi");
+        setTapMultiKeys(tapValue);
+      } else {
+        setTapKeyType("key");
+        setTapKey(tapValue);
+      }
+      setHoldType("multi");
+      setHoldMultiKeys(tapHoldMultiMatch[3]);
+      return;
+    }
+
+    // Try to parse simple tap-hold: (tap-hold 200 200 esc lctl)
+    const tapHoldMatch = currentAction.match(
+      /\(tap-hold\s+(\d+)\s+\d+\s+(\S+|\(multi[^)]+\))\s+(\S+)\)/
+    );
     if (tapHoldMatch) {
       setActionType("tap-hold");
       setTimeout(parseInt(tapHoldMatch[1]));
-      setTapKey(tapHoldMatch[2]);
+      const tapValue = tapHoldMatch[2];
+      if (isMultiExpression(tapValue)) {
+        setTapKeyType("multi");
+        setTapMultiKeys(tapValue);
+      } else {
+        setTapKeyType("key");
+        setTapKey(tapValue);
+      }
+      setHoldType("key");
       setHoldKey(tapHoldMatch[3]);
       return;
     }
@@ -59,6 +178,7 @@ export function ActionEditor({ keyId, currentAction, onSave, layers }: ActionEdi
 
     // Default: treat as simple key
     setActionType("simple");
+    setSimpleKeyType("key");
     setSimpleKey(currentAction);
   }, [currentAction, keyId]);
 
@@ -67,11 +187,24 @@ export function ActionEditor({ keyId, currentAction, onSave, layers }: ActionEdi
 
     switch (actionType) {
       case "simple":
-        action = simpleKey;
+        action = simpleKeyType === "key" ? simpleKey : simpleMultiKeys;
         break;
-      case "tap-hold":
-        action = `(tap-hold ${timeout} ${timeout} ${tapKey} ${holdKey})`;
+      case "tap-hold": {
+        const tapValue = tapKeyType === "key" ? tapKey : tapMultiKeys;
+
+        if (holdType === "key") {
+          action = `(tap-hold ${timeout} ${timeout} ${tapValue} ${holdKey})`;
+        } else if (holdType === "multi") {
+          action = `(tap-hold ${timeout} ${timeout} ${tapValue} ${holdMultiKeys})`;
+        } else {
+          const layerAction =
+            holdLayerMode === "momentary"
+              ? `(layer-while-held ${holdLayer})`
+              : `(layer-toggle ${holdLayer})`;
+          action = `(tap-hold ${timeout} ${timeout} ${tapValue} ${layerAction})`;
+        }
         break;
+      }
       case "layer":
         switch (layerMode) {
           case "momentary":
@@ -91,6 +224,35 @@ export function ActionEditor({ keyId, currentAction, onSave, layers }: ActionEdi
   };
 
   const { label } = getKeyLabel(keyId);
+
+  // Reusable key type toggle component
+  const KeyTypeToggle = ({
+    value,
+    onChange,
+  }: {
+    value: KeyType;
+    onChange: (type: KeyType) => void;
+  }) => (
+    <div className="flex gap-1 mb-2">
+      {(["key", "multi"] as const).map((type) => (
+        <button
+          key={type}
+          type="button"
+          onClick={() => onChange(type)}
+          className={`
+            px-2 py-1 rounded text-xs
+            ${
+              value === type
+                ? "bg-accent text-white"
+                : "bg-bg-tertiary text-text-secondary hover:bg-bg-hover"
+            }
+          `}
+        >
+          {type === "multi" ? "Multi-Key" : "Single Key"}
+        </button>
+      ))}
+    </div>
+  );
 
   return (
     <div className="space-y-4">
@@ -116,9 +278,10 @@ export function ActionEditor({ keyId, currentAction, onSave, layers }: ActionEdi
               onClick={() => setActionType(type)}
               className={`
                 px-3 py-1.5 rounded text-sm capitalize
-                ${actionType === type
-                  ? "bg-accent text-white"
-                  : "bg-bg-tertiary text-text-secondary hover:bg-bg-hover"
+                ${
+                  actionType === type
+                    ? "bg-accent text-white"
+                    : "bg-bg-tertiary text-text-secondary hover:bg-bg-hover"
                 }
               `}
             >
@@ -133,49 +296,147 @@ export function ActionEditor({ keyId, currentAction, onSave, layers }: ActionEdi
         {actionType === "simple" && (
           <div className="space-y-2">
             <label className="text-text-secondary text-sm">Key Output</label>
-            <input
-              type="text"
-              value={simpleKey}
-              onChange={(e) => setSimpleKey(e.target.value.toLowerCase())}
-              placeholder="Key name (e.g., a, esc, lctl)"
-              className="w-full px-3 py-2 bg-bg-tertiary border border-border rounded
-                         text-text-primary font-mono text-sm
-                         focus:border-accent focus:ring-1 focus:ring-accent outline-none"
-            />
+            <KeyTypeToggle value={simpleKeyType} onChange={setSimpleKeyType} />
+
+            {simpleKeyType === "key" ? (
+              <KeyCombobox
+                value={simpleKey}
+                onChange={setSimpleKey}
+                placeholder="Select key..."
+              />
+            ) : (
+              <MultiKeyPicker
+                value={simpleMultiKeys}
+                onChange={setSimpleMultiKeys}
+              />
+            )}
+
             <div className="text-text-muted text-xs">
-              Use <code className="bg-bg-hover px-1 rounded">_</code> for transparent (inherit from lower layer)
+              {simpleKeyType === "key" ? (
+                <>
+                  Use <code className="bg-bg-hover px-1 rounded">_</code> for
+                  transparent (inherit from lower layer)
+                </>
+              ) : (
+                "Outputs multiple keys simultaneously (e.g., Ctrl+C)"
+              )}
             </div>
           </div>
         )}
 
         {actionType === "tap-hold" && (
           <>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <label className="text-text-secondary text-sm">Tap Key</label>
-                <input
-                  type="text"
+            {/* Tap Action */}
+            <div className="space-y-2">
+              <label className="text-text-secondary text-sm">Tap Action</label>
+              <KeyTypeToggle value={tapKeyType} onChange={setTapKeyType} />
+
+              {tapKeyType === "key" ? (
+                <KeyCombobox
                   value={tapKey}
-                  onChange={(e) => setTapKey(e.target.value.toLowerCase())}
-                  placeholder="e.g., esc"
-                  className="w-full px-3 py-2 bg-bg-tertiary border border-border rounded
-                             text-text-primary font-mono text-sm
-                             focus:border-accent focus:ring-1 focus:ring-accent outline-none"
+                  onChange={setTapKey}
+                  placeholder="Key when tapped..."
                 />
-              </div>
-              <div className="space-y-2">
-                <label className="text-text-secondary text-sm">Hold Key</label>
-                <input
-                  type="text"
-                  value={holdKey}
-                  onChange={(e) => setHoldKey(e.target.value.toLowerCase())}
-                  placeholder="e.g., lctl"
-                  className="w-full px-3 py-2 bg-bg-tertiary border border-border rounded
-                             text-text-primary font-mono text-sm
-                             focus:border-accent focus:ring-1 focus:ring-accent outline-none"
+              ) : (
+                <MultiKeyPicker
+                  value={tapMultiKeys}
+                  onChange={setTapMultiKeys}
                 />
-              </div>
+              )}
             </div>
+
+            {/* Hold Action */}
+            <div className="space-y-2">
+              <label className="text-text-secondary text-sm">Hold Action</label>
+              <div className="flex gap-1 mb-2">
+                {(["key", "multi", "layer"] as const).map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setHoldType(type)}
+                    className={`
+                      px-2 py-1 rounded text-xs capitalize
+                      ${
+                        holdType === type
+                          ? "bg-accent text-white"
+                          : "bg-bg-tertiary text-text-secondary hover:bg-bg-hover"
+                      }
+                    `}
+                  >
+                    {type === "multi" ? "Multi-Key" : type}
+                  </button>
+                ))}
+              </div>
+
+              {holdType === "key" && (
+                <KeyCombobox
+                  value={holdKey}
+                  onChange={setHoldKey}
+                  placeholder="Key when held..."
+                />
+              )}
+
+              {holdType === "multi" && (
+                <MultiKeyPicker
+                  value={holdMultiKeys}
+                  onChange={setHoldMultiKeys}
+                />
+              )}
+
+              {holdType === "layer" && (
+                <div className="space-y-2">
+                  <select
+                    value={holdLayer}
+                    onChange={(e) => setHoldLayer(e.target.value)}
+                    className="w-full px-3 py-2 bg-bg-tertiary border border-border rounded
+                               text-text-primary text-sm
+                               focus:border-accent focus:ring-1 focus:ring-accent outline-none"
+                  >
+                    {layers.map((layer) => (
+                      <option key={layer} value={layer}>
+                        {layer}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setHoldLayerMode("momentary")}
+                      className={`
+                        flex-1 px-2 py-1 rounded text-xs
+                        ${
+                          holdLayerMode === "momentary"
+                            ? "bg-accent/20 text-accent border border-accent"
+                            : "bg-bg-tertiary text-text-secondary hover:bg-bg-hover border border-transparent"
+                        }
+                      `}
+                    >
+                      Momentary
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setHoldLayerMode("toggle")}
+                      className={`
+                        flex-1 px-2 py-1 rounded text-xs
+                        ${
+                          holdLayerMode === "toggle"
+                            ? "bg-accent/20 text-accent border border-accent"
+                            : "bg-bg-tertiary text-text-secondary hover:bg-bg-hover border border-transparent"
+                        }
+                      `}
+                    >
+                      Toggle
+                    </button>
+                  </div>
+                  <div className="text-text-muted text-xs">
+                    {holdLayerMode === "momentary"
+                      ? "Layer active while held"
+                      : "Layer toggles on/off"}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="space-y-2">
               <label className="text-text-secondary text-sm">
                 Timeout: {timeout}ms
@@ -189,6 +450,9 @@ export function ActionEditor({ keyId, currentAction, onSave, layers }: ActionEdi
                 onChange={(e) => setTimeout(parseInt(e.target.value))}
                 className="w-full accent-accent"
               />
+              <div className="text-text-muted text-xs">
+                Time to distinguish between tap and hold
+              </div>
             </div>
           </>
         )}
@@ -196,7 +460,9 @@ export function ActionEditor({ keyId, currentAction, onSave, layers }: ActionEdi
         {actionType === "layer" && (
           <>
             <div className="space-y-2">
-              <label className="text-text-secondary text-sm">Target Layer</label>
+              <label className="text-text-secondary text-sm">
+                Target Layer
+              </label>
               <select
                 value={layerName}
                 onChange={(e) => setLayerName(e.target.value)}
@@ -212,7 +478,9 @@ export function ActionEditor({ keyId, currentAction, onSave, layers }: ActionEdi
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-text-secondary text-sm">Activation Mode</label>
+              <label className="text-text-secondary text-sm">
+                Activation Mode
+              </label>
               <div className="flex gap-2">
                 {(["momentary", "toggle", "one-shot"] as const).map((mode) => (
                   <button
@@ -221,9 +489,10 @@ export function ActionEditor({ keyId, currentAction, onSave, layers }: ActionEdi
                     onClick={() => setLayerMode(mode)}
                     className={`
                       px-3 py-1.5 rounded text-sm capitalize
-                      ${layerMode === mode
-                        ? "bg-accent text-white"
-                        : "bg-bg-tertiary text-text-secondary hover:bg-bg-hover"
+                      ${
+                        layerMode === mode
+                          ? "bg-accent text-white"
+                          : "bg-bg-tertiary text-text-secondary hover:bg-bg-hover"
                       }
                     `}
                   >
@@ -233,8 +502,10 @@ export function ActionEditor({ keyId, currentAction, onSave, layers }: ActionEdi
               </div>
               <div className="text-text-muted text-xs">
                 {layerMode === "momentary" && "Layer active while key is held"}
-                {layerMode === "toggle" && "Toggle layer on/off with each press"}
-                {layerMode === "one-shot" && "Layer active for next keypress only"}
+                {layerMode === "toggle" &&
+                  "Toggle layer on/off with each press"}
+                {layerMode === "one-shot" &&
+                  "Layer active for next keypress only"}
               </div>
             </div>
           </>
@@ -255,4 +526,3 @@ export function ActionEditor({ keyId, currentAction, onSave, layers }: ActionEdi
     </div>
   );
 }
-
