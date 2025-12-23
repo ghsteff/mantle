@@ -9,7 +9,13 @@
     "sourceMap": true,
     "baseUrl": ".",
     "outDir": "dist",
-    "moduleResolution": "node",
-    "resolveJsonModule": true
-  }
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "jsx": "react-jsx",
+    "strict": true
+  },
+  "include": [
+    "src/**/*",
+    "forge.env.d.ts"
+  ]
 }

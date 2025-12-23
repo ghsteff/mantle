@@ -1,8 +1,122 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Background colors - VS Code inspired dark theme */
+  --bg-primary: #1e1e1e;
+  --bg-secondary: #252526;
+  --bg-tertiary: #2d2d2d;
+  --bg-hover: #3c3c3c;
+  --bg-active: #37373d;
+
+  /* Accent colors */
+  --accent: #0078d4;
+  --accent-hover: #1a8cff;
+  --accent-muted: #264f78;
+
+  /* Text colors */
+  --text-primary: #cccccc;
+  --text-secondary: #9d9d9d;
+  --text-muted: #808080;
+  --text-bright: #ffffff;
+
+  /* Status colors */
+  --success: #4ec9b0;
+  --success-bg: rgba(78, 201, 176, 0.15);
+  --warning: #dcdcaa;
+  --warning-bg: rgba(220, 220, 170, 0.15);
+  --error: #f14c4c;
+  --error-bg: rgba(241, 76, 76, 0.15);
+
+  /* Border colors */
+  --border: #3c3c3c;
+  --border-focus: #0078d4;
+
+  /* Key specific */
+  --key-bg: #3c3c3c;
+  --key-bg-hover: #4a4a4a;
+  --key-bg-selected: #264f78;
+  --key-border: #505050;
+  --key-shadow: rgba(0, 0, 0, 0.4);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
 body {
   font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
     sans-serif;
-  margin: auto;
-  max-width: 38rem;
-  padding: 2rem;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  overflow: hidden;
+}
+
+/* Monospace font for key labels */
+.font-mono {
+  font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bg-hover);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border);
+}
+
+/* Focus outline */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Key animations */
+@keyframes pulse-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 4px var(--success);
+  }
+  50% {
+    box-shadow: 0 0 12px var(--success);
+  }
+}
+
+@keyframes pulse-warning {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-pulse-warning {
+  animation: pulse-warning 1s ease-in-out infinite;
 }
