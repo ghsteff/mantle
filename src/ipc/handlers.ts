@@ -1,4 +1,4 @@
-import { ipcMain, BrowserWindow } from "electron";
+import { ipcMain, BrowserWindow, shell } from "electron";
 import {
   getConfigManager,
   getProcessManager,
@@ -25,6 +25,9 @@ export const IPC_CHANNELS = {
   BACKUP_CONFIG: "config:backup",
   LIST_BACKUPS: "config:list-backups",
   RESTORE_BACKUP: "config:restore-backup",
+
+  // System
+  OPEN_INPUT_MONITORING: "system:open-input-monitoring",
 
   // Events sent to renderer (via webContents.send)
   KANATA_LOG: "kanata:log",
@@ -113,6 +116,16 @@ export function registerIpcHandlers(): void {
       await processManager.reloadConfig();
     }
     return success;
+  });
+
+  // ============================================
+  // System
+  // ============================================
+
+  ipcMain.handle(IPC_CHANNELS.OPEN_INPUT_MONITORING, async (): Promise<void> => {
+    // Open macOS System Settings to Input Monitoring
+    // This URL scheme opens the Privacy & Security > Input Monitoring pane
+    await shell.openExternal("x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent");
   });
 }
 

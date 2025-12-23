@@ -22,6 +22,9 @@ const IPC_CHANNELS = {
   LIST_BACKUPS: "config:list-backups",
   RESTORE_BACKUP: "config:restore-backup",
 
+  // System
+  OPEN_INPUT_MONITORING: "system:open-input-monitoring",
+
   // Events from main process
   KANATA_LOG: "kanata:log",
   KANATA_STATUS_CHANGE: "kanata:status-change",
@@ -78,6 +81,9 @@ export interface KanataApi {
   listBackups: () => Promise<string[]>;
   restoreBackup: (backupPath: string) => Promise<boolean>;
 
+  // System
+  openInputMonitoringSettings: () => Promise<void>;
+
   // Event subscriptions
   onLog: (callback: (entry: KanataLogEntry) => void) => () => void;
   onStatusChange: (callback: (status: KanataStatus) => void) => () => void;
@@ -117,6 +123,9 @@ const kanataApi: KanataApi = {
   backupConfig: () => ipcRenderer.invoke(IPC_CHANNELS.BACKUP_CONFIG),
   listBackups: () => ipcRenderer.invoke(IPC_CHANNELS.LIST_BACKUPS),
   restoreBackup: (backupPath) => ipcRenderer.invoke(IPC_CHANNELS.RESTORE_BACKUP, backupPath),
+
+  // System
+  openInputMonitoringSettings: () => ipcRenderer.invoke(IPC_CHANNELS.OPEN_INPUT_MONITORING),
 
   // Event subscriptions
   onLog: (callback) => createSubscription(IPC_CHANNELS.KANATA_LOG, callback),

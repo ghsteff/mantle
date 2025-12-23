@@ -22,111 +22,113 @@ export interface KeyDef {
 
 /**
  * Map of Kanata key IDs to human-readable labels.
+ * Kanata uses literal characters for many punctuation keys.
  */
-export const KEY_LABELS: Record<string, { label: string; subLabel?: string }> = {
-  // Function row
-  esc: { label: "Esc" },
-  f1: { label: "F1" },
-  f2: { label: "F2" },
-  f3: { label: "F3" },
-  f4: { label: "F4" },
-  f5: { label: "F5" },
-  f6: { label: "F6" },
-  f7: { label: "F7" },
-  f8: { label: "F8" },
-  f9: { label: "F9" },
-  f10: { label: "F10" },
-  f11: { label: "F11" },
-  f12: { label: "F12" },
+export const KEY_LABELS: Record<string, { label: string; subLabel?: string }> =
+  {
+    // Function row
+    esc: { label: "Esc" },
+    f1: { label: "F1" },
+    f2: { label: "F2" },
+    f3: { label: "F3" },
+    f4: { label: "F4" },
+    f5: { label: "F5" },
+    f6: { label: "F6" },
+    f7: { label: "F7" },
+    f8: { label: "F8" },
+    f9: { label: "F9" },
+    f10: { label: "F10" },
+    f11: { label: "F11" },
+    f12: { label: "F12" },
 
-  // Number row
-  grv: { label: "`", subLabel: "~" },
-  "1": { label: "1", subLabel: "!" },
-  "2": { label: "2", subLabel: "@" },
-  "3": { label: "3", subLabel: "#" },
-  "4": { label: "4", subLabel: "$" },
-  "5": { label: "5", subLabel: "%" },
-  "6": { label: "6", subLabel: "^" },
-  "7": { label: "7", subLabel: "&" },
-  "8": { label: "8", subLabel: "*" },
-  "9": { label: "9", subLabel: "(" },
-  "0": { label: "0", subLabel: ")" },
-  min: { label: "-", subLabel: "_" },
-  eql: { label: "=", subLabel: "+" },
-  bspc: { label: "⌫", subLabel: "Backspace" },
+    // Number row
+    grv: { label: "`", subLabel: "~" },
+    "1": { label: "1", subLabel: "!" },
+    "2": { label: "2", subLabel: "@" },
+    "3": { label: "3", subLabel: "#" },
+    "4": { label: "4", subLabel: "$" },
+    "5": { label: "5", subLabel: "%" },
+    "6": { label: "6", subLabel: "^" },
+    "7": { label: "7", subLabel: "&" },
+    "8": { label: "8", subLabel: "*" },
+    "9": { label: "9", subLabel: "(" },
+    "0": { label: "0", subLabel: ")" },
+    "-": { label: "-", subLabel: "_" },
+    "=": { label: "=", subLabel: "+" },
+    bspc: { label: "⌫", subLabel: "Backspace" },
 
-  // Top row
-  tab: { label: "Tab" },
-  q: { label: "Q" },
-  w: { label: "W" },
-  e: { label: "E" },
-  r: { label: "R" },
-  t: { label: "T" },
-  y: { label: "Y" },
-  u: { label: "U" },
-  i: { label: "I" },
-  o: { label: "O" },
-  p: { label: "P" },
-  lbrc: { label: "[", subLabel: "{" },
-  rbrc: { label: "]", subLabel: "}" },
-  bsls: { label: "\\", subLabel: "|" },
+    // Top row
+    tab: { label: "Tab" },
+    q: { label: "Q" },
+    w: { label: "W" },
+    e: { label: "E" },
+    r: { label: "R" },
+    t: { label: "T" },
+    y: { label: "Y" },
+    u: { label: "U" },
+    i: { label: "I" },
+    o: { label: "O" },
+    p: { label: "P" },
+    "[": { label: "[", subLabel: "{" },
+    "]": { label: "]", subLabel: "}" },
+    "\\": { label: "\\", subLabel: "|" },
 
-  // Home row
-  caps: { label: "Caps" },
-  a: { label: "A" },
-  s: { label: "S" },
-  d: { label: "D" },
-  f: { label: "F" },
-  g: { label: "G" },
-  h: { label: "H" },
-  j: { label: "J" },
-  k: { label: "K" },
-  l: { label: "L" },
-  scln: { label: ";", subLabel: ":" },
-  quot: { label: "'", subLabel: '"' },
-  ret: { label: "Enter" },
+    // Home row
+    caps: { label: "Caps" },
+    a: { label: "A" },
+    s: { label: "S" },
+    d: { label: "D" },
+    f: { label: "F" },
+    g: { label: "G" },
+    h: { label: "H" },
+    j: { label: "J" },
+    k: { label: "K" },
+    l: { label: "L" },
+    ";": { label: ";", subLabel: ":" },
+    "'": { label: "'", subLabel: '"' },
+    ret: { label: "Enter" },
 
-  // Bottom row
-  lsft: { label: "Shift" },
-  z: { label: "Z" },
-  x: { label: "X" },
-  c: { label: "C" },
-  v: { label: "V" },
-  b: { label: "B" },
-  n: { label: "N" },
-  m: { label: "M" },
-  comm: { label: ",", subLabel: "<" },
-  dot: { label: ".", subLabel: ">" },
-  slsh: { label: "/", subLabel: "?" },
-  rsft: { label: "Shift" },
+    // Bottom row
+    lsft: { label: "Shift" },
+    z: { label: "Z" },
+    x: { label: "X" },
+    c: { label: "C" },
+    v: { label: "V" },
+    b: { label: "B" },
+    n: { label: "N" },
+    m: { label: "M" },
+    ",": { label: ",", subLabel: "<" },
+    ".": { label: ".", subLabel: ">" },
+    "/": { label: "/", subLabel: "?" },
+    rsft: { label: "Shift" },
 
-  // Modifier row
-  lctl: { label: "Ctrl" },
-  lmet: { label: "⌘", subLabel: "Win" },
-  lalt: { label: "Alt" },
-  spc: { label: "Space" },
-  ralt: { label: "Alt" },
-  rmet: { label: "⌘", subLabel: "Win" },
-  rctl: { label: "Ctrl" },
-  menu: { label: "Menu" },
+    // Modifier row
+    lctl: { label: "Ctrl" },
+    lmet: { label: "⌘", subLabel: "Win" },
+    lalt: { label: "Alt" },
+    spc: { label: "Space" },
+    ralt: { label: "Alt" },
+    rmet: { label: "⌘", subLabel: "Win" },
+    rctl: { label: "Ctrl" },
+    menu: { label: "Menu" },
 
-  // Navigation cluster
-  ins: { label: "Ins" },
-  del: { label: "Del" },
-  home: { label: "Home" },
-  end: { label: "End" },
-  pgup: { label: "PgUp" },
-  pgdn: { label: "PgDn" },
-  prnt: { label: "PrtSc" },
-  slck: { label: "ScrLk" },
-  pause: { label: "Pause" },
+    // Navigation cluster
+    ins: { label: "Ins" },
+    del: { label: "Del" },
+    home: { label: "Home" },
+    end: { label: "End" },
+    pgup: { label: "PgUp" },
+    pgdn: { label: "PgDn" },
+    prnt: { label: "PrtSc" },
+    slck: { label: "ScrLk" },
+    pause: { label: "Pause" },
 
-  // Arrow keys
-  up: { label: "↑" },
-  down: { label: "↓" },
-  left: { label: "←" },
-  right: { label: "→" },
-};
+    // Arrow keys
+    up: { label: "↑" },
+    down: { label: "↓" },
+    left: { label: "←" },
+    right: { label: "→" },
+  };
 
 /**
  * TKL (Tenkeyless / 80%) keyboard layout.
@@ -167,8 +169,8 @@ export const TKL_LAYOUT: KeyDef[] = [
   { id: "8", label: "8", width: 1, row: 1, col: 8 },
   { id: "9", label: "9", width: 1, row: 1, col: 9 },
   { id: "0", label: "0", width: 1, row: 1, col: 10 },
-  { id: "min", label: "-", width: 1, row: 1, col: 11 },
-  { id: "eql", label: "=", width: 1, row: 1, col: 12 },
+  { id: "-", label: "-", width: 1, row: 1, col: 11 },
+  { id: "=", label: "=", width: 1, row: 1, col: 12 },
   { id: "bspc", label: "⌫", width: 2, row: 1, col: 13 },
   // Nav cluster
   { id: "ins", label: "Ins", width: 1, row: 1, col: 15.25 },
@@ -187,9 +189,9 @@ export const TKL_LAYOUT: KeyDef[] = [
   { id: "i", label: "I", width: 1, row: 2, col: 8.5 },
   { id: "o", label: "O", width: 1, row: 2, col: 9.5 },
   { id: "p", label: "P", width: 1, row: 2, col: 10.5 },
-  { id: "lbrc", label: "[", width: 1, row: 2, col: 11.5 },
-  { id: "rbrc", label: "]", width: 1, row: 2, col: 12.5 },
-  { id: "bsls", label: "\\", width: 1.5, row: 2, col: 13.5 },
+  { id: "[", label: "[", width: 1, row: 2, col: 11.5 },
+  { id: "]", label: "]", width: 1, row: 2, col: 12.5 },
+  { id: "\\", label: "\\", width: 1.5, row: 2, col: 13.5 },
   // Nav cluster
   { id: "del", label: "Del", width: 1, row: 2, col: 15.25 },
   { id: "end", label: "End", width: 1, row: 2, col: 16.25 },
@@ -206,8 +208,8 @@ export const TKL_LAYOUT: KeyDef[] = [
   { id: "j", label: "J", width: 1, row: 3, col: 7.75 },
   { id: "k", label: "K", width: 1, row: 3, col: 8.75 },
   { id: "l", label: "L", width: 1, row: 3, col: 9.75 },
-  { id: "scln", label: ";", width: 1, row: 3, col: 10.75 },
-  { id: "quot", label: "'", width: 1, row: 3, col: 11.75 },
+  { id: ";", label: ";", width: 1, row: 3, col: 10.75 },
+  { id: "'", label: "'", width: 1, row: 3, col: 11.75 },
   { id: "ret", label: "Enter", width: 2.25, row: 3, col: 12.75 },
 
   // Row 4: Bottom letter row
@@ -219,9 +221,9 @@ export const TKL_LAYOUT: KeyDef[] = [
   { id: "b", label: "B", width: 1, row: 4, col: 6.25 },
   { id: "n", label: "N", width: 1, row: 4, col: 7.25 },
   { id: "m", label: "M", width: 1, row: 4, col: 8.25 },
-  { id: "comm", label: ",", width: 1, row: 4, col: 9.25 },
-  { id: "dot", label: ".", width: 1, row: 4, col: 10.25 },
-  { id: "slsh", label: "/", width: 1, row: 4, col: 11.25 },
+  { id: ",", label: ",", width: 1, row: 4, col: 9.25 },
+  { id: ".", label: ".", width: 1, row: 4, col: 10.25 },
+  { id: "/", label: "/", width: 1, row: 4, col: 11.25 },
   { id: "rsft", label: "Shift", width: 2.75, row: 4, col: 12.25 },
   // Arrow up
   { id: "up", label: "↑", width: 1, row: 4, col: 16.25 },
@@ -244,7 +246,10 @@ export const TKL_LAYOUT: KeyDef[] = [
 /**
  * Get the label info for a key ID.
  */
-export function getKeyLabel(keyId: string): { label: string; subLabel?: string } {
+export function getKeyLabel(keyId: string): {
+  label: string;
+  subLabel?: string;
+} {
   return KEY_LABELS[keyId] || { label: keyId.toUpperCase() };
 }
 
@@ -268,4 +273,3 @@ export function getLayoutHeight(layout: KeyDef[]): number {
 export function getLayoutKeyIds(layout: KeyDef[]): string[] {
   return layout.filter((k) => !k.isSpacer).map((k) => k.id);
 }
-

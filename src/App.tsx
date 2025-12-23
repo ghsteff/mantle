@@ -1,4 +1,9 @@
-import { ConfigProvider, KanataProvider, useConfig } from "./contexts";
+import {
+  ConfigProvider,
+  KanataProvider,
+  useConfig,
+  useKanata,
+} from "./contexts";
 import { KeyboardGrid } from "./components/keyboard";
 import { KeyInspector, LayerTabs } from "./components/editor";
 import { StatusIndicator } from "./components/status";
@@ -15,6 +20,62 @@ function Header() {
       </div>
       <StatusIndicator />
     </header>
+  );
+}
+
+/**
+ * Log panel to display Kanata process logs.
+ */
+function LogPanel() {
+  const { logs, clearLogs, openInputMonitoringSettings } = useKanata();
+
+  // Check if there's an Input Monitoring permission error
+  const hasPermissionError = logs.some(
+    (log) =>
+      log.message.includes("not permitted") ||
+      log.message.includes("Input Monitoring")
+  );
+
+  if (logs.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="h-40 bg-bg-secondary border-t border-border flex flex-col">
+      <div className="flex items-center justify-between px-3 py-1 border-b border-border">
+        <span className="text-xs text-text-muted uppercase">Logs</span>
+        <div className="flex items-center gap-2">
+          {hasPermissionError && (
+            <button
+              onClick={openInputMonitoringSettings}
+              className="text-xs bg-accent hover:bg-accent/80 text-white px-2 py-0.5 rounded"
+            >
+              Open Input Monitoring Settings
+            </button>
+          )}
+          <button
+            onClick={clearLogs}
+            className="text-xs text-text-muted hover:text-text-primary"
+          >
+            Clear
+          </button>
+        </div>
+      </div>
+      <div className="flex-1 overflow-auto p-2 font-mono text-xs">
+        {logs.map((log, i) => (
+          <div
+            key={i}
+            className={
+              log.type === "stderr"
+                ? "text-status-error"
+                : "text-text-secondary"
+            }
+          >
+            {log.message}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -61,9 +122,9 @@ export function App() {
         <div className="h-full flex flex-col bg-bg-primary">
           <Header />
           <MainContent />
+          <LogPanel />
         </div>
       </ConfigProvider>
     </KanataProvider>
   );
 }
-

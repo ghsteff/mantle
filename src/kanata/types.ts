@@ -50,7 +50,12 @@ export interface LayerAction {
 /**
  * Union of all possible key actions.
  */
-export type KeyAction = TapHoldAction | MultiTapAction | RemapAction | LayerAction | string;
+export type KeyAction =
+  | TapHoldAction
+  | MultiTapAction
+  | RemapAction
+  | LayerAction
+  | string;
 
 /**
  * Extended layer that supports complex actions.
@@ -74,19 +79,75 @@ export interface KeyboardConfig {
 
 /**
  * Standard QWERTY source keys for a typical keyboard.
- * This defines the physical key positions.
+ * This defines the physical key positions using Kanata key names.
+ * See: https://github.com/jtroo/kanata/blob/main/docs/config.adoc
  */
 export const STANDARD_QWERTY_KEYS = [
   // Number row
-  "grv", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "min", "eql", "bspc",
-  // Top row
-  "tab", "q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "lbrc", "rbrc", "bsls",
+  "grv",
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  "0",
+  "-",
+  "=",
+  "bspc",
+  // Top row (using literal characters where Kanata expects them)
+  "tab",
+  "q",
+  "w",
+  "e",
+  "r",
+  "t",
+  "y",
+  "u",
+  "i",
+  "o",
+  "p",
+  "[",
+  "]",
+  "\\",
   // Home row
-  "caps", "a", "s", "d", "f", "g", "h", "j", "k", "l", "scln", "quot", "ret",
+  "caps",
+  "a",
+  "s",
+  "d",
+  "f",
+  "g",
+  "h",
+  "j",
+  "k",
+  "l",
+  ";",
+  "'",
+  "ret",
   // Bottom row
-  "lsft", "z", "x", "c", "v", "b", "n", "m", "comm", "dot", "slsh", "rsft",
+  "lsft",
+  "z",
+  "x",
+  "c",
+  "v",
+  "b",
+  "n",
+  "m",
+  ",",
+  ".",
+  "/",
+  "rsft",
   // Modifier row
-  "lctl", "lmet", "lalt", "spc", "ralt", "rmet", "rctl",
+  "lctl",
+  "lmet",
+  "lalt",
+  "spc",
+  "ralt",
+  "rmet",
+  "rctl",
 ] as const;
 
 export type StandardKey = (typeof STANDARD_QWERTY_KEYS)[number];
@@ -94,7 +155,10 @@ export type StandardKey = (typeof STANDARD_QWERTY_KEYS)[number];
 /**
  * Create an empty layer with all keys mapped to themselves (passthrough).
  */
-export function createEmptyLayer(name: string, sourceKeys: readonly string[]): KeyboardLayer {
+export function createEmptyLayer(
+  name: string,
+  sourceKeys: readonly string[]
+): KeyboardLayer {
   const keys: Record<string, string> = {};
   for (const key of sourceKeys) {
     keys[key] = "_"; // _ means "transparent" in Kanata (inherit from lower layer)
@@ -112,4 +176,3 @@ export function createBaseLayer(sourceKeys: readonly string[]): KeyboardLayer {
   }
   return { name: "base", keys };
 }
-

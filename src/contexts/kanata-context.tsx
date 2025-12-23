@@ -24,6 +24,7 @@ interface KanataContextValue {
   restart: () => Promise<boolean>;
   clearLogs: () => void;
   setAutoRestart: (enabled: boolean) => Promise<void>;
+  openInputMonitoringSettings: () => Promise<void>;
 }
 
 const KanataContext = createContext<KanataContextValue | null>(null);
@@ -120,6 +121,11 @@ export function KanataProvider({ children }: { children: ReactNode }) {
     await window.kanata.setAutoRestart(enabled);
   }, []);
 
+  const openInputMonitoringSettings = useCallback(async () => {
+    if (!isElectron) return;
+    await window.kanata.openInputMonitoringSettings();
+  }, []);
+
   const value: KanataContextValue = {
     status,
     logs,
@@ -129,6 +135,7 @@ export function KanataProvider({ children }: { children: ReactNode }) {
     restart,
     clearLogs,
     setAutoRestart,
+    openInputMonitoringSettings,
   };
 
   return (
