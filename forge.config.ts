@@ -20,6 +20,7 @@ const config: ForgeConfig = {
       // Linux binaries
       "./bin/kanata_linux_x64",
     ],
+    icon: "./images/icon",
   },
   rebuildConfig: {},
   makers: [
