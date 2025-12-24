@@ -1,10 +1,10 @@
-# Kanata UI
+# Mantle
 
 A visual keyboard configurator for [Kanata](https://github.com/jtroo/kanata) — the cross-platform software keyboard remapper.
 
 Build complex keyboard layouts with an intuitive GUI instead of writing Lisp configuration files by hand.
 
-![Kanata UI Screenshot](docs/screenshot.png)
+![Mantle Screenshot](docs/screenshot.png)
 
 ## Features
 
@@ -20,13 +20,13 @@ Build complex keyboard layouts with an intuitive GUI instead of writing Lisp con
 
 ### Download
 
-Download the latest release for your platform from the [Releases](https://github.com/YOUR_USERNAME/kanata-ui/releases) page.
+Download the latest release for your platform from the [Releases](https://github.com/YOUR_USERNAME/mantle/releases) page.
 
 ### macOS Setup
 
-Kanata requires elevated permissions on macOS to intercept keyboard input:
+Mantle requires elevated permissions on macOS to intercept keyboard input:
 
-1. **Install Karabiner Virtual HID Device** (required for Kanata to work):
+1. **Install Karabiner Virtual HID Device** (required for Mantle to work):
 
    ```bash
    brew install --cask karabiner-elements
@@ -37,9 +37,9 @@ Kanata requires elevated permissions on macOS to intercept keyboard input:
 2. **Grant Input Monitoring permission**:
    - Open **System Settings → Privacy & Security → Input Monitoring**
    - Click **+** and add the `kanata` binary from the app's Resources folder
-   - Or when you see a "not permitted" error, click the "Open Input Monitoring Settings" button in the app
+    - Or when you see a "not permitted" error, click the **Open Input Monitoring Settings** button in the app; this will open the settings pane and reveal the `kanata` binary in Finder so you can easily drag and drop it into the list.
 
-3. **Important**: Quit Karabiner-Elements before using Kanata UI — they can't both control the keyboard simultaneously.
+3. **Important**: Quit Karabiner-Elements before using Mantle — they can't both control the keyboard simultaneously.
 
 ### Windows Setup
 
@@ -56,7 +56,7 @@ sudo usermod -aG input $USER
 
 ## Usage
 
-1. **Launch Kanata UI**
+1. **Launch Mantle**
 2. **Click "Stopped"** in the top-right to start Kanata (you'll be prompted for your password on macOS)
 3. **Click any key** on the visual keyboard to select it
 4. **Configure the key** in the right panel:
@@ -80,7 +80,7 @@ Layers let you have multiple keyboard layouts you can switch between:
 
 ## Configuration Files
 
-Kanata UI stores configuration in:
+Mantle stores configuration in:
 
 - **macOS**: `~/Library/Application Support/kanata-ui/kanata/`
 - **Windows**: `%APPDATA%\kanata-ui\kanata\`
