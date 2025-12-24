@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   ConfigProvider,
   KanataProvider,
@@ -8,13 +8,24 @@ import {
 import { KeyboardGrid } from "./components/keyboard";
 import { KeyInspector, LayerTabs } from "./components/editor";
 import { StatusIndicator } from "./components/status";
+import { ProfileSwitcher } from "./components/profiles";
+import { NewProfileDialog } from "./components/presets";
+import { qwertyPreset } from "./presets";
+import type { Preset } from "./presets";
 import { Button } from "./components/ui";
 
 /**
  * Header with layer tabs, apply changes button, and status indicator.
  */
 function Header() {
-  const { isDirty, applyChanges, discardChanges } = useConfig();
+  const {
+    isDirty,
+    applyChanges,
+    discardChanges,
+    hasProfiles,
+    createProfile,
+    switchProfile,
+  } = useConfig();
   const [isApplying, setIsApplying] = useState(false);
 
   const handleApply = async () => {
@@ -26,13 +37,31 @@ function Header() {
     }
   };
 
+  const handleNewProfile = useCallback(
+    async (name: string, preset: Preset) => {
+      const success = await createProfile(name, structuredClone(preset.config));
+      if (success) {
+        // Switch to the new profile
+        await switchProfile(name);
+      }
+    },
+    [createProfile, switchProfile]
+  );
+
   return (
     <header className="h-12 bg-bg-secondary border-b border-border flex items-center justify-between px-4">
       <div className="flex items-center gap-4">
         <h1 className="text-sm font-semibold text-text-primary">Mantle</h1>
-        <LayerTabs />
+        {hasProfiles && (
+          <>
+            <ProfileSwitcher />
+            <div className="h-4 w-px bg-border" />
+            <LayerTabs />
+          </>
+        )}
       </div>
       <div className="flex items-center gap-3">
+        {hasProfiles && <NewProfileDialog onComplete={handleNewProfile} />}
         {isDirty && (
           <div className="flex items-center gap-2">
             <span className="text-xs text-text-muted">Unsaved changes</span>
@@ -112,9 +141,33 @@ function LogPanel() {
  * Main content area with keyboard grid and inspector.
  */
 function MainContent() {
-  const { isLoading, error } = useConfig();
+  const {
+    isLoading,
+    error,
+    hasProfiles,
+    createProfile,
+    switchProfile,
+    refreshProfiles,
+  } = useConfig();
 
-  if (isLoading) {
+  // Auto-create default profile if none exists
+  useEffect(() => {
+    if (!isLoading && !hasProfiles) {
+      const createDefault = async () => {
+        const success = await createProfile(
+          "default",
+          structuredClone(qwertyPreset.config)
+        );
+        if (success) {
+          await switchProfile("default");
+          await refreshProfiles();
+        }
+      };
+      createDefault();
+    }
+  }, [isLoading, hasProfiles, createProfile, switchProfile, refreshProfiles]);
+
+  if (isLoading || !hasProfiles) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-text-muted">Loading configuration...</div>

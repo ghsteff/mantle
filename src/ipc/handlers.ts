@@ -7,6 +7,7 @@ import {
   type KanataStatus,
   type KanataLogEntry,
 } from "../kanata";
+import type { ProfileInfo } from "../kanata/config-manager";
 
 /**
  * IPC Channel names - keep in sync with preload.ts
@@ -26,6 +27,15 @@ export const IPC_CHANNELS = {
   BACKUP_CONFIG: "config:backup",
   LIST_BACKUPS: "config:list-backups",
   RESTORE_BACKUP: "config:restore-backup",
+
+  // Profile management
+  LIST_PROFILES: "profiles:list",
+  GET_ACTIVE_PROFILE: "profiles:get-active",
+  HAS_PROFILES: "profiles:has-any",
+  CREATE_PROFILE: "profiles:create",
+  SWITCH_PROFILE: "profiles:switch",
+  DELETE_PROFILE: "profiles:delete",
+  RENAME_PROFILE: "profiles:rename",
 
   // System
   OPEN_INPUT_MONITORING: "system:open-input-monitoring",
@@ -120,6 +130,57 @@ export function registerIpcHandlers(): void {
   });
 
   // ============================================
+  // Profile Management
+  // ============================================
+
+  ipcMain.handle(IPC_CHANNELS.LIST_PROFILES, (): ProfileInfo[] => {
+    return configManager.listProfiles();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GET_ACTIVE_PROFILE, (): string | null => {
+    return configManager.getActiveProfileName();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.HAS_PROFILES, (): boolean => {
+    return configManager.hasProfiles();
+  });
+
+  ipcMain.handle(
+    IPC_CHANNELS.CREATE_PROFILE,
+    async (_event, name: string, config: KeyboardConfig): Promise<boolean> => {
+      const success = configManager.createProfile(name, config);
+      // If creating a profile and it's now active, reload Kanata
+      if (success && configManager.getActiveProfileName() === name && processManager.isRunning()) {
+        await processManager.reloadConfig();
+      }
+      return success;
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.SWITCH_PROFILE,
+    async (_event, name: string): Promise<KeyboardConfig | null> => {
+      const config = configManager.switchProfile(name);
+      // Reload Kanata with new profile's config
+      if (config && processManager.isRunning()) {
+        await processManager.reloadConfig();
+      }
+      return config;
+    }
+  );
+
+  ipcMain.handle(IPC_CHANNELS.DELETE_PROFILE, (_event, name: string): boolean => {
+    return configManager.deleteProfile(name);
+  });
+
+  ipcMain.handle(
+    IPC_CHANNELS.RENAME_PROFILE,
+    (_event, oldName: string, newName: string): boolean => {
+      return configManager.renameProfile(oldName, newName);
+    }
+  );
+
+  // ============================================
   // System
   // ============================================
 
@@ -171,4 +232,3 @@ export function setupProcessEventForwarding(mainWindow: BrowserWindow): void {
     }
   });
 }
-

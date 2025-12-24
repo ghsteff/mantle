@@ -145,10 +145,10 @@ body {
 }
 
 /* Focus outline */
-:focus-visible {
+/* :focus-visible {
   outline: 1px solid var(--border-focus);
   outline-offset: 2px;
-}
+} */
 
 /* Key animations */
 @keyframes pulse-glow {

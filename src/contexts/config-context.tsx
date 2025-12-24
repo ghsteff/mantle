@@ -19,6 +19,12 @@ interface KeyboardConfig {
   aliases?: Record<string, string>;
 }
 
+interface ProfileInfo {
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface ConfigContextValue {
   config: KeyboardConfig | null;
   isLoading: boolean;
@@ -27,6 +33,11 @@ interface ConfigContextValue {
   selectedKey: string | null;
   activeLayer: string;
   showActions: boolean;
+  // Profile management
+  profiles: ProfileInfo[];
+  activeProfile: string | null;
+  hasProfiles: boolean;
+  // Actions
   setSelectedKey: (key: string | null) => void;
   setActiveLayer: (layerName: string) => void;
   setShowActions: (show: boolean) => void;
@@ -37,6 +48,12 @@ interface ConfigContextValue {
   applyChanges: () => Promise<boolean>;
   discardChanges: () => Promise<void>;
   reloadConfig: () => Promise<void>;
+  // Profile actions
+  createProfile: (name: string, config: KeyboardConfig) => Promise<boolean>;
+  switchProfile: (name: string) => Promise<boolean>;
+  deleteProfile: (name: string) => Promise<boolean>;
+  renameProfile: (oldName: string, newName: string) => Promise<boolean>;
+  refreshProfiles: () => Promise<void>;
 }
 
 const ConfigContext = createContext<ConfigContextValue | null>(null);
@@ -317,17 +334,49 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   const [activeLayer, setActiveLayer] = useState("base");
   const [showActions, setShowActions] = useState(loadShowActionsPreference);
   const [isDirty, setIsDirty] = useState(false);
+  
+  // Profile state
+  const [profiles, setProfiles] = useState<ProfileInfo[]>([]);
+  const [activeProfile, setActiveProfile] = useState<string | null>(null);
+  const [hasProfiles, setHasProfiles] = useState(false);
 
   // Persist showActions to localStorage whenever it changes
   useEffect(() => {
     saveShowActionsPreference(showActions);
   }, [showActions]);
 
+  // Load profiles list
+  const refreshProfiles = useCallback(async () => {
+    if (!isElectron) {
+      // Mock data for development
+      setProfiles([{ name: "default", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }]);
+      setActiveProfile("default");
+      setHasProfiles(true);
+      return;
+    }
+    
+    try {
+      const [profilesList, active, has] = await Promise.all([
+        window.kanata.listProfiles(),
+        window.kanata.getActiveProfile(),
+        window.kanata.hasProfiles(),
+      ]);
+      setProfiles(profilesList);
+      setActiveProfile(active);
+      setHasProfiles(has);
+    } catch (err) {
+      console.error("Failed to load profiles:", err);
+    }
+  }, []);
+
   // Load config on mount
   const loadConfig = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
+      // First refresh profiles
+      await refreshProfiles();
+      
       let loadedConfig: KeyboardConfig | null;
 
       if (isElectron) {
@@ -349,7 +398,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [activeLayer]);
+  }, [activeLayer, refreshProfiles]);
 
   useEffect(() => {
     loadConfig();
@@ -445,19 +494,118 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
       const success = await window.kanata.saveConfig(config);
       if (success) {
         setIsDirty(false);
+        await refreshProfiles(); // Refresh to get updated timestamps
       }
       return success;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save config");
       return false;
     }
-  }, [config]);
+  }, [config, refreshProfiles]);
 
   // Discard all pending changes - reload from disk
   const discardChanges = useCallback(async (): Promise<void> => {
     setIsDirty(false);
     await loadConfig();
   }, [loadConfig]);
+
+  // ============================================
+  // Profile Management
+  // ============================================
+
+  const createProfile = useCallback(async (name: string, profileConfig: KeyboardConfig): Promise<boolean> => {
+    if (!isElectron) {
+      console.log("Would create profile:", name, profileConfig);
+      return true;
+    }
+
+    try {
+      const success = await window.kanata.createProfile(name, profileConfig);
+      if (success) {
+        await refreshProfiles();
+        // If this is the first profile or it became active, load it
+        const newActive = await window.kanata.getActiveProfile();
+        if (newActive === name) {
+          setConfig(profileConfig);
+          setActiveLayer(profileConfig.layers[0]?.name || "base");
+        }
+      }
+      return success;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create profile");
+      return false;
+    }
+  }, [refreshProfiles]);
+
+  const switchProfile = useCallback(async (name: string): Promise<boolean> => {
+    if (!isElectron) {
+      console.log("Would switch to profile:", name);
+      return true;
+    }
+
+    // Don't switch if there are unsaved changes
+    if (isDirty) {
+      const confirmed = confirm("You have unsaved changes. Discard and switch profiles?");
+      if (!confirmed) return false;
+    }
+
+    try {
+      const newConfig = await window.kanata.switchProfile(name);
+      if (newConfig) {
+        setConfig(newConfig);
+        setActiveProfile(name);
+        setActiveLayer(newConfig.layers[0]?.name || "base");
+        setIsDirty(false);
+        setSelectedKey(null);
+        await refreshProfiles();
+        return true;
+      }
+      return false;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to switch profile");
+      return false;
+    }
+  }, [isDirty, refreshProfiles]);
+
+  const deleteProfileAction = useCallback(async (name: string): Promise<boolean> => {
+    if (!isElectron) {
+      console.log("Would delete profile:", name);
+      return true;
+    }
+
+    try {
+      const success = await window.kanata.deleteProfile(name);
+      if (success) {
+        await refreshProfiles();
+        // If we deleted the active profile, reload config
+        if (name === activeProfile) {
+          await loadConfig();
+        }
+      }
+      return success;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete profile");
+      return false;
+    }
+  }, [activeProfile, loadConfig, refreshProfiles]);
+
+  const renameProfileAction = useCallback(async (oldName: string, newName: string): Promise<boolean> => {
+    if (!isElectron) {
+      console.log("Would rename profile:", oldName, "to", newName);
+      return true;
+    }
+
+    try {
+      const success = await window.kanata.renameProfile(oldName, newName);
+      if (success) {
+        await refreshProfiles();
+      }
+      return success;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to rename profile");
+      return false;
+    }
+  }, [refreshProfiles]);
 
   const value: ConfigContextValue = {
     config,
@@ -467,6 +615,9 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     selectedKey,
     activeLayer,
     showActions,
+    profiles,
+    activeProfile,
+    hasProfiles,
     setSelectedKey,
     setActiveLayer,
     setShowActions,
@@ -477,6 +628,11 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     applyChanges,
     discardChanges,
     reloadConfig: loadConfig,
+    createProfile,
+    switchProfile,
+    deleteProfile: deleteProfileAction,
+    renameProfile: renameProfileAction,
+    refreshProfiles,
   };
 
   return (

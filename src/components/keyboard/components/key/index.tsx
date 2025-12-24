@@ -121,18 +121,22 @@ export function Key({
     <Tooltip delayDuration={300}>
       <TooltipTrigger asChild>{keyButton}</TooltipTrigger>
       <TooltipContent side="top" className="max-w-xs">
-        <div className="space-y-1 text-sm">
-          <div className="font-semibold">{actionDetails.type}</div>
+        <div className="space-y-0 text-xs">
+          <div className="font-semibold font-mono">{actionDetails.type}</div>
           {actionDetails.tap && (
             <div>
-              <span className="text-muted-foreground">Tap:</span>{" "}
-              <span>{actionDetails.tap}</span>
+              <span className="text-muted-foreground text-[10px] uppercase tracking-widest font-mono">
+                Tap:
+              </span>{" "}
+              <span className="font-mono">{actionDetails.tap}</span>
             </div>
           )}
           {actionDetails.hold && (
             <div>
-              <span className="text-muted-foreground">Hold:</span>{" "}
-              <span>{actionDetails.hold}</span>
+              <span className="text-muted-foreground text-[10px] uppercase tracking-widest font-mono">
+                Hold:
+              </span>{" "}
+              <span className="font-mono">{actionDetails.hold}</span>
             </div>
           )}
         </div>

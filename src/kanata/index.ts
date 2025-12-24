@@ -28,6 +28,7 @@ export {
 } from "./generator";
 
 // Config Manager
+export type { ProfileInfo } from "./config-manager";
 export { ConfigManager, getConfigManager } from "./config-manager";
 
 // Binary Path

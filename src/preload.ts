@@ -22,6 +22,15 @@ const IPC_CHANNELS = {
   LIST_BACKUPS: "config:list-backups",
   RESTORE_BACKUP: "config:restore-backup",
 
+  // Profile management
+  LIST_PROFILES: "profiles:list",
+  GET_ACTIVE_PROFILE: "profiles:get-active",
+  HAS_PROFILES: "profiles:has-any",
+  CREATE_PROFILE: "profiles:create",
+  SWITCH_PROFILE: "profiles:switch",
+  DELETE_PROFILE: "profiles:delete",
+  RENAME_PROFILE: "profiles:rename",
+
   // System
   OPEN_INPUT_MONITORING: "system:open-input-monitoring",
 
@@ -62,6 +71,12 @@ export interface CrashInfo {
   signal: string | null;
 }
 
+export interface ProfileInfo {
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /**
  * The API exposed to the renderer process via contextBridge.
  */
@@ -80,6 +95,15 @@ export interface KanataApi {
   backupConfig: () => Promise<string | null>;
   listBackups: () => Promise<string[]>;
   restoreBackup: (backupPath: string) => Promise<boolean>;
+
+  // Profile management
+  listProfiles: () => Promise<ProfileInfo[]>;
+  getActiveProfile: () => Promise<string | null>;
+  hasProfiles: () => Promise<boolean>;
+  createProfile: (name: string, config: KeyboardConfig) => Promise<boolean>;
+  switchProfile: (name: string) => Promise<KeyboardConfig | null>;
+  deleteProfile: (name: string) => Promise<boolean>;
+  renameProfile: (oldName: string, newName: string) => Promise<boolean>;
 
   // System
   openInputMonitoringSettings: () => Promise<void>;
@@ -123,6 +147,15 @@ const kanataApi: KanataApi = {
   backupConfig: () => ipcRenderer.invoke(IPC_CHANNELS.BACKUP_CONFIG),
   listBackups: () => ipcRenderer.invoke(IPC_CHANNELS.LIST_BACKUPS),
   restoreBackup: (backupPath) => ipcRenderer.invoke(IPC_CHANNELS.RESTORE_BACKUP, backupPath),
+
+  // Profile management
+  listProfiles: () => ipcRenderer.invoke(IPC_CHANNELS.LIST_PROFILES),
+  getActiveProfile: () => ipcRenderer.invoke(IPC_CHANNELS.GET_ACTIVE_PROFILE),
+  hasProfiles: () => ipcRenderer.invoke(IPC_CHANNELS.HAS_PROFILES),
+  createProfile: (name, config) => ipcRenderer.invoke(IPC_CHANNELS.CREATE_PROFILE, name, config),
+  switchProfile: (name) => ipcRenderer.invoke(IPC_CHANNELS.SWITCH_PROFILE, name),
+  deleteProfile: (name) => ipcRenderer.invoke(IPC_CHANNELS.DELETE_PROFILE, name),
+  renameProfile: (oldName, newName) => ipcRenderer.invoke(IPC_CHANNELS.RENAME_PROFILE, oldName, newName),
 
   // System
   openInputMonitoringSettings: () => ipcRenderer.invoke(IPC_CHANNELS.OPEN_INPUT_MONITORING),
