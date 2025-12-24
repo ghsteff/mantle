@@ -16,11 +16,13 @@ export function Button({
   children,
   ...props
 }: ButtonProps) {
-  const baseClasses = "inline-flex items-center justify-center rounded font-medium transition-colors";
+  const baseClasses =
+    "inline-flex items-center justify-center rounded font-medium transition-colors";
 
   const variantClasses = {
     primary: "bg-accent hover:bg-accent-hover text-white",
-    secondary: "bg-bg-tertiary hover:bg-bg-hover text-text-primary border border-border",
+    secondary:
+      "bg-bg-tertiary hover:bg-bg-hover text-text-primary border border-border",
     ghost: "hover:bg-bg-hover text-text-secondary hover:text-text-primary",
   };
 
@@ -40,4 +42,3 @@ export function Button({
     </button>
   );
 }
-
