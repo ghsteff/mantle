@@ -150,4 +150,3 @@ export function useKanata(): KanataContextValue {
   }
   return context;
 }
-
