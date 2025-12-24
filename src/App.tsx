@@ -8,6 +8,7 @@ import {
 import { KeyboardGrid } from "./components/keyboard";
 import { KeyInspector, LayerTabs } from "./components/editor";
 import { StatusIndicator } from "./components/status";
+import { Button } from "./components/ui";
 
 /**
  * Header with layer tabs, apply changes button, and status indicator.
@@ -35,22 +36,20 @@ function Header() {
         {isDirty && (
           <div className="flex items-center gap-2">
             <span className="text-xs text-text-muted">Unsaved changes</span>
-            <button
+            <Button
               onClick={discardChanges}
               disabled={isApplying}
-              className="px-3 py-1.5 text-sm text-text-secondary hover:text-text-primary
-                         border border-border rounded transition-colors disabled:opacity-50"
+              variant="outline"
             >
               Discard
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleApply}
               disabled={isApplying}
-              className="px-3 py-1.5 text-sm bg-accent hover:bg-accent-hover
-                         text-white rounded font-medium transition-colors disabled:opacity-50"
+              variant="default"
             >
               {isApplying ? "Applying..." : "Apply Changes"}
-            </button>
+            </Button>
           </div>
         )}
         <StatusIndicator />
@@ -82,19 +81,13 @@ function LogPanel() {
         <span className="text-xs text-text-muted uppercase">Logs</span>
         <div className="flex items-center gap-2">
           {hasPermissionError && (
-            <button
-              onClick={openInputMonitoringSettings}
-              className="text-xs bg-accent hover:bg-accent/80 text-white px-2 py-0.5 rounded"
-            >
+            <Button onClick={openInputMonitoringSettings} variant="outline">
               Open Input Monitoring Settings
-            </button>
+            </Button>
           )}
-          <button
-            onClick={clearLogs}
-            className="text-xs text-text-muted hover:text-text-primary"
-          >
+          <Button onClick={clearLogs} variant="ghost">
             Clear
-          </button>
+          </Button>
         </div>
       </div>
       <div className="flex-1 overflow-auto p-2 font-mono text-xs">

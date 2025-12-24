@@ -11,9 +11,15 @@ interface KeyProps {
 /**
  * Renders a single key on the keyboard grid.
  */
-export function Key({ keyDef, action, isSelected, onClick, unitSize }: KeyProps) {
+export function Key({
+  keyDef,
+  action,
+  isSelected,
+  onClick,
+  unitSize,
+}: KeyProps) {
   const { label, subLabel } = getKeyLabel(keyDef.id);
-  
+
   // Check if the action is different from the default (modified)
   const isModified = action !== keyDef.id && action !== "_";
   const isTransparent = action === "_";
@@ -33,9 +39,10 @@ export function Key({ keyDef, action, isSelected, onClick, unitSize }: KeyProps)
         absolute font-mono text-xs select-none
         flex flex-col items-center justify-center
         rounded-md border transition-all duration-100
-        ${isSelected
-          ? "bg-key-bg-selected border-accent text-text-bright ring-2 ring-accent"
-          : "bg-key-bg border-key-border text-text-primary hover:bg-key-bg-hover"
+        ${
+          isSelected
+            ? "bg-key-bg-selected border-primary text-text-bright"
+            : "bg-key-bg border-key-border text-text-primary hover:bg-key-bg-hover"
         }
         ${isModified && !isSelected ? "border-accent/50" : ""}
         ${isTransparent ? "opacity-60" : ""}
@@ -55,17 +62,18 @@ export function Key({ keyDef, action, isSelected, onClick, unitSize }: KeyProps)
           {subLabel}
         </span>
       )}
-      
+
       {/* Main label */}
-      <span className={`leading-none ${keyDef.width >= 1.5 ? "text-[10px]" : "text-xs"}`}>
+      <span
+        className={`leading-none ${keyDef.width >= 1.5 ? "text-[10px]" : "text-xs"}`}
+      >
         {label}
       </span>
-      
+
       {/* Modified indicator */}
       {isModified && (
-        <span className="absolute bottom-1 right-1 w-1.5 h-1.5 rounded-full bg-accent" />
+        <div className="absolute bottom-1 right-1 w-1 h-1 rounded-full bg-primary" />
       )}
     </button>
   );
 }
-

@@ -1,7 +1,15 @@
+import { Button } from "@/components/ui";
 import { getKeyLabel } from "../../keyboard/layout";
 import { KeyCombobox } from "../key-combobox";
 import { MultiKeyPicker } from "../multi-key-picker";
 import { useActionEditor, type KeyType } from "./hooks/use-action-editor";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ActionEditorProps {
   keyId: string;
@@ -65,21 +73,14 @@ export function ActionEditor({
   }) => (
     <div className="flex gap-1 mb-2">
       {(["key", "multi"] as const).map((type) => (
-        <button
+        <Button
           key={type}
-          type="button"
+          variant={value === type ? "default" : "outline"}
           onClick={() => onChange(type)}
-          className={`
-            px-2 py-1 rounded text-xs
-            ${
-              value === type
-                ? "bg-accent text-white"
-                : "bg-bg-tertiary text-text-secondary hover:bg-bg-hover"
-            }
-          `}
+          size="xs"
         >
           {type === "multi" ? "Multi-Key" : "Single Key"}
-        </button>
+        </Button>
       ))}
     </div>
   );
@@ -102,21 +103,14 @@ export function ActionEditor({
         <label className="text-text-secondary text-sm">Action Type</label>
         <div className="flex gap-2">
           {(["simple", "tap-hold", "layer"] as const).map((type) => (
-            <button
+            <Button
               key={type}
-              type="button"
               onClick={() => setActionType(type)}
-              className={`
-                px-3 py-1.5 rounded text-sm capitalize
-                ${
-                  actionType === type
-                    ? "bg-accent text-white"
-                    : "bg-bg-tertiary text-text-secondary hover:bg-bg-hover"
-                }
-              `}
+              variant={actionType === type ? "default" : "outline"}
+              size="xs"
             >
               {type === "tap-hold" ? "Tap-Hold" : type}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
@@ -180,21 +174,14 @@ export function ActionEditor({
               <label className="text-text-secondary text-sm">Hold Action</label>
               <div className="flex gap-1 mb-2">
                 {(["key", "multi", "layer"] as const).map((type) => (
-                  <button
+                  <Button
                     key={type}
-                    type="button"
                     onClick={() => setHoldType(type)}
-                    className={`
-                      px-2 py-1 rounded text-xs capitalize
-                      ${
-                        holdType === type
-                          ? "bg-accent text-white"
-                          : "bg-bg-tertiary text-text-secondary hover:bg-bg-hover"
-                      }
-                    `}
+                    variant={holdType === type ? "default" : "outline"}
+                    size="xs"
                   >
                     {type === "multi" ? "Multi-Key" : type}
-                  </button>
+                  </Button>
                 ))}
               </div>
 
@@ -229,34 +216,24 @@ export function ActionEditor({
                     ))}
                   </select>
                   <div className="flex gap-2">
-                    <button
-                      type="button"
+                    <Button
                       onClick={() => setHoldLayerMode("momentary")}
-                      className={`
-                        flex-1 px-2 py-1 rounded text-xs
-                        ${
-                          holdLayerMode === "momentary"
-                            ? "bg-accent/20 text-accent border border-accent"
-                            : "bg-bg-tertiary text-text-secondary hover:bg-bg-hover border border-transparent"
-                        }
-                      `}
+                      variant={
+                        holdLayerMode === "momentary" ? "default" : "outline"
+                      }
+                      size="xs"
                     >
                       Momentary
-                    </button>
-                    <button
-                      type="button"
+                    </Button>
+                    <Button
                       onClick={() => setHoldLayerMode("toggle")}
-                      className={`
-                        flex-1 px-2 py-1 rounded text-xs
-                        ${
-                          holdLayerMode === "toggle"
-                            ? "bg-accent/20 text-accent border border-accent"
-                            : "bg-bg-tertiary text-text-secondary hover:bg-bg-hover border border-transparent"
-                        }
-                      `}
+                      variant={
+                        holdLayerMode === "toggle" ? "default" : "outline"
+                      }
+                      size="xs"
                     >
                       Toggle
-                    </button>
+                    </Button>
                   </div>
                   <div className="text-text-muted text-xs">
                     {holdLayerMode === "momentary"
@@ -293,19 +270,18 @@ export function ActionEditor({
               <label className="text-text-secondary text-sm">
                 Target Layer
               </label>
-              <select
-                value={layerName}
-                onChange={(e) => setLayerName(e.target.value)}
-                className="w-full px-3 py-2 bg-bg-tertiary border border-border rounded
-                           text-text-primary text-sm
-                           focus:border-accent focus:ring-1 focus:ring-accent outline-none"
-              >
-                {layers.map((layer) => (
-                  <option key={layer} value={layer}>
-                    {layer}
-                  </option>
-                ))}
-              </select>
+              <Select>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select layer..." />
+                  <SelectContent>
+                    {layers.map((layer) => (
+                      <SelectItem key={layer} value={layer}>
+                        {layer}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </SelectTrigger>
+              </Select>
             </div>
             <div className="space-y-2">
               <label className="text-text-secondary text-sm">
@@ -313,21 +289,14 @@ export function ActionEditor({
               </label>
               <div className="flex gap-2">
                 {(["momentary", "toggle", "one-shot"] as const).map((mode) => (
-                  <button
+                  <Button
                     key={mode}
-                    type="button"
                     onClick={() => setLayerMode(mode)}
-                    className={`
-                      px-3 py-1.5 rounded text-sm capitalize
-                      ${
-                        layerMode === mode
-                          ? "bg-accent text-white"
-                          : "bg-bg-tertiary text-text-secondary hover:bg-bg-hover"
-                      }
-                    `}
+                    variant={layerMode === mode ? "default" : "outline"}
+                    size="xs"
                   >
                     {mode}
-                  </button>
+                  </Button>
                 ))}
               </div>
               <div className="text-text-muted text-xs">

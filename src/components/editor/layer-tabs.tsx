@@ -1,11 +1,20 @@
 import { useState } from "react";
 import { useConfig } from "../../contexts";
+import { Button } from "../ui";
+import { PlusIcon } from "lucide-react";
 
 /**
  * Tabs for switching between keyboard layers.
  */
 export function LayerTabs() {
-  const { config, activeLayer, setActiveLayer, addLayer, removeLayer, renameLayer } = useConfig();
+  const {
+    config,
+    activeLayer,
+    setActiveLayer,
+    addLayer,
+    removeLayer,
+    renameLayer,
+  } = useConfig();
   const [isAdding, setIsAdding] = useState(false);
   const [newLayerName, setNewLayerName] = useState("");
   const [editingLayer, setEditingLayer] = useState<string | null>(null);
@@ -14,7 +23,10 @@ export function LayerTabs() {
   const layers = config?.layers || [];
 
   const handleAddLayer = () => {
-    if (newLayerName.trim() && !layers.find((l) => l.name === newLayerName.trim())) {
+    if (
+      newLayerName.trim() &&
+      !layers.find((l) => l.name === newLayerName.trim())
+    ) {
       addLayer(newLayerName.trim().toLowerCase().replace(/\s+/g, "-"));
       setNewLayerName("");
       setIsAdding(false);
@@ -28,7 +40,10 @@ export function LayerTabs() {
 
   const handleRename = () => {
     if (editingLayer && editName.trim() && editName !== editingLayer) {
-      renameLayer(editingLayer, editName.trim().toLowerCase().replace(/\s+/g, "-"));
+      renameLayer(
+        editingLayer,
+        editName.trim().toLowerCase().replace(/\s+/g, "-")
+      );
     }
     setEditingLayer(null);
   };
@@ -58,35 +73,30 @@ export function LayerTabs() {
               autoFocus
             />
           ) : (
-            <button
-              type="button"
+            <Button
               onClick={() => setActiveLayer(layer.name)}
               onDoubleClick={() => handleStartRename(layer.name)}
-              className={`
-                px-3 py-1.5 rounded text-sm font-mono transition-colors
-                ${activeLayer === layer.name
-                  ? "bg-accent text-white"
-                  : "bg-bg-tertiary text-text-secondary hover:bg-bg-hover hover:text-text-primary"
-                }
-              `}
+              variant={activeLayer === layer.name ? "default" : "outline"}
             >
               {layer.name}
-            </button>
+            </Button>
           )}
-          
+
           {/* Delete button - shown on hover if more than 1 layer */}
-          {layers.length > 1 && activeLayer === layer.name && editingLayer !== layer.name && (
-            <button
-              type="button"
-              onClick={() => handleDelete(layer.name)}
-              className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-status-error
+          {layers.length > 1 &&
+            activeLayer === layer.name &&
+            editingLayer !== layer.name && (
+              <button
+                type="button"
+                onClick={() => handleDelete(layer.name)}
+                className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-status-error
                          text-white text-xs flex items-center justify-center
                          opacity-0 group-hover:opacity-100 transition-opacity"
-              title="Delete layer"
-            >
-              ×
-            </button>
-          )}
+                title="Delete layer"
+              >
+                ×
+              </button>
+            )}
         </div>
       ))}
 
@@ -110,36 +120,30 @@ export function LayerTabs() {
                        focus:border-accent"
             autoFocus
           />
-          <button
-            type="button"
-            onClick={handleAddLayer}
-            className="px-2 py-1 bg-accent text-white rounded text-sm hover:bg-accent-hover"
-          >
+          <Button onClick={handleAddLayer} variant="default">
             Add
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             onClick={() => {
               setIsAdding(false);
               setNewLayerName("");
             }}
-            className="px-2 py-1 bg-bg-tertiary text-text-secondary rounded text-sm hover:bg-bg-hover"
+            variant="outline"
           >
             Cancel
-          </button>
+          </Button>
         </div>
       ) : (
-        <button
-          type="button"
+        <Button
           onClick={() => setIsAdding(true)}
-          className="px-2 py-1.5 rounded text-sm text-text-muted hover:text-text-primary
-                     hover:bg-bg-hover transition-colors"
+          variant="ghost"
           title="Add new layer"
+          className="text-text-muted hover:text-text-primary"
         >
-          + Add Layer
-        </button>
+          <PlusIcon className="size-4" /> Add Layer
+        </Button>
       )}
     </div>
   );
 }
-
