@@ -53,7 +53,7 @@
   --border-focus: #ffffff;
 
   /* Key specific */
-  --key-bg: #0a0a0a;
+  --key-bg: #121212;
   --key-bg-hover: #1a1a1a;
   --key-bg-selected: rgba(255, 255, 255, 0.1);
   --key-border: #262626;

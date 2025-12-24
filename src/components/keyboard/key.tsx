@@ -38,14 +38,14 @@ export function Key({
       className={`
         absolute font-mono text-xs select-none
         flex flex-col items-center justify-center
-        rounded-md border transition-all duration-100
+        rounded-none border transition-all duration-100
         ${
           isSelected
             ? "bg-key-bg-selected border-primary text-text-bright"
             : "bg-key-bg border-key-border text-text-primary hover:bg-key-bg-hover"
         }
         ${isModified && !isSelected ? "border-accent/50" : ""}
-        ${isTransparent ? "opacity-60" : ""}
+        ${isTransparent ? "opacity-50" : ""}
         shadow-key active:shadow-key-pressed active:translate-y-[1px]
       `}
       style={{

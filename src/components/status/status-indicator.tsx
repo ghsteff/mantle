@@ -56,7 +56,7 @@ export function StatusIndicator() {
       type="button"
       onClick={handleClick}
       className={`
-        flex items-center gap-2 px-3 py-1.5 rounded-full
+        flex items-center gap-2 px-3 py-1.5
         ${config.bgClass} ${config.textClass}
         text-sm font-medium transition-all
         hover:opacity-80 active:scale-95

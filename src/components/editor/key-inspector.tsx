@@ -28,7 +28,7 @@ export function KeyInspector() {
 
   if (!selectedKey) {
     return (
-      <div className="w-72 bg-bg-secondary border-l border-border p-4 flex flex-col">
+      <div className="w-72 bg-bg-secondary border-l border-border p-4 flex flex-col z-10">
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center text-text-muted">
             <div className="text-4xl mb-2">⌨️</div>
@@ -40,7 +40,7 @@ export function KeyInspector() {
   }
 
   return (
-    <div className="w-72 bg-bg-secondary border-l border-border p-4 overflow-y-auto">
+    <div className="w-72 bg-bg-secondary border-l border-border p-4 overflow-y-auto z-10">
       <ActionEditor
         keyId={selectedKey}
         currentAction={currentAction || selectedKey}

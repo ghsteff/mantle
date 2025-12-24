@@ -134,7 +134,17 @@ function MainContent() {
   }
 
   return (
-    <main className="flex-1 flex overflow-hidden">
+    <main className="flex-1 flex overflow-hidden relative">
+      <div
+        className="absolute inset-0 opacity-[0.4] pointer-events-none"
+        style={{
+          backgroundImage: `
+            linear-gradient(to right, var(--primary-foreground) 1px, transparent 1px),
+            linear-gradient(to bottom, var(--primary-foreground) 1px, transparent 1px)
+          `,
+          backgroundSize: "50px 50px",
+        }}
+      />
       <KeyboardGrid />
       <KeyInspector />
     </main>
