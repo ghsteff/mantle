@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui";
-import { getKeyLabel } from "../../keyboard/layout";
+import { getKeyLabel } from "../../keyboard/utils/layout";
 import { KeyCombobox } from "../key-combobox";
 import { MultiKeyPicker } from "../multi-key-picker";
 import { useActionEditor, type KeyType } from "./hooks/use-action-editor";

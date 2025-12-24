@@ -3,7 +3,7 @@ import {
   AVAILABLE_MODIFIERS,
   findKeyOption,
 } from "../../editor/kanata-keys";
-import { getKeyLabel } from "../layout";
+import { getKeyLabel } from "./layout";
 
 export interface FormattedAction {
   primary: string;

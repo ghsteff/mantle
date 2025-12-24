@@ -71,35 +71,240 @@ function saveShowActionsPreference(value: boolean): void {
 // Mock config for development outside Electron
 const MOCK_CONFIG: KeyboardConfig = {
   sourceKeys: [
-    "esc", "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12",
-    "grv", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "min", "eql", "bspc",
-    "tab", "q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "lbrc", "rbrc", "bsls",
-    "caps", "a", "s", "d", "f", "g", "h", "j", "k", "l", "scln", "quot", "ret",
-    "lsft", "z", "x", "c", "v", "b", "n", "m", "comm", "dot", "slsh", "rsft",
-    "lctl", "lmet", "lalt", "spc", "ralt", "rmet", "rctl",
+    "esc",
+    "f1",
+    "f2",
+    "f3",
+    "f4",
+    "f5",
+    "f6",
+    "f7",
+    "f8",
+    "f9",
+    "f10",
+    "f11",
+    "f12",
+    "grv",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "0",
+    "min",
+    "eql",
+    "bspc",
+    "tab",
+    "q",
+    "w",
+    "e",
+    "r",
+    "t",
+    "y",
+    "u",
+    "i",
+    "o",
+    "p",
+    "lbrc",
+    "rbrc",
+    "bsls",
+    "caps",
+    "a",
+    "s",
+    "d",
+    "f",
+    "g",
+    "h",
+    "j",
+    "k",
+    "l",
+    "scln",
+    "quot",
+    "ret",
+    "lsft",
+    "z",
+    "x",
+    "c",
+    "v",
+    "b",
+    "n",
+    "m",
+    "comm",
+    "dot",
+    "slsh",
+    "rsft",
+    "lctl",
+    "lmet",
+    "lalt",
+    "spc",
+    "ralt",
+    "rmet",
+    "rctl",
   ],
   layers: [
     {
       name: "base",
-      keys: Object.fromEntries([
-        "esc", "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12",
-        "grv", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "min", "eql", "bspc",
-        "tab", "q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "lbrc", "rbrc", "bsls",
-        "caps", "a", "s", "d", "f", "g", "h", "j", "k", "l", "scln", "quot", "ret",
-        "lsft", "z", "x", "c", "v", "b", "n", "m", "comm", "dot", "slsh", "rsft",
-        "lctl", "lmet", "lalt", "spc", "ralt", "rmet", "rctl",
-      ].map((k) => [k, k])),
+      keys: Object.fromEntries(
+        [
+          "esc",
+          "f1",
+          "f2",
+          "f3",
+          "f4",
+          "f5",
+          "f6",
+          "f7",
+          "f8",
+          "f9",
+          "f10",
+          "f11",
+          "f12",
+          "grv",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9",
+          "0",
+          "min",
+          "eql",
+          "bspc",
+          "tab",
+          "q",
+          "w",
+          "e",
+          "r",
+          "t",
+          "y",
+          "u",
+          "i",
+          "o",
+          "p",
+          "lbrc",
+          "rbrc",
+          "bsls",
+          "caps",
+          "a",
+          "s",
+          "d",
+          "f",
+          "g",
+          "h",
+          "j",
+          "k",
+          "l",
+          "scln",
+          "quot",
+          "ret",
+          "lsft",
+          "z",
+          "x",
+          "c",
+          "v",
+          "b",
+          "n",
+          "m",
+          "comm",
+          "dot",
+          "slsh",
+          "rsft",
+          "lctl",
+          "lmet",
+          "lalt",
+          "spc",
+          "ralt",
+          "rmet",
+          "rctl",
+        ].map((k) => [k, k])
+      ),
     },
     {
       name: "nav",
-      keys: Object.fromEntries([
-        "esc", "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12",
-        "grv", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "min", "eql", "bspc",
-        "tab", "q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "lbrc", "rbrc", "bsls",
-        "caps", "a", "s", "d", "f", "g", "h", "j", "k", "l", "scln", "quot", "ret",
-        "lsft", "z", "x", "c", "v", "b", "n", "m", "comm", "dot", "slsh", "rsft",
-        "lctl", "lmet", "lalt", "spc", "ralt", "rmet", "rctl",
-      ].map((k) => [k, "_"])),
+      keys: Object.fromEntries(
+        [
+          "esc",
+          "f1",
+          "f2",
+          "f3",
+          "f4",
+          "f5",
+          "f6",
+          "f7",
+          "f8",
+          "f9",
+          "f10",
+          "f11",
+          "f12",
+          "grv",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9",
+          "0",
+          "min",
+          "eql",
+          "bspc",
+          "tab",
+          "q",
+          "w",
+          "e",
+          "r",
+          "t",
+          "y",
+          "u",
+          "i",
+          "o",
+          "p",
+          "lbrc",
+          "rbrc",
+          "bsls",
+          "caps",
+          "a",
+          "s",
+          "d",
+          "f",
+          "g",
+          "h",
+          "j",
+          "k",
+          "l",
+          "scln",
+          "quot",
+          "ret",
+          "lsft",
+          "z",
+          "x",
+          "c",
+          "v",
+          "b",
+          "n",
+          "m",
+          "comm",
+          "dot",
+          "slsh",
+          "rsft",
+          "lctl",
+          "lmet",
+          "lalt",
+          "spc",
+          "ralt",
+          "rmet",
+          "rctl",
+        ].map((k) => [k, "_"])
+      ),
     },
   ],
 };
@@ -124,14 +329,14 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     setError(null);
     try {
       let loadedConfig: KeyboardConfig | null;
-      
+
       if (isElectron) {
         loadedConfig = await window.kanata.loadConfig();
       } else {
         // Use mock config for development outside Electron
         loadedConfig = MOCK_CONFIG;
       }
-      
+
       if (loadedConfig) {
         setConfig(loadedConfig);
         // Set active layer to first layer if current doesn't exist
@@ -170,24 +375,21 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   );
 
   // Add a new layer
-  const addLayer = useCallback(
-    (name: string) => {
-      setConfig((prev) => {
-        if (!prev) return prev;
-        // Don't add duplicate
-        if (prev.layers.find((l) => l.name === name)) return prev;
-        // Create transparent layer
-        const newLayer: KeyboardLayer = {
-          name,
-          keys: Object.fromEntries(prev.sourceKeys.map((k) => [k, "_"])),
-        };
-        return { ...prev, layers: [...prev.layers, newLayer] };
-      });
-      setActiveLayer(name);
-      setIsDirty(true);
-    },
-    []
-  );
+  const addLayer = useCallback((name: string) => {
+    setConfig((prev) => {
+      if (!prev) return prev;
+      // Don't add duplicate
+      if (prev.layers.find((l) => l.name === name)) return prev;
+      // Create transparent layer
+      const newLayer: KeyboardLayer = {
+        name,
+        keys: Object.fromEntries(prev.sourceKeys.map((k) => [k, "_"])),
+      };
+      return { ...prev, layers: [...prev.layers, newLayer] };
+    });
+    setActiveLayer(name);
+    setIsDirty(true);
+  }, []);
 
   // Remove a layer
   const removeLayer = useCallback(
@@ -231,14 +433,14 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   // Apply all pending changes - saves to disk and restarts Kanata
   const applyChanges = useCallback(async (): Promise<boolean> => {
     if (!config) return false;
-    
+
     if (!isElectron) {
       // In dev mode without Electron, just log
       console.log("Config would be saved:", config);
       setIsDirty(false);
       return true;
     }
-    
+
     try {
       const success = await window.kanata.saveConfig(config);
       if (success) {
@@ -289,4 +491,3 @@ export function useConfig(): ConfigContextValue {
   }
   return context;
 }
-

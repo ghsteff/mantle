@@ -1,5 +1,7 @@
-import { type KeyDef, getKeyLabel } from "./layout";
-import { formatAction } from "./utils/format-action";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../../../ui";
+import { formatAction } from "../../utils/format-action";
+import { type KeyDef, getKeyLabel } from "../../utils/layout";
+import { parseActionDetails } from "./utils/parse-action-details";
 
 interface KeyProps {
   keyDef: KeyDef;
@@ -47,13 +49,30 @@ export function Key({
   const left = keyDef.col * unitSize;
   const top = keyDef.row * unitSize;
 
-  return (
+  // Calculate max characters based on key width (roughly 6 chars per unit width)
+  const maxChars = Math.floor(keyDef.width * 6);
+  const truncatedLabel =
+    displayLabel.length > maxChars
+      ? displayLabel.slice(0, maxChars - 1) + "…"
+      : displayLabel;
+  const truncatedSubLabel =
+    displaySubLabel && displaySubLabel.length > maxChars
+      ? displaySubLabel.slice(0, maxChars - 1) + "…"
+      : displaySubLabel;
+
+  // Show tooltip if content is truncated or if key has a modified action
+  const needsTooltip =
+    displayLabel.length > maxChars ||
+    (displaySubLabel && displaySubLabel.length > maxChars) ||
+    isModified;
+
+  const keyButton = (
     <button
       type="button"
       onClick={onClick}
       className={`
         absolute font-mono text-xs select-none
-        flex flex-col items-center justify-center
+        flex flex-col items-center justify-center overflow-hidden
         rounded-none border transition-all duration-100
         ${
           isSelected
@@ -70,19 +89,18 @@ export function Key({
         left: `${left + 2}px`,
         top: `${top + 2}px`,
       }}
-      title={`${keyDef.id}: ${action}`}
     >
       {/* Main label */}
       <span
-        className={`leading-none ${keyDef.width >= 1.5 ? "text-[10px]" : "text-xs"}`}
+        className={`leading-none truncate max-w-full px-1 ${keyDef.width >= 1.5 ? "text-[10px]" : "text-xs"}`}
       >
-        {displayLabel}
+        {truncatedLabel}
       </span>
 
       {/* Sub-label (shifted character or action secondary info) */}
-      {displaySubLabel && (
-        <span className="text-[9px] text-text-muted leading-none mt-0.5">
-          {displaySubLabel}
+      {truncatedSubLabel && (
+        <span className="text-[9px] text-text-muted leading-none mt-0.5 truncate max-w-full px-1">
+          {truncatedSubLabel}
         </span>
       )}
 
@@ -91,5 +109,34 @@ export function Key({
         <div className="absolute bottom-1 right-1 w-1 h-1 rounded-full bg-primary" />
       )}
     </button>
+  );
+
+  if (!needsTooltip) {
+    return keyButton;
+  }
+
+  const actionDetails = parseActionDetails(action);
+
+  return (
+    <Tooltip delayDuration={300}>
+      <TooltipTrigger asChild>{keyButton}</TooltipTrigger>
+      <TooltipContent side="top" className="max-w-xs">
+        <div className="space-y-1 text-sm">
+          <div className="font-semibold">{actionDetails.type}</div>
+          {actionDetails.tap && (
+            <div>
+              <span className="text-muted-foreground">Tap:</span>{" "}
+              <span>{actionDetails.tap}</span>
+            </div>
+          )}
+          {actionDetails.hold && (
+            <div>
+              <span className="text-muted-foreground">Hold:</span>{" "}
+              <span>{actionDetails.hold}</span>
+            </div>
+          )}
+        </div>
+      </TooltipContent>
+    </Tooltip>
   );
 }

@@ -5,9 +5,9 @@ import {
   getLayoutWidth,
   getLayoutHeight,
   type KeyDef,
-} from "./layout";
-import { useConfig } from "../../contexts";
-import { Switch } from "../ui";
+} from "../utils/layout";
+import { useConfig } from "../../../contexts";
+import { Switch } from "../../ui";
 
 interface KeyboardGridProps {
   layout?: KeyDef[];
