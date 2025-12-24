@@ -2,6 +2,7 @@ import { ipcMain, BrowserWindow, shell } from "electron";
 import {
   getConfigManager,
   getProcessManager,
+  getKanataBinaryPath,
   type KeyboardConfig,
   type KanataStatus,
   type KanataLogEntry,
@@ -126,6 +127,12 @@ export function registerIpcHandlers(): void {
     // Open macOS System Settings to Input Monitoring
     // This URL scheme opens the Privacy & Security > Input Monitoring pane
     await shell.openExternal("x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent");
+
+    // Also reveal the binary in Finder so the user can drag and drop it
+    if (process.platform === "darwin") {
+      const binaryPath = getKanataBinaryPath();
+      shell.showItemInFolder(binaryPath);
+    }
   });
 }
 
