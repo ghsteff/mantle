@@ -42,7 +42,6 @@ export function ActionEditor({
     holdLayer,
     holdLayerMode,
     timeout,
-    layerName,
     layerMode,
     setActionType,
     setSimpleKeyType,
@@ -57,7 +56,6 @@ export function ActionEditor({
     setHoldLayer,
     setHoldLayerMode,
     setTimeout,
-    setLayerName,
     setLayerMode,
   } = useActionEditor({ keyId, currentAction, onSave, layers });
 

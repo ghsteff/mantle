@@ -1,7 +1,13 @@
 import { useMemo } from "react";
 import { Key } from "./key";
-import { TKL_LAYOUT, getLayoutWidth, getLayoutHeight, type KeyDef } from "./layout";
+import {
+  TKL_LAYOUT,
+  getLayoutWidth,
+  getLayoutHeight,
+  type KeyDef,
+} from "./layout";
 import { useConfig } from "../../contexts";
+import { Switch } from "../ui";
 
 interface KeyboardGridProps {
   layout?: KeyDef[];
@@ -11,7 +17,14 @@ interface KeyboardGridProps {
  * Renders the full keyboard grid.
  */
 export function KeyboardGrid({ layout = TKL_LAYOUT }: KeyboardGridProps) {
-  const { config, selectedKey, activeLayer, setSelectedKey } = useConfig();
+  const {
+    config,
+    selectedKey,
+    activeLayer,
+    setSelectedKey,
+    showActions,
+    setShowActions,
+  } = useConfig();
 
   // Get the current layer's key mappings
   const layerKeys = useMemo(() => {
@@ -32,7 +45,13 @@ export function KeyboardGrid({ layout = TKL_LAYOUT }: KeyboardGridProps) {
   const gridHeight = layoutHeight * unitSize;
 
   return (
-    <div className="flex-1 flex items-center justify-center p-4 overflow-auto">
+    <div className="flex-1 flex items-center justify-center p-4 overflow-auto relative">
+      {/* View mode toggle */}
+      <div className="absolute top-4 right-4 flex items-center gap-2 bg-bg-secondary border border-border px-3 py-1.5 z-10">
+        <span className="text-xs text-text-muted">Keys</span>
+        <Switch checked={showActions} onCheckedChange={setShowActions} />
+        <span className="text-xs text-text-muted">Actions</span>
+      </div>
       <div
         className="relative"
         style={{
@@ -44,7 +63,7 @@ export function KeyboardGrid({ layout = TKL_LAYOUT }: KeyboardGridProps) {
       >
         {layout.map((keyDef) => {
           if (keyDef.isSpacer) return null;
-          
+
           const action = layerKeys[keyDef.id] || keyDef.id;
           const isSelected = selectedKey === keyDef.id;
 
@@ -56,6 +75,7 @@ export function KeyboardGrid({ layout = TKL_LAYOUT }: KeyboardGridProps) {
               isSelected={isSelected}
               onClick={() => setSelectedKey(isSelected ? null : keyDef.id)}
               unitSize={unitSize}
+              showAction={showActions}
             />
           );
         })}
@@ -63,4 +83,3 @@ export function KeyboardGrid({ layout = TKL_LAYOUT }: KeyboardGridProps) {
     </div>
   );
 }
-

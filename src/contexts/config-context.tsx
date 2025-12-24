@@ -26,8 +26,10 @@ interface ConfigContextValue {
   isDirty: boolean;
   selectedKey: string | null;
   activeLayer: string;
+  showActions: boolean;
   setSelectedKey: (key: string | null) => void;
   setActiveLayer: (layerName: string) => void;
+  setShowActions: (show: boolean) => void;
   updateKey: (layerName: string, keyId: string, action: string) => void;
   addLayer: (name: string) => void;
   removeLayer: (name: string) => void;
@@ -41,6 +43,30 @@ const ConfigContext = createContext<ConfigContextValue | null>(null);
 
 // Check if we're running in Electron with the preload script
 const isElectron = typeof window !== "undefined" && window.kanata !== undefined;
+
+// LocalStorage key for showActions preference
+const SHOW_ACTIONS_STORAGE_KEY = "kanata-ui.showActions";
+
+// Load showActions preference from localStorage
+function loadShowActionsPreference(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const stored = localStorage.getItem(SHOW_ACTIONS_STORAGE_KEY);
+    return stored === "true";
+  } catch {
+    return false;
+  }
+}
+
+// Save showActions preference to localStorage
+function saveShowActionsPreference(value: boolean): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(SHOW_ACTIONS_STORAGE_KEY, String(value));
+  } catch {
+    // Ignore localStorage errors
+  }
+}
 
 // Mock config for development outside Electron
 const MOCK_CONFIG: KeyboardConfig = {
@@ -84,7 +110,13 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [activeLayer, setActiveLayer] = useState("base");
+  const [showActions, setShowActions] = useState(loadShowActionsPreference);
   const [isDirty, setIsDirty] = useState(false);
+
+  // Persist showActions to localStorage whenever it changes
+  useEffect(() => {
+    saveShowActionsPreference(showActions);
+  }, [showActions]);
 
   // Load config on mount
   const loadConfig = useCallback(async () => {
@@ -232,8 +264,10 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     isDirty,
     selectedKey,
     activeLayer,
+    showActions,
     setSelectedKey,
     setActiveLayer,
+    setShowActions,
     updateKey,
     addLayer,
     removeLayer,

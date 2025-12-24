@@ -1,4 +1,5 @@
 import { type KeyDef, getKeyLabel } from "./layout";
+import { formatAction } from "./utils/format-action";
 
 interface KeyProps {
   keyDef: KeyDef;
@@ -6,6 +7,7 @@ interface KeyProps {
   isSelected: boolean;
   onClick: () => void;
   unitSize: number;
+  showAction?: boolean;
 }
 
 /**
@@ -17,8 +19,22 @@ export function Key({
   isSelected,
   onClick,
   unitSize,
+  showAction = false,
 }: KeyProps) {
   const { label, subLabel } = getKeyLabel(keyDef.id);
+
+  // Determine what to display based on showAction prop
+  let displayLabel: string;
+  let displaySubLabel: string | undefined;
+
+  if (showAction) {
+    const formatted = formatAction(action);
+    displayLabel = formatted.primary;
+    displaySubLabel = formatted.secondary;
+  } else {
+    displayLabel = label;
+    displaySubLabel = subLabel;
+  }
 
   // Check if the action is different from the default (modified)
   const isModified = action !== keyDef.id && action !== "_";
@@ -56,19 +72,19 @@ export function Key({
       }}
       title={`${keyDef.id}: ${action}`}
     >
-      {/* Sub-label (shifted character) */}
-      {subLabel && (
-        <span className="text-[9px] text-text-muted leading-none mb-0.5">
-          {subLabel}
-        </span>
-      )}
-
       {/* Main label */}
       <span
         className={`leading-none ${keyDef.width >= 1.5 ? "text-[10px]" : "text-xs"}`}
       >
-        {label}
+        {displayLabel}
       </span>
+
+      {/* Sub-label (shifted character or action secondary info) */}
+      {displaySubLabel && (
+        <span className="text-[9px] text-text-muted leading-none mt-0.5">
+          {displaySubLabel}
+        </span>
+      )}
 
       {/* Modified indicator */}
       {isModified && (
