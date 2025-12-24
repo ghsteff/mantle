@@ -23,6 +23,7 @@ interface ConfigContextValue {
   config: KeyboardConfig | null;
   isLoading: boolean;
   error: string | null;
+  isDirty: boolean;
   selectedKey: string | null;
   activeLayer: string;
   setSelectedKey: (key: string | null) => void;
@@ -31,7 +32,8 @@ interface ConfigContextValue {
   addLayer: (name: string) => void;
   removeLayer: (name: string) => void;
   renameLayer: (oldName: string, newName: string) => void;
-  saveConfig: () => Promise<boolean>;
+  applyChanges: () => Promise<boolean>;
+  discardChanges: () => Promise<void>;
   reloadConfig: () => Promise<void>;
 }
 
@@ -194,8 +196,8 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     setIsDirty(true);
   }, []);
 
-  // Save config to disk
-  const saveConfig = useCallback(async (): Promise<boolean> => {
+  // Apply all pending changes - saves to disk and restarts Kanata
+  const applyChanges = useCallback(async (): Promise<boolean> => {
     if (!config) return false;
     
     if (!isElectron) {
@@ -217,19 +219,17 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     }
   }, [config]);
 
-  // Auto-save when dirty (debounced)
-  useEffect(() => {
-    if (!isDirty) return;
-    const timeout = setTimeout(() => {
-      saveConfig();
-    }, 1000);
-    return () => clearTimeout(timeout);
-  }, [isDirty, saveConfig]);
+  // Discard all pending changes - reload from disk
+  const discardChanges = useCallback(async (): Promise<void> => {
+    setIsDirty(false);
+    await loadConfig();
+  }, [loadConfig]);
 
   const value: ConfigContextValue = {
     config,
     isLoading,
     error,
+    isDirty,
     selectedKey,
     activeLayer,
     setSelectedKey,
@@ -238,7 +238,8 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     addLayer,
     removeLayer,
     renameLayer,
-    saveConfig,
+    applyChanges,
+    discardChanges,
     reloadConfig: loadConfig,
   };
 

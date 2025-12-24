@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   ConfigProvider,
   KanataProvider,
@@ -9,16 +10,51 @@ import { KeyInspector, LayerTabs } from "./components/editor";
 import { StatusIndicator } from "./components/status";
 
 /**
- * Header with layer tabs and status indicator.
+ * Header with layer tabs, apply changes button, and status indicator.
  */
 function Header() {
+  const { isDirty, applyChanges, discardChanges } = useConfig();
+  const [isApplying, setIsApplying] = useState(false);
+
+  const handleApply = async () => {
+    setIsApplying(true);
+    try {
+      await applyChanges();
+    } finally {
+      setIsApplying(false);
+    }
+  };
+
   return (
     <header className="h-12 bg-bg-secondary border-b border-border flex items-center justify-between px-4">
       <div className="flex items-center gap-4">
-        <h1 className="text-sm font-semibold text-text-primary">Kanata UI</h1>
+        <h1 className="text-sm font-semibold text-text-primary">Mantle</h1>
         <LayerTabs />
       </div>
-      <StatusIndicator />
+      <div className="flex items-center gap-3">
+        {isDirty && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-text-muted">Unsaved changes</span>
+            <button
+              onClick={discardChanges}
+              disabled={isApplying}
+              className="px-3 py-1.5 text-sm text-text-secondary hover:text-text-primary
+                         border border-border rounded transition-colors disabled:opacity-50"
+            >
+              Discard
+            </button>
+            <button
+              onClick={handleApply}
+              disabled={isApplying}
+              className="px-3 py-1.5 text-sm bg-accent hover:bg-accent-hover
+                         text-white rounded font-medium transition-colors disabled:opacity-50"
+            >
+              {isApplying ? "Applying..." : "Apply Changes"}
+            </button>
+          </div>
+        )}
+        <StatusIndicator />
+      </div>
     </header>
   );
 }
