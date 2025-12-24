@@ -4,8 +4,6 @@ import { getKanataBinaryPath } from "./binary-path";
 import { getConfigManager } from "./config-manager";
 import * as sudoPrompt from "@vscode/sudo-prompt";
 import * as fs from "node:fs";
-import * as path from "node:path";
-import { app } from "electron";
 
 export type KanataStatus = "stopped" | "starting" | "running" | "error";
 
@@ -24,6 +22,27 @@ export interface KanataProcessEvents {
 
 const isMacOS = process.platform === "darwin";
 
+// eslint-disable-next-line no-control-regex
+const ANSI_REGEX = /[\x1B]\[[0-9;]*m/g;
+
+/**
+ * Strip ANSI color codes and classify log line
+ */
+function parseLogLine(
+  line: string
+): { clean: string; isError: boolean } | null {
+  const clean = line.replace(ANSI_REGEX, "").trim();
+  if (!clean) return null;
+
+  const isError =
+    clean.includes("[ERROR]") ||
+    clean.includes("Permission denied") ||
+    clean.includes("not permitted") ||
+    clean.includes("exclusive access");
+
+  return { clean, isError };
+}
+
 /**
  * Manages the Kanata child process lifecycle.
  * On macOS, uses sudo-prompt to request elevated permissions.
@@ -38,14 +57,9 @@ export class KanataProcessManager extends EventEmitter {
   private restartTimeoutId: NodeJS.Timeout | null = null;
   private intentionalStop = false;
   private pollInterval: NodeJS.Timeout | null = null;
-  private pidFile: string;
-
-  constructor() {
-    super();
-    // Store PID file in app data directory
-    const appDataPath = app.getPath("userData");
-    this.pidFile = path.join(appDataPath, "kanata.pid");
-  }
+  private logFile = "";
+  private logTailInterval: NodeJS.Timeout | null = null;
+  private lastLogPosition = 0;
 
   getStatus(): KanataStatus {
     return this.status;
@@ -60,35 +74,23 @@ export class KanataProcessManager extends EventEmitter {
   }
 
   /**
-   * Check if a Kanata process is already running
+   * Find running Kanata process by name
    */
-  private getRunningKanataPid(): number | null {
+  private findKanataPid(): number | null {
     try {
-      // Check our PID file first
-      if (fs.existsSync(this.pidFile)) {
-        const pid = parseInt(fs.readFileSync(this.pidFile, "utf8").trim(), 10);
-        if (pid && this.isProcessRunning(pid)) {
-          // Verify it's actually a kanata process, not something else
-          try {
-            const psResult = execSync(
-              `ps -p ${pid} -o command= 2>/dev/null || true`,
-              {
-                encoding: "utf8",
-              }
-            ).trim();
-            if (
-              psResult.includes("kanata") &&
-              !psResult.includes("kanata-ui")
-            ) {
-              return pid;
-            }
-          } catch {
-            // Fall through to cleanup
-          }
-        }
-        // PID file exists but process is dead or wrong, clean up
-        fs.unlinkSync(this.pidFile);
-      }
+      // Match kanata_macos_arm64, kanata_macos_x64, kanata_linux_x64, etc.
+      // Exclude mantle processes
+      const result = execSync(
+        `pgrep -f 'kanata_(macos|linux|windows)' 2>/dev/null | head -1`,
+        { encoding: "utf8" }
+      ).trim();
+
+      if (!result) return null;
+
+      const pid = parseInt(result, 10);
+      if (!pid || !this.isProcessRunning(pid)) return null;
+
+      return pid;
     } catch {
       // Ignore errors
     }
@@ -97,9 +99,12 @@ export class KanataProcessManager extends EventEmitter {
 
   private isProcessRunning(pid: number): boolean {
     try {
-      // Check if process exists by sending signal 0
-      process.kill(pid, 0);
-      return true;
+      // On macOS, kanata runs as root so we can't use process.kill(pid, 0)
+      // Use ps to check if the process exists instead
+      const result = execSync(`ps -p ${pid} -o pid= 2>/dev/null || true`, {
+        encoding: "utf8",
+      }).trim();
+      return result !== "";
     } catch {
       return false;
     }
@@ -110,15 +115,9 @@ export class KanataProcessManager extends EventEmitter {
    * On macOS, prompts for sudo password.
    */
   async start(): Promise<boolean> {
-    console.log("[KanataProcessManager] start() called");
-
     // Check for existing process first
-    const existingPid = this.getRunningKanataPid();
+    const existingPid = this.findKanataPid();
     if (existingPid) {
-      console.log(
-        "[KanataProcessManager] Kanata already running at PID:",
-        existingPid
-      );
       this.emitLog("stdout", `Kanata already running (PID: ${existingPid})`);
       this.setStatus("running");
       this.startProcessPolling(existingPid);
@@ -126,7 +125,6 @@ export class KanataProcessManager extends EventEmitter {
     }
 
     if (this.process) {
-      console.log("[KanataProcessManager] Already running");
       this.emitLog("stderr", "Kanata is already running");
       return false;
     }
@@ -138,13 +136,9 @@ export class KanataProcessManager extends EventEmitter {
       const binaryPath = getKanataBinaryPath();
       const configPath = getConfigManager().getKbdConfigPath();
 
-      console.log("[KanataProcessManager] Binary:", binaryPath);
-      console.log("[KanataProcessManager] Config:", configPath);
-
-      this.emitLog("stdout", `Starting Kanata...`);
+      this.emitLog("stdout", "Starting Kanata...");
 
       if (isMacOS) {
-        // Kill any stray kanata processes before starting
         await this.killStrayProcesses();
         return this.startWithSudo(binaryPath, configPath);
       } else {
@@ -152,7 +146,6 @@ export class KanataProcessManager extends EventEmitter {
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      console.error("[KanataProcessManager] Failed to start:", message);
       this.emitLog("stderr", `Failed to start Kanata: ${message}`);
       this.setStatus("error");
       this.emit("error", message);
@@ -168,22 +161,11 @@ export class KanataProcessManager extends EventEmitter {
       stdio: ["ignore", "pipe", "pipe"],
     });
 
-    const pid = this.process.pid;
-    console.log("[KanataProcessManager] Process spawned, pid:", pid);
-
-    if (pid) {
-      fs.writeFileSync(this.pidFile, String(pid));
-    }
-
     this.setupProcessHandlers();
     this.setStatus("running");
     this.restartAttempts = 0;
     return true;
   }
-
-  private logFile = "";
-  private logTailInterval: NodeJS.Timeout | null = null;
-  private lastLogPosition = 0;
 
   /**
    * Start Kanata with sudo on macOS
@@ -193,70 +175,116 @@ export class KanataProcessManager extends EventEmitter {
     configPath: string
   ): Promise<boolean> {
     return new Promise((resolve) => {
-      // Use /tmp for log file since root can write there
-      this.logFile = `/tmp/kanata-ui-${Date.now()}.log`;
-
-      // Simple background execution with output redirection
-      const command = `"${binaryPath}" -n -c "${configPath}" > "${this.logFile}" 2>&1 & echo $! > "${this.pidFile}"`;
+      this.logFile = `/tmp/mantle-${Date.now()}.log`;
+      const command = `"${binaryPath}" -n -c "${configPath}" > "${this.logFile}" 2>&1 &`;
 
       this.emitLog("stdout", "Requesting administrator privileges...");
 
-      sudoPrompt.exec(
-        command,
-        { name: "Kanata UI" },
-        (error, stdout, stderr) => {
-          if (error) {
-            // User cancelled or actual error
-            console.error("[KanataProcessManager] Sudo error:", error);
-            // Don't show "User cancelled" as a scary error
-            if (error.message?.includes("canceled") || error.message?.includes("cancelled")) {
-              this.emitLog("stdout", "Start cancelled");
-            } else {
-              this.emitLog("stderr", `${error.message}`);
-            }
-            this.setStatus("stopped");
-            resolve(false);
-            return;
+      sudoPrompt.exec(command, { name: "Mantle" }, (error) => {
+        if (error) {
+          if (
+            error.message?.includes("canceled") ||
+            error.message?.includes("cancelled")
+          ) {
+            this.emitLog("stdout", "Start cancelled");
+          } else {
+            this.emitLog("stderr", error.message);
           }
-
-          // Log stdout/stderr for debugging but don't show as errors
-          if (stdout) {
-            const out = typeof stdout === "string" ? stdout : stdout.toString();
-            if (out.trim()) {
-              console.log("[Sudo stdout]", out);
-            }
-          }
-          if (stderr) {
-            const err = typeof stderr === "string" ? stderr : stderr.toString();
-            if (err.trim()) {
-              console.log("[Sudo stderr]", err);
-              // Only show as error if it contains actual error keywords
-              if (err.includes("error") || err.includes("failed") || err.includes("denied")) {
-                this.emitLog("stderr", err);
-              }
-            }
-          }
-
-          // Give it a moment to start and write the PID file
-          setTimeout(() => {
-            const pid = this.getRunningKanataPid();
-            if (pid) {
-              this.emitLog("stdout", `Kanata started (PID: ${pid})`);
-              this.setStatus("running");
-              this.restartAttempts = 0;
-              this.startProcessPolling(pid);
-              this.startLogTailing();
-              resolve(true);
-            } else {
-              // Check log file for errors
-              this.checkLogForErrors();
-              this.setStatus("error");
-              resolve(false);
-            }
-          }, 1500);
+          this.setStatus("stopped");
+          resolve(false);
+          return;
         }
-      );
+
+        // Wait for process to start, then verify it's running
+        this.waitForKanataStart(resolve);
+      });
     });
+  }
+
+  /**
+   * Poll until Kanata starts or timeout
+   */
+  private waitForKanataStart(
+    resolve: (success: boolean) => void,
+    attempts = 0
+  ): void {
+    const maxAttempts = 5;
+    const delay = 500;
+
+    setTimeout(() => {
+      const pid = this.findKanataPid();
+
+      if (pid) {
+        this.emitLog("stdout", `Kanata started (PID: ${pid})`);
+        this.setStatus("running");
+        this.restartAttempts = 0;
+        this.startProcessPolling(pid);
+        this.startLogTailing();
+        resolve(true);
+        return;
+      }
+
+      // Check logs for success indicators or errors
+      const logContent = this.readLogFile();
+      const hasSuccess =
+        logContent.includes("connected") ||
+        logContent.includes("driver activated") ||
+        logContent.includes("Starting kanata proper");
+      const hasErrors = logContent.includes("[ERROR]");
+
+      if (hasSuccess && !hasErrors) {
+        // Logs show it's working, keep waiting for PID
+        if (attempts < maxAttempts) {
+          this.waitForKanataStart(resolve, attempts + 1);
+          return;
+        }
+        // Max attempts but logs show success - trust the logs
+        this.emitLog("stdout", "Kanata started");
+        this.setStatus("running");
+        this.restartAttempts = 0;
+        this.startLogTailing();
+        resolve(true);
+        return;
+      }
+
+      if (attempts < maxAttempts && !hasErrors) {
+        // Still starting, wait more
+        this.waitForKanataStart(resolve, attempts + 1);
+        return;
+      }
+
+      // Failed to start
+      this.showLogErrors();
+      this.setStatus("error");
+      resolve(false);
+    }, delay);
+  }
+
+  private readLogFile(): string {
+    try {
+      if (this.logFile && fs.existsSync(this.logFile)) {
+        return fs.readFileSync(this.logFile, "utf8");
+      }
+    } catch {
+      // Ignore
+    }
+    return "";
+  }
+
+  private showLogErrors(): void {
+    const content = this.readLogFile();
+    if (!content.trim()) {
+      this.emitLog("stderr", "Kanata process not found after start");
+      return;
+    }
+
+    for (const line of content.split("\n").slice(-10)) {
+      const parsed = parseLogLine(line);
+      if (parsed) {
+        this.emitLog(parsed.isError ? "stderr" : "stdout", parsed.clean);
+        this.checkInputMonitoringError(parsed.clean);
+      }
+    }
   }
 
   private startLogTailing(): void {
@@ -268,41 +296,39 @@ export class KanataProcessManager extends EventEmitter {
         if (!this.logFile || !fs.existsSync(this.logFile)) return;
 
         const stats = fs.statSync(this.logFile);
-        if (stats.size > this.lastLogPosition) {
-          const fd = fs.openSync(this.logFile, "r");
-          const buffer = Buffer.alloc(stats.size - this.lastLogPosition);
-          fs.readSync(fd, buffer, 0, buffer.length, this.lastLogPosition);
-          fs.closeSync(fd);
+        if (stats.size <= this.lastLogPosition) return;
 
-          const newContent = buffer.toString("utf8").trim();
-          if (newContent) {
-            for (const line of newContent.split("\n")) {
-              // Strip ANSI color codes for analysis
-              const cleanLine = line.replace(/\x1b\[[0-9;]*m/g, "").trim();
-              if (cleanLine) {
-                // Only treat actual ERROR level or specific error messages as errors
-                const isError =
-                  cleanLine.includes("[ERROR]") ||
-                  cleanLine.includes("Permission denied") ||
-                  cleanLine.includes("not permitted") ||
-                  cleanLine.includes("exclusive access");
-                this.emitLog(isError ? "stderr" : "stdout", cleanLine);
-                
-                // Detect Input Monitoring permission error
-                if (cleanLine.includes("not permitted") && cleanLine.includes("IOHIDDeviceOpen")) {
-                  this.emitLog("stderr", "⚠️ Input Monitoring permission required!");
-                  this.emitLog("stderr", "Go to: System Settings → Privacy & Security → Input Monitoring");
-                  this.emitLog("stderr", "Add the kanata binary and enable it.");
-                }
-              }
-            }
+        const fd = fs.openSync(this.logFile, "r");
+        const buffer = Buffer.alloc(stats.size - this.lastLogPosition);
+        fs.readSync(fd, buffer, 0, buffer.length, this.lastLogPosition);
+        fs.closeSync(fd);
+
+        for (const line of buffer.toString("utf8").split("\n")) {
+          const parsed = parseLogLine(line);
+          if (parsed) {
+            this.emitLog(parsed.isError ? "stderr" : "stdout", parsed.clean);
+            this.checkInputMonitoringError(parsed.clean);
           }
-          this.lastLogPosition = stats.size;
         }
+        this.lastLogPosition = stats.size;
       } catch {
         // Ignore read errors
       }
     }, 1000);
+  }
+
+  private checkInputMonitoringError(line: string): void {
+    if (line.includes("not permitted") && line.includes("IOHIDDeviceOpen")) {
+      this.emitLog("stderr", "⚠️ Input Monitoring permission required!");
+      this.emitLog(
+        "stderr",
+        "Click the button above to open System Settings and reveal the kanata binary in Finder."
+      );
+      this.emitLog(
+        "stderr",
+        "Then drag the kanata binary into the Input Monitoring list."
+      );
+    }
   }
 
   private stopLogTailing(): void {
@@ -312,36 +338,11 @@ export class KanataProcessManager extends EventEmitter {
     }
   }
 
-  private checkLogForErrors(): void {
-    try {
-      if (this.logFile && fs.existsSync(this.logFile)) {
-        const content = fs.readFileSync(this.logFile, "utf8");
-        if (content.trim()) {
-          for (const line of content.split("\n").slice(-10)) {
-            if (line.trim()) {
-              this.emitLog("stderr", line);
-            }
-          }
-        } else {
-          this.emitLog("stderr", "Kanata process not found after start");
-        }
-      } else {
-        this.emitLog("stderr", "Kanata process not found after start");
-      }
-    } catch {
-      this.emitLog("stderr", "Kanata process not found after start");
-    }
-  }
-
-  /**
-   * Poll to check if the process is still running
-   */
   private startProcessPolling(pid: number): void {
     this.stopProcessPolling();
 
     this.pollInterval = setInterval(() => {
       if (!this.isProcessRunning(pid)) {
-        console.log("[KanataProcessManager] Process no longer running");
         this.handleProcessExit();
       }
     }, 2000);
@@ -358,15 +359,6 @@ export class KanataProcessManager extends EventEmitter {
     this.stopProcessPolling();
     this.stopLogTailing();
     this.process = null;
-
-    // Clean up PID file
-    try {
-      if (fs.existsSync(this.pidFile)) {
-        fs.unlinkSync(this.pidFile);
-      }
-    } catch {
-      // Ignore
-    }
 
     if (this.intentionalStop) {
       this.emitLog("stdout", "Kanata stopped");
@@ -393,7 +385,7 @@ export class KanataProcessManager extends EventEmitter {
     this.stopProcessPolling();
     this.stopLogTailing();
 
-    // Handle direct process
+    // Handle direct process (non-macOS)
     if (this.process) {
       const proc = this.process;
       return new Promise((resolve) => {
@@ -405,7 +397,6 @@ export class KanataProcessManager extends EventEmitter {
 
         proc.once("exit", () => {
           clearTimeout(timeout);
-          this.cleanupPidFile();
           resolve(true);
         });
 
@@ -414,22 +405,20 @@ export class KanataProcessManager extends EventEmitter {
       });
     }
 
-    // Handle sudo process (macOS) - kill by PID and also by process name to catch stragglers
-    const pid = this.getRunningKanataPid();
-    
+    // Handle sudo process (macOS)
+    const pid = this.findKanataPid();
+    if (!pid) {
+      this.setStatus("stopped");
+      return true;
+    }
+
     return new Promise((resolve) => {
       this.emitLog("stdout", "Stopping Kanata...");
 
-      // Kill by PID if we have it, and also pkill to catch any orphans
-      const killCmd = pid
-        ? `kill ${pid} 2>/dev/null; sleep 0.5; kill -9 ${pid} 2>/dev/null; pkill -9 -f kanata_macos 2>/dev/null; exit 0`
-        : `pkill -9 -f kanata_macos 2>/dev/null; exit 0`;
-
       sudoPrompt.exec(
-        killCmd,
-        { name: "Kanata UI" },
+        `kill ${pid} 2>/dev/null; sleep 0.5; kill -9 ${pid} 2>/dev/null; exit 0`,
+        { name: "Mantle" },
         () => {
-          this.cleanupPidFile();
           this.setStatus("stopped");
           resolve(true);
         }
@@ -437,55 +426,41 @@ export class KanataProcessManager extends EventEmitter {
     });
   }
 
-  private cleanupPidFile(): void {
-    try {
-      if (fs.existsSync(this.pidFile)) {
-        fs.unlinkSync(this.pidFile);
-      }
-    } catch {
-      // Ignore
-    }
-  }
-
   /**
    * Kill any stray kanata processes before starting a new one.
    */
   private async killStrayProcesses(): Promise<void> {
+    const pid = this.findKanataPid();
+    if (!pid) return;
+
     return new Promise((resolve) => {
-      // Check if any kanata processes exist
-      try {
-        const result = execSync("pgrep -f kanata_macos 2>/dev/null || true", {
-          encoding: "utf8",
-        }).trim();
-        
-        if (result) {
-          this.emitLog("stdout", "Cleaning up existing Kanata processes...");
-          sudoPrompt.exec(
-            "pkill -9 -f kanata_macos 2>/dev/null; exit 0",
-            { name: "Kanata UI" },
-            () => {
-              // Wait a bit for the process to fully release resources
-              setTimeout(resolve, 1000);
-            }
-          );
-        } else {
-          resolve();
-        }
-      } catch {
-        resolve();
-      }
+      this.emitLog("stdout", "Cleaning up existing Kanata processes...");
+      sudoPrompt.exec(
+        `kill -9 ${pid} 2>/dev/null; exit 0`,
+        { name: "Mantle" },
+        () => setTimeout(resolve, 1000)
+      );
     });
   }
 
   async restart(): Promise<boolean> {
     await this.stop();
-    // Wait for process to fully release the keyboard device
     await new Promise((r) => setTimeout(r, 1500));
     return this.start();
   }
 
+  /**
+   * Reload config by restarting Kanata.
+   * Note: Signal-based reload (SIGUSR1) requires kanata to be started with -l flag
+   * and doesn't work reliably on macOS with sudo. Full restart is more reliable.
+   */
   async reloadConfig(): Promise<boolean> {
-    this.emitLog("stdout", "Reloading configuration...");
+    if (!this.findKanataPid()) {
+      this.emitLog("stdout", "Kanata not running, skipping reload");
+      return true;
+    }
+
+    this.emitLog("stdout", "Restarting Kanata to apply changes...");
     return this.restart();
   }
 
@@ -495,7 +470,6 @@ export class KanataProcessManager extends EventEmitter {
     this.process.stdout?.on("data", (data: Buffer) => {
       const message = data.toString().trim();
       if (message) {
-        console.log("[Kanata stdout]", message);
         this.emitLog("stdout", message);
       }
     });
@@ -503,27 +477,18 @@ export class KanataProcessManager extends EventEmitter {
     this.process.stderr?.on("data", (data: Buffer) => {
       const message = data.toString().trim();
       if (message) {
-        console.log("[Kanata stderr]", message);
         this.emitLog("stderr", message);
       }
     });
 
     this.process.on("error", (error) => {
-      console.error("[KanataProcessManager] Process error:", error);
       this.emitLog("stderr", `Process error: ${error.message}`);
       this.setStatus("error");
       this.emit("error", error.message);
     });
 
     this.process.on("exit", (code, signal) => {
-      console.log(
-        "[KanataProcessManager] Exit - code:",
-        code,
-        "signal:",
-        signal
-      );
       this.process = null;
-      this.cleanupPidFile();
 
       if (this.intentionalStop) {
         this.emitLog("stdout", "Kanata stopped");

@@ -56,6 +56,7 @@ export class ConfigManager {
   /**
    * Loads the keyboard configuration from the JSON file.
    * Returns null if the file doesn't exist or can't be parsed.
+   * Migrates old configs to include function row if missing.
    */
   loadConfig(): KeyboardConfig | null {
     try {
@@ -63,11 +64,44 @@ export class ConfigManager {
         return null;
       }
       const content = fs.readFileSync(this.jsonConfigPath, "utf-8");
-      return JSON.parse(content) as KeyboardConfig;
+      const config = JSON.parse(content) as KeyboardConfig;
+      
+      // Migrate: add function row if missing
+      return this.migrateConfig(config);
     } catch (error) {
       console.error("Failed to load config:", error);
       return null;
     }
+  }
+
+  /**
+   * Migrates old configs to include new keys (e.g., function row).
+   */
+  private migrateConfig(config: KeyboardConfig): KeyboardConfig {
+    const functionRow = ["esc", "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12"];
+    
+    // Check if function row is missing
+    if (!config.sourceKeys.includes("esc") && !config.sourceKeys.includes("f1")) {
+      console.log("[ConfigManager] Migrating config to add function row");
+      
+      // Add function row to beginning of sourceKeys
+      config.sourceKeys = [...functionRow, ...config.sourceKeys];
+      
+      // Add function row keys to each layer
+      for (const layer of config.layers) {
+        for (const key of functionRow) {
+          if (!(key in layer.keys)) {
+            // Default to passthrough on base layer, transparent on others
+            layer.keys[key] = layer.name === "base" ? key : "_";
+          }
+        }
+      }
+      
+      // Save migrated config
+      this.saveConfig(config);
+    }
+    
+    return config;
   }
 
   /**
