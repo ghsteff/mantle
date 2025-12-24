@@ -128,6 +128,19 @@ export const KEY_LABELS: Record<string, { label: string; subLabel?: string }> =
     down: { label: "↓" },
     left: { label: "←" },
     right: { label: "→" },
+
+    // Media keys
+    mute: { label: "🔇", subLabel: "Mute" },
+    vold: { label: "🔉", subLabel: "Vol -" },
+    volu: { label: "🔊", subLabel: "Vol +" },
+    brdn: { label: "🔅", subLabel: "Bright -" },
+    brup: { label: "🔆", subLabel: "Bright +" },
+    pp: { label: "⏯", subLabel: "Play/Pause" },
+    prev: { label: "⏮", subLabel: "Previous" },
+    next: { label: "⏭", subLabel: "Next" },
+    stop: { label: "⏹", subLabel: "Stop" },
+    mrwd: { label: "⏪", subLabel: "Rewind" },
+    mffd: { label: "⏩", subLabel: "Fast Fwd" },
   };
 
 /**
