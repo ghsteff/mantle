@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 
 interface ActionEditorProps {
   keyId: string;
@@ -225,14 +226,12 @@ export function ActionEditor({
                 <label className="text-text-secondary text-xs uppercase tracking-wide">
                   HOLD TIMEOUT: {timeout}ms
                 </label>
-                <input
-                  type="range"
-                  min={50}
+                <Slider
+                  min={0}
                   max={500}
-                  step={25}
-                  value={timeout}
-                  onChange={(e) => setTimeout(parseInt(e.target.value))}
-                  className="w-full accent-accent"
+                  step={5}
+                  value={[timeout]}
+                  onValueChange={(values) => setTimeout(values[0])}
                 />
                 <div className="text-text-muted text-xs">
                   Time to distinguish between tap and hold
