@@ -7,3 +7,4 @@ export {
   TooltipProvider,
 } from "./tooltip";
 export { MultiSelectCombobox, MultiSelectComboboxChips } from "./multi-select-combobox";
+export { ResizablePanel } from "./resizable-panel";

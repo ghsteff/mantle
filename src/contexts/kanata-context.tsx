@@ -65,25 +65,39 @@ export function KanataProvider({ children }: { children: ReactNode }) {
     });
 
     const unsubCrash = window.kanata.onCrash(({ code, signal }) => {
-      setLogs((prev) => [
-        ...prev,
-        {
-          type: "stderr",
-          message: `Process crashed (code: ${code}, signal: ${signal})`,
-          timestamp: Date.now(),
-        },
-      ]);
+      setLogs((prev) => {
+        const updated: KanataLogEntry[] = [
+          ...prev,
+          {
+            type: "stderr" as const,
+            message: `Process crashed (code: ${code}, signal: ${signal})`,
+            timestamp: Date.now(),
+          },
+        ];
+        // Keep only last MAX_LOGS entries
+        if (updated.length > MAX_LOGS) {
+          return updated.slice(-MAX_LOGS);
+        }
+        return updated;
+      });
     });
 
     const unsubError = window.kanata.onError((error) => {
-      setLogs((prev) => [
-        ...prev,
-        {
-          type: "stderr",
-          message: `Error: ${error}`,
-          timestamp: Date.now(),
-        },
-      ]);
+      setLogs((prev) => {
+        const updated: KanataLogEntry[] = [
+          ...prev,
+          {
+            type: "stderr" as const,
+            message: `Error: ${error}`,
+            timestamp: Date.now(),
+          },
+        ];
+        // Keep only last MAX_LOGS entries
+        if (updated.length > MAX_LOGS) {
+          return updated.slice(-MAX_LOGS);
+        }
+        return updated;
+      });
     });
 
     return () => {
