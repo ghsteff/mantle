@@ -102,6 +102,13 @@ body,
   height: 100%;
   margin: 0;
   padding: 0;
+  overflow: hidden;
+}
+
+/* Ensure the app fills the entire window, including title bar area */
+#root {
+  display: flex;
+  flex-direction: column;
 }
 
 body {
@@ -177,4 +184,15 @@ body {
 
 .animate-pulse-warning {
   animation: pulse-warning 1s ease-in-out infinite;
+}
+
+/* Window drag region for macOS title bar integration */
+.drag-region {
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+
+.no-drag-region {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
 }

@@ -13,6 +13,7 @@ import { NewProfileDialog } from "./components/presets";
 import { qwertyPreset } from "./presets";
 import type { Preset } from "./presets";
 import { Button, ResizablePanel } from "./components/ui";
+import { cn } from "./lib/utils";
 
 /**
  * Header with layer tabs, apply changes button, and status indicator.
@@ -48,9 +49,18 @@ function Header() {
     [createProfile, switchProfile]
   );
 
+  const isMac = window.navigator.platform.toLowerCase().includes("mac");
+
   return (
-    <header className="h-12 bg-bg-secondary border-b border-border flex items-center justify-between px-4">
-      <div className="flex items-center gap-4">
+    <header
+      className={cn(
+        "h-12 bg-bg-secondary border-b border-border flex items-center justify-between",
+        isMac ? "drag-region pl-20 pr-4" : "px-4"
+      )}
+    >
+      <div
+        className={cn("flex items-center gap-4", isMac ? "no-drag-region" : "")}
+      >
         <h1 className="text-sm font-semibold text-text-primary">Mantle</h1>
         {hasProfiles && (
           <>
@@ -60,7 +70,9 @@ function Header() {
           </>
         )}
       </div>
-      <div className="flex items-center gap-3">
+      <div
+        className={cn("flex items-center gap-3", isMac ? "no-drag-region" : "")}
+      >
         {hasProfiles && <NewProfileDialog onComplete={handleNewProfile} />}
         {isDirty && (
           <div className="flex items-center gap-2">

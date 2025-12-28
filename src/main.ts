@@ -12,10 +12,16 @@ if (started) {
 let mainWindow: BrowserWindow | null = null;
 
 const createWindow = () => {
-  // Create the browser window.
+  // Create the browser window with integrated title bar on macOS only
+  const isMac = process.platform === "darwin";
+
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    ...(isMac && {
+      titleBarStyle: "hiddenInset",
+      trafficLightPosition: { x: 12, y: 15 },
+    }),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
     },

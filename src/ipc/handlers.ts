@@ -75,9 +75,12 @@ export function registerIpcHandlers(): void {
     return processManager.getStatus();
   });
 
-  ipcMain.handle(IPC_CHANNELS.SET_AUTO_RESTART, (_event, enabled: boolean): void => {
-    processManager.setAutoRestart(enabled);
-  });
+  ipcMain.handle(
+    IPC_CHANNELS.SET_AUTO_RESTART,
+    (_event, enabled: boolean): void => {
+      processManager.setAutoRestart(enabled);
+    }
+  );
 
   // ============================================
   // Config Management
@@ -87,31 +90,37 @@ export function registerIpcHandlers(): void {
     return configManager.loadConfig();
   });
 
-  ipcMain.handle(IPC_CHANNELS.SAVE_CONFIG, async (_event, config: KeyboardConfig): Promise<boolean> => {
-    try {
-      // Backup before saving
-      configManager.backupConfig();
-      configManager.saveConfig(config);
+  ipcMain.handle(
+    IPC_CHANNELS.SAVE_CONFIG,
+    async (_event, config: KeyboardConfig): Promise<boolean> => {
+      try {
+        // Backup before saving
+        configManager.backupConfig();
+        configManager.saveConfig(config);
 
-      // Reload Kanata if it's running
-      if (processManager.isRunning()) {
-        await processManager.reloadConfig();
+        // Reload Kanata if it's running
+        if (processManager.isRunning()) {
+          await processManager.reloadConfig();
+        }
+
+        return true;
+      } catch (error) {
+        console.error("Failed to save config:", error);
+        return false;
       }
-
-      return true;
-    } catch (error) {
-      console.error("Failed to save config:", error);
-      return false;
     }
-  });
+  );
 
-  ipcMain.handle(IPC_CHANNELS.GET_CONFIG_PATH, (): { json: string; kbd: string; dir: string } => {
-    return {
-      json: configManager.getJsonConfigPath(),
-      kbd: configManager.getKbdConfigPath(),
-      dir: configManager.getConfigDir(),
-    };
-  });
+  ipcMain.handle(
+    IPC_CHANNELS.GET_CONFIG_PATH,
+    (): { json: string; kbd: string; dir: string } => {
+      return {
+        json: configManager.getJsonConfigPath(),
+        kbd: configManager.getKbdConfigPath(),
+        dir: configManager.getConfigDir(),
+      };
+    }
+  );
 
   ipcMain.handle(IPC_CHANNELS.BACKUP_CONFIG, (): string | null => {
     return configManager.backupConfig();
@@ -121,13 +130,16 @@ export function registerIpcHandlers(): void {
     return configManager.listBackups();
   });
 
-  ipcMain.handle(IPC_CHANNELS.RESTORE_BACKUP, async (_event, backupPath: string): Promise<boolean> => {
-    const success = configManager.restoreBackup(backupPath);
-    if (success && processManager.isRunning()) {
-      await processManager.reloadConfig();
+  ipcMain.handle(
+    IPC_CHANNELS.RESTORE_BACKUP,
+    async (_event, backupPath: string): Promise<boolean> => {
+      const success = configManager.restoreBackup(backupPath);
+      if (success && processManager.isRunning()) {
+        await processManager.reloadConfig();
+      }
+      return success;
     }
-    return success;
-  });
+  );
 
   // ============================================
   // Profile Management
@@ -150,7 +162,11 @@ export function registerIpcHandlers(): void {
     async (_event, name: string, config: KeyboardConfig): Promise<boolean> => {
       const success = configManager.createProfile(name, config);
       // If creating a profile and it's now active, reload Kanata
-      if (success && configManager.getActiveProfileName() === name && processManager.isRunning()) {
+      if (
+        success &&
+        configManager.getActiveProfileName() === name &&
+        processManager.isRunning()
+      ) {
         await processManager.reloadConfig();
       }
       return success;
@@ -169,9 +185,12 @@ export function registerIpcHandlers(): void {
     }
   );
 
-  ipcMain.handle(IPC_CHANNELS.DELETE_PROFILE, (_event, name: string): boolean => {
-    return configManager.deleteProfile(name);
-  });
+  ipcMain.handle(
+    IPC_CHANNELS.DELETE_PROFILE,
+    (_event, name: string): boolean => {
+      return configManager.deleteProfile(name);
+    }
+  );
 
   ipcMain.handle(
     IPC_CHANNELS.RENAME_PROFILE,
@@ -184,17 +203,22 @@ export function registerIpcHandlers(): void {
   // System
   // ============================================
 
-  ipcMain.handle(IPC_CHANNELS.OPEN_INPUT_MONITORING, async (): Promise<void> => {
-    // Open macOS System Settings to Input Monitoring
-    // This URL scheme opens the Privacy & Security > Input Monitoring pane
-    await shell.openExternal("x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent");
+  ipcMain.handle(
+    IPC_CHANNELS.OPEN_INPUT_MONITORING,
+    async (): Promise<void> => {
+      // Open macOS System Settings to Input Monitoring
+      // This URL scheme opens the Privacy & Security > Input Monitoring pane
+      await shell.openExternal(
+        "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent"
+      );
 
-    // Also reveal the binary in Finder so the user can drag and drop it
-    if (process.platform === "darwin") {
-      const binaryPath = getKanataBinaryPath();
-      shell.showItemInFolder(binaryPath);
+      // Also reveal the binary in Finder so the user can drag and drop it
+      if (process.platform === "darwin") {
+        const binaryPath = getKanataBinaryPath();
+        shell.showItemInFolder(binaryPath);
+      }
     }
-  });
+  );
 }
 
 /**
