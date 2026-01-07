@@ -1,32 +1,23 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { KeyInspector, LayerTabs } from "./components/editor";
+import { KeyboardGrid } from "./components/keyboard";
+import { ProfileSwitcher } from "./components/profiles";
+import { StatusIndicator } from "./components/status";
+import { Button, ResizablePanel } from "./components/ui";
 import {
   ConfigProvider,
   KanataProvider,
   useConfig,
   useKanata,
 } from "./contexts";
-import { KeyboardGrid } from "./components/keyboard";
-import { KeyInspector, LayerTabs } from "./components/editor";
-import { StatusIndicator } from "./components/status";
-import { ProfileSwitcher } from "./components/profiles";
-import { NewProfileDialog } from "./components/presets";
-import { qwertyPreset } from "./presets";
-import type { Preset } from "./presets";
-import { Button, ResizablePanel } from "./components/ui";
 import { cn } from "./lib/utils";
+import { qwertyPreset } from "./presets";
 
 /**
  * Header with layer tabs, apply changes button, and status indicator.
  */
 function Header() {
-  const {
-    isDirty,
-    applyChanges,
-    discardChanges,
-    hasProfiles,
-    createProfile,
-    switchProfile,
-  } = useConfig();
+  const { isDirty, applyChanges, discardChanges, hasProfiles } = useConfig();
   const [isApplying, setIsApplying] = useState(false);
 
   const handleApply = async () => {
@@ -37,17 +28,6 @@ function Header() {
       setIsApplying(false);
     }
   };
-
-  const handleNewProfile = useCallback(
-    async (name: string, preset: Preset) => {
-      const success = await createProfile(name, structuredClone(preset.config));
-      if (success) {
-        // Switch to the new profile
-        await switchProfile(name);
-      }
-    },
-    [createProfile, switchProfile]
-  );
 
   const isMac = window.navigator.platform.toLowerCase().includes("mac");
 
@@ -73,7 +53,6 @@ function Header() {
       <div
         className={cn("flex items-center gap-3", isMac ? "no-drag-region" : "")}
       >
-        {hasProfiles && <NewProfileDialog onComplete={handleNewProfile} />}
         {isDirty && (
           <div className="flex items-center gap-2">
             <span className="text-xs text-text-muted">Unsaved changes</span>

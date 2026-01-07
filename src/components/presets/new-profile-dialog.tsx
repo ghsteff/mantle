@@ -23,14 +23,26 @@ import { PlusIcon } from "lucide-react";
 
 interface NewProfileDialogProps {
   onComplete: (profileName: string, preset: Preset) => Promise<void>;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  trigger?: React.ReactNode;
 }
 
 /**
  * Dialog for creating a new profile.
  * Preset selection is optional - defaults to QWERTY if none selected.
  */
-export function NewProfileDialog({ onComplete }: NewProfileDialogProps) {
-  const [open, setOpen] = useState(false);
+
+export function NewProfileDialog({
+  onComplete,
+  open: controlledOpen,
+  onOpenChange,
+  trigger,
+}: NewProfileDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = isControlled ? onOpenChange : setInternalOpen;
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
   const [profileName, setProfileName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
@@ -47,7 +59,7 @@ export function NewProfileDialog({ onComplete }: NewProfileDialogProps) {
         const presetToUse = selectedPreset || qwertyPreset;
         await onComplete(profileName.trim(), presetToUse);
         // Reset state
-        setOpen(false);
+        setOpen?.(false);
         setSelectedPresetId(null);
         setProfileName("");
       } finally {
@@ -57,7 +69,7 @@ export function NewProfileDialog({ onComplete }: NewProfileDialogProps) {
   };
 
   const handleOpenChange = (newOpen: boolean) => {
-    setOpen(newOpen);
+    setOpen?.(newOpen);
     if (!newOpen) {
       // Reset state when closing
       setSelectedPresetId(null);
@@ -65,14 +77,18 @@ export function NewProfileDialog({ onComplete }: NewProfileDialogProps) {
     }
   };
 
+  const defaultTrigger = (
+    <Button variant="ghost" className="gap-1">
+      <PlusIcon className="size-4" />
+      New Profile
+    </Button>
+  );
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" className="gap-1">
-          <PlusIcon className="size-4" />
-          New Profile
-        </Button>
-      </DialogTrigger>
+      {trigger !== null && (
+        <DialogTrigger asChild>{trigger ?? defaultTrigger}</DialogTrigger>
+      )}
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Create New Profile</DialogTitle>
@@ -102,9 +118,6 @@ export function NewProfileDialog({ onComplete }: NewProfileDialogProps) {
                 }
               }}
             />
-            <p className="text-xs text-text-muted font-normal">
-              Use lowercase letters, numbers, and hyphens.
-            </p>
           </div>
 
           {/* Optional Template Selection */}
@@ -136,14 +149,7 @@ export function NewProfileDialog({ onComplete }: NewProfileDialogProps) {
               </SelectContent>
             </Select>
             <p className="text-xs text-text-muted font-normal">
-              {selectedPreset ? (
-                selectedPreset.metadata.description
-              ) : (
-                <>
-                  Defaults to <span className="font-mono">QWERTY</span> layout
-                  if no template is selected.
-                </>
-              )}
+              {selectedPreset && selectedPreset.metadata.description}
             </p>
           </div>
         </div>
@@ -151,7 +157,7 @@ export function NewProfileDialog({ onComplete }: NewProfileDialogProps) {
         <DialogFooter>
           <Button
             variant="outline"
-            onClick={() => setOpen(false)}
+            onClick={() => setOpen?.(false)}
             disabled={isCreating}
           >
             Cancel

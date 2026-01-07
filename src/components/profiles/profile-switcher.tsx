@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useConfig } from "../../contexts";
 import { Button } from "../ui";
+import { NewProfileDialog } from "../presets/new-profile-dialog";
+import type { Preset } from "../../presets";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,7 +20,7 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { Input } from "../ui/input";
-import { ChevronDownIcon, PencilIcon, TrashIcon, CheckIcon } from "lucide-react";
+import { ChevronDownIcon, PencilIcon, TrashIcon, CheckIcon, PlusIcon } from "lucide-react";
 
 /**
  * Dropdown to switch between saved profiles.
@@ -30,8 +32,10 @@ export function ProfileSwitcher() {
     switchProfile,
     deleteProfile,
     renameProfile,
+    createProfile,
   } = useConfig();
 
+  const [newProfileDialogOpen, setNewProfileDialogOpen] = useState(false);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [targetProfile, setTargetProfile] = useState<string | null>(null);
@@ -63,6 +67,10 @@ export function ProfileSwitcher() {
     }
     setDeleteDialogOpen(false);
     setTargetProfile(null);
+  };
+
+  const handleCreateProfile = async (name: string, preset: Preset) => {
+    await createProfile(name, preset.config);
   };
 
   if (profiles.length === 0) {
@@ -123,6 +131,11 @@ export function ProfileSwitcher() {
               </span>
             </DropdownMenuItem>
           ))}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => setNewProfileDialogOpen(true)}>
+            <PlusIcon className="size-4 mr-2" />
+            Add New Profile
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -175,6 +188,14 @@ export function ProfileSwitcher() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* New Profile Dialog */}
+      <NewProfileDialog
+        open={newProfileDialogOpen}
+        onOpenChange={setNewProfileDialogOpen}
+        onComplete={handleCreateProfile}
+        trigger={null}
+      />
     </>
   );
 }
