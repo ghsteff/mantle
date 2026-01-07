@@ -23,11 +23,9 @@ export function LayerTabs() {
   const layers = config?.layers || [];
 
   const handleAddLayer = () => {
-    if (
-      newLayerName.trim() &&
-      !layers.find((l) => l.name === newLayerName.trim())
-    ) {
-      addLayer(newLayerName.trim().toLowerCase().replace(/\s+/g, "-"));
+    const normalizedName = newLayerName.trim().toLowerCase().replace(/\s+/g, "-");
+    if (normalizedName && !layers.find((l) => l.name === normalizedName)) {
+      addLayer(normalizedName);
       setNewLayerName("");
       setIsAdding(false);
     }

@@ -388,17 +388,20 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
 
       if (loadedConfig) {
         setConfig(loadedConfig);
-        // Set active layer to first layer if current doesn't exist
-        if (!loadedConfig.layers.find((l) => l.name === activeLayer)) {
-          setActiveLayer(loadedConfig.layers[0]?.name || "base");
-        }
+        // Set active layer to first layer
+        setActiveLayer((current) => {
+          if (!loadedConfig.layers.find((l) => l.name === current)) {
+            return loadedConfig.layers[0]?.name || "base";
+          }
+          return current;
+        });
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load config");
     } finally {
       setIsLoading(false);
     }
-  }, [activeLayer, refreshProfiles]);
+  }, [refreshProfiles]);
 
   useEffect(() => {
     loadConfig();
