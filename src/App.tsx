@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { KeyInspector, LayerTabs } from "./components/editor";
 import { KeyboardGrid } from "./components/keyboard";
-import { ProfileSwitcher } from "./components/profiles";
+import { ProfileSwitcher, ImportExportButton } from "./components/profiles";
 import { StatusIndicator } from "./components/status";
 import { Button, ResizablePanel } from "./components/ui";
 import {
@@ -72,6 +72,7 @@ function Header() {
             </Button>
           </div>
         )}
+        <ImportExportButton />
         <StatusIndicator />
       </div>
     </header>

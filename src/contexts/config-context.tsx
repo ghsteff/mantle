@@ -25,6 +25,19 @@ interface ProfileInfo {
   updatedAt: string;
 }
 
+interface ExportResult {
+  success: boolean;
+  path?: string;
+  error?: string;
+}
+
+interface ImportResult {
+  success: boolean;
+  config?: KeyboardConfig;
+  suggestedName?: string;
+  error?: string;
+}
+
 interface ConfigContextValue {
   config: KeyboardConfig | null;
   isLoading: boolean;
@@ -54,6 +67,9 @@ interface ConfigContextValue {
   deleteProfile: (name: string) => Promise<boolean>;
   renameProfile: (oldName: string, newName: string) => Promise<boolean>;
   refreshProfiles: () => Promise<void>;
+  // Import/Export
+  exportKbd: () => Promise<ExportResult>;
+  importKbd: () => Promise<ImportResult>;
 }
 
 const ConfigContext = createContext<ConfigContextValue | null>(null);
@@ -610,6 +626,42 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     }
   }, [refreshProfiles]);
 
+  // ============================================
+  // Import/Export
+  // ============================================
+
+  const exportKbd = useCallback(async (): Promise<ExportResult> => {
+    if (!isElectron) {
+      console.log("Would export .kbd file");
+      return { success: false, error: "Not running in Electron" };
+    }
+
+    try {
+      return await window.kanata.exportKbd();
+    } catch (err) {
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : "Failed to export",
+      };
+    }
+  }, []);
+
+  const importKbd = useCallback(async (): Promise<ImportResult> => {
+    if (!isElectron) {
+      console.log("Would import .kbd file");
+      return { success: false, error: "Not running in Electron" };
+    }
+
+    try {
+      return await window.kanata.importKbd();
+    } catch (err) {
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : "Failed to import",
+      };
+    }
+  }, []);
+
   const value: ConfigContextValue = {
     config,
     isLoading,
@@ -636,6 +688,8 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     deleteProfile: deleteProfileAction,
     renameProfile: renameProfileAction,
     refreshProfiles,
+    exportKbd,
+    importKbd,
   };
 
   return (

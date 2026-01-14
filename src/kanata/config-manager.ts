@@ -3,6 +3,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import type { KeyboardConfig } from "./types";
 import { generateKanataConfig, createExampleConfig } from "./generator";
+import { parseKbdFile, type ParseResult } from "./parser";
 
 /**
  * Metadata for a saved profile.
@@ -517,6 +518,49 @@ export class ConfigManager {
       return path.join(this.configDir, "config.json");
     }
     return this.getProfileConfigPath(activeProfile);
+  }
+
+  // ============================================
+  // Import/Export
+  // ============================================
+
+  /**
+   * Exports the current profile's .kbd file to a specified path.
+   * Returns true if successful.
+   */
+  exportKbdFile(targetPath: string): boolean {
+    try {
+      if (!fs.existsSync(this.kbdConfigPath)) {
+        console.error("No .kbd file exists to export");
+        return false;
+      }
+
+      fs.copyFileSync(this.kbdConfigPath, targetPath);
+      return true;
+    } catch (error) {
+      console.error("Failed to export .kbd file:", error);
+      return false;
+    }
+  }
+
+  /**
+   * Imports a .kbd file and returns the parsed configuration.
+   * Does not create a profile - that should be done separately.
+   */
+  importKbdFile(sourcePath: string): ParseResult {
+    try {
+      if (!fs.existsSync(sourcePath)) {
+        return { success: false, error: "File does not exist" };
+      }
+
+      const content = fs.readFileSync(sourcePath, "utf-8");
+      return parseKbdFile(content);
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to read file",
+      };
+    }
   }
 }
 

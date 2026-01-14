@@ -21,6 +21,8 @@ const IPC_CHANNELS = {
   BACKUP_CONFIG: "config:backup",
   LIST_BACKUPS: "config:list-backups",
   RESTORE_BACKUP: "config:restore-backup",
+  EXPORT_KBD: "config:export-kbd",
+  IMPORT_KBD: "config:import-kbd",
 
   // Profile management
   LIST_PROFILES: "profiles:list",
@@ -71,6 +73,19 @@ export interface CrashInfo {
   signal: string | null;
 }
 
+export interface ExportResult {
+  success: boolean;
+  path?: string;
+  error?: string;
+}
+
+export interface ImportResult {
+  success: boolean;
+  config?: KeyboardConfig;
+  suggestedName?: string;
+  error?: string;
+}
+
 export interface ProfileInfo {
   name: string;
   createdAt: string;
@@ -95,6 +110,8 @@ export interface KanataApi {
   backupConfig: () => Promise<string | null>;
   listBackups: () => Promise<string[]>;
   restoreBackup: (backupPath: string) => Promise<boolean>;
+  exportKbd: () => Promise<ExportResult>;
+  importKbd: () => Promise<ImportResult>;
 
   // Profile management
   listProfiles: () => Promise<ProfileInfo[]>;
@@ -147,6 +164,8 @@ const kanataApi: KanataApi = {
   backupConfig: () => ipcRenderer.invoke(IPC_CHANNELS.BACKUP_CONFIG),
   listBackups: () => ipcRenderer.invoke(IPC_CHANNELS.LIST_BACKUPS),
   restoreBackup: (backupPath) => ipcRenderer.invoke(IPC_CHANNELS.RESTORE_BACKUP, backupPath),
+  exportKbd: () => ipcRenderer.invoke(IPC_CHANNELS.EXPORT_KBD),
+  importKbd: () => ipcRenderer.invoke(IPC_CHANNELS.IMPORT_KBD),
 
   // Profile management
   listProfiles: () => ipcRenderer.invoke(IPC_CHANNELS.LIST_PROFILES),

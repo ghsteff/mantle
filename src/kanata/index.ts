@@ -35,6 +35,13 @@ export { ConfigManager, getConfigManager } from "./config-manager";
 export { getKanataBinaryPath } from "./binary-path";
 
 // Process Manager
-export type { KanataStatus, KanataLogEntry, KanataProcessEvents } from "./process-manager";
+export type {
+  KanataStatus,
+  KanataLogEntry,
+  KanataProcessEvents,
+} from "./process-manager";
 export { KanataProcessManager, getProcessManager } from "./process-manager";
 
+// Parser
+export type { ParseResult } from "./parser";
+export { parseKbdFile, suggestProfileName } from "./parser";

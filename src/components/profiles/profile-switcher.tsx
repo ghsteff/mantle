@@ -20,7 +20,13 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { Input } from "../ui/input";
-import { ChevronDownIcon, PencilIcon, TrashIcon, CheckIcon, PlusIcon } from "lucide-react";
+import {
+  ChevronDownIcon,
+  PencilIcon,
+  TrashIcon,
+  CheckIcon,
+  PlusIcon,
+} from "lucide-react";
 
 /**
  * Dropdown to switch between saved profiles.
@@ -99,7 +105,11 @@ export function ProfileSwitcher() {
                 {profile.name === activeProfile && (
                   <CheckIcon className="size-3" />
                 )}
-                <span className={profile.name === activeProfile ? "font-medium" : ""}>
+                <span
+                  className={
+                    profile.name === activeProfile ? "font-medium" : ""
+                  }
+                >
                   {profile.name}
                 </span>
               </span>
@@ -158,7 +168,10 @@ export function ProfileSwitcher() {
             autoFocus
           />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setRenameDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setRenameDialogOpen(false)}
+            >
               Cancel
             </Button>
             <Button onClick={handleRename} disabled={!newName.trim()}>
@@ -174,12 +187,15 @@ export function ProfileSwitcher() {
           <DialogHeader>
             <DialogTitle>Delete Profile</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete the profile "{targetProfile}"? This
-              action cannot be undone.
+              Are you sure you want to delete the profile "{targetProfile}"?
+              This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+            >
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleDelete}>
@@ -199,4 +215,3 @@ export function ProfileSwitcher() {
     </>
   );
 }
-

@@ -1,11 +1,13 @@
-import { ipcMain, BrowserWindow, shell } from "electron";
+import { ipcMain, BrowserWindow, shell, dialog } from "electron";
 import {
   getConfigManager,
   getProcessManager,
   getKanataBinaryPath,
+  suggestProfileName,
   type KeyboardConfig,
   type KanataStatus,
   type KanataLogEntry,
+  type ParseResult,
 } from "../kanata";
 import type { ProfileInfo } from "../kanata/config-manager";
 
@@ -27,6 +29,8 @@ export const IPC_CHANNELS = {
   BACKUP_CONFIG: "config:backup",
   LIST_BACKUPS: "config:list-backups",
   RESTORE_BACKUP: "config:restore-backup",
+  EXPORT_KBD: "config:export-kbd",
+  IMPORT_KBD: "config:import-kbd",
 
   // Profile management
   LIST_PROFILES: "profiles:list",
@@ -138,6 +142,63 @@ export function registerIpcHandlers(): void {
         await processManager.reloadConfig();
       }
       return success;
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.EXPORT_KBD,
+    async (): Promise<{ success: boolean; path?: string; error?: string }> => {
+      const activeProfile = configManager.getActiveProfileName();
+      const defaultName = activeProfile ? `${activeProfile}.kbd` : "kanata.kbd";
+
+      const result = await dialog.showSaveDialog({
+        title: "Export .kbd Configuration",
+        defaultPath: defaultName,
+        filters: [
+          { name: "Kanata Config", extensions: ["kbd"] },
+          { name: "All Files", extensions: ["*"] },
+        ],
+      });
+
+      if (result.canceled || !result.filePath) {
+        return { success: false, error: "Export cancelled" };
+      }
+
+      const success = configManager.exportKbdFile(result.filePath);
+      if (success) {
+        return { success: true, path: result.filePath };
+      }
+      return { success: false, error: "Failed to export file" };
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.IMPORT_KBD,
+    async (): Promise<ParseResult & { suggestedName?: string }> => {
+      const result = await dialog.showOpenDialog({
+        title: "Import .kbd Configuration",
+        filters: [
+          { name: "Kanata Config", extensions: ["kbd"] },
+          { name: "All Files", extensions: ["*"] },
+        ],
+        properties: ["openFile"],
+      });
+
+      if (result.canceled || result.filePaths.length === 0) {
+        return { success: false, error: "Import cancelled" };
+      }
+
+      const filePath = result.filePaths[0];
+      const parseResult = configManager.importKbdFile(filePath);
+
+      if (parseResult.success) {
+        return {
+          ...parseResult,
+          suggestedName: suggestProfileName(filePath),
+        };
+      }
+
+      return parseResult;
     }
   );
 
