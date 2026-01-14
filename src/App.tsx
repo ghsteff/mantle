@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { KeyInspector, LayerTabs } from "./components/editor";
 import { KeyboardGrid } from "./components/keyboard";
 import { ProfileSwitcher, ImportExportButton } from "./components/profiles";
-import { StatusIndicator } from "./components/status";
+import { PermissionModal, StatusIndicator } from "./components/status";
 import { Button, ResizablePanel } from "./components/ui";
 import {
   ConfigProvider,
@@ -105,6 +105,17 @@ function LogPanel() {
       log.message.includes("Input Monitoring")
   );
 
+  // Show permission modal automatically when permission error is detected
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const hasShownModalRef = useRef(false);
+
+  useEffect(() => {
+    if (hasPermissionError && !hasShownModalRef.current) {
+      hasShownModalRef.current = true;
+      setShowPermissionModal(true);
+    }
+  }, [hasPermissionError]);
+
   // Auto-scroll to bottom when new logs arrive
   useEffect(() => {
     if (shouldAutoScrollRef.current && scrollContainerRef.current) {
@@ -143,8 +154,11 @@ function LogPanel() {
         </span>
         <div className="flex items-center gap-2">
           {hasPermissionError && (
-            <Button onClick={openInputMonitoringSettings} variant="outline">
-              Open Input Monitoring Settings
+            <Button
+              onClick={() => setShowPermissionModal(true)}
+              variant="outline"
+            >
+              Fix Permission Issue
             </Button>
           )}
           <Button onClick={clearLogs} variant="ghost">
@@ -176,6 +190,11 @@ function LogPanel() {
           </div>
         ))}
       </div>
+      <PermissionModal
+        open={showPermissionModal}
+        onOpenChange={setShowPermissionModal}
+        onOpenSettings={openInputMonitoringSettings}
+      />
     </ResizablePanel>
   );
 }
