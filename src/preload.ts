@@ -36,12 +36,19 @@ const IPC_CHANNELS = {
   // System
   OPEN_INPUT_MONITORING: "system:open-input-monitoring",
 
+  // Karabiner
+  KARABINER_CHECK: "karabiner:check",
+  KARABINER_INSTALL: "karabiner:install",
+  KARABINER_CANCEL_INSTALL: "karabiner:cancel-install",
+
   // Events from main process
   KANATA_LOG: "kanata:log",
   KANATA_STATUS_CHANGE: "kanata:status-change",
   KANATA_CRASH: "kanata:crash",
   KANATA_ERROR: "kanata:error",
   KANATA_PERMISSION_DENIED: "kanata:permission-denied",
+  KARABINER_INSTALL_OUTPUT: "karabiner:install-output",
+  KARABINER_INSTALL_COMPLETE: "karabiner:install-complete",
 } as const;
 
 export type KanataStatus = "stopped" | "starting" | "running" | "error";
@@ -93,6 +100,16 @@ export interface ProfileInfo {
   updatedAt: string;
 }
 
+export interface KarabinerStatus {
+  driverInstalled: boolean;
+  homebrewInstalled: boolean;
+}
+
+export interface KarabinerInstallResult {
+  success: boolean;
+  error?: string;
+}
+
 /**
  * The API exposed to the renderer process via contextBridge.
  */
@@ -126,12 +143,19 @@ export interface KanataApi {
   // System
   openInputMonitoringSettings: () => Promise<void>;
 
+  // Karabiner
+  checkKarabiner: () => Promise<KarabinerStatus>;
+  installKarabiner: () => Promise<boolean>;
+  cancelKarabinerInstall: () => Promise<void>;
+
   // Event subscriptions
   onLog: (callback: (entry: KanataLogEntry) => void) => () => void;
   onStatusChange: (callback: (status: KanataStatus) => void) => () => void;
   onCrash: (callback: (info: CrashInfo) => void) => () => void;
   onError: (callback: (error: string) => void) => () => void;
   onPermissionDenied: (callback: () => void) => () => void;
+  onKarabinerInstallOutput: (callback: (line: string) => void) => () => void;
+  onKarabinerInstallComplete: (callback: (result: KarabinerInstallResult) => void) => () => void;
 }
 
 /**
@@ -181,6 +205,11 @@ const kanataApi: KanataApi = {
   // System
   openInputMonitoringSettings: () => ipcRenderer.invoke(IPC_CHANNELS.OPEN_INPUT_MONITORING),
 
+  // Karabiner
+  checkKarabiner: () => ipcRenderer.invoke(IPC_CHANNELS.KARABINER_CHECK),
+  installKarabiner: () => ipcRenderer.invoke(IPC_CHANNELS.KARABINER_INSTALL),
+  cancelKarabinerInstall: () => ipcRenderer.invoke(IPC_CHANNELS.KARABINER_CANCEL_INSTALL),
+
   // Event subscriptions
   onLog: (callback) => createSubscription(IPC_CHANNELS.KANATA_LOG, callback),
   onStatusChange: (callback) => createSubscription(IPC_CHANNELS.KANATA_STATUS_CHANGE, callback),
@@ -193,6 +222,8 @@ const kanataApi: KanataApi = {
       ipcRenderer.removeListener(IPC_CHANNELS.KANATA_PERMISSION_DENIED, handler);
     };
   },
+  onKarabinerInstallOutput: (callback) => createSubscription(IPC_CHANNELS.KARABINER_INSTALL_OUTPUT, callback),
+  onKarabinerInstallComplete: (callback) => createSubscription(IPC_CHANNELS.KARABINER_INSTALL_COMPLETE, callback),
 };
 
 // Expose the API to the renderer

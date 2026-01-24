@@ -10,6 +10,12 @@ import {
   type ParseResult,
 } from "../kanata";
 import type { ProfileInfo } from "../kanata/config-manager";
+import {
+  isKarabinerDriverInstalled,
+  isHomebrewInstalled,
+  getKarabinerInstaller,
+  resetKarabinerInstaller,
+} from "../karabiner";
 
 /**
  * IPC Channel names - keep in sync with preload.ts
@@ -44,12 +50,19 @@ export const IPC_CHANNELS = {
   // System
   OPEN_INPUT_MONITORING: "system:open-input-monitoring",
 
+  // Karabiner
+  KARABINER_CHECK: "karabiner:check",
+  KARABINER_INSTALL: "karabiner:install",
+  KARABINER_CANCEL_INSTALL: "karabiner:cancel-install",
+
   // Events sent to renderer (via webContents.send)
   KANATA_LOG: "kanata:log",
   KANATA_STATUS_CHANGE: "kanata:status-change",
   KANATA_CRASH: "kanata:crash",
   KANATA_ERROR: "kanata:error",
   KANATA_PERMISSION_DENIED: "kanata:permission-denied",
+  KARABINER_INSTALL_OUTPUT: "karabiner:install-output",
+  KARABINER_INSTALL_COMPLETE: "karabiner:install-complete",
 } as const;
 
 /**
@@ -279,6 +292,61 @@ export function registerIpcHandlers(): void {
         const binaryPath = getKanataBinaryPath();
         shell.showItemInFolder(binaryPath);
       }
+    }
+  );
+
+  // ============================================
+  // Karabiner Driver Management
+  // ============================================
+
+  ipcMain.handle(
+    IPC_CHANNELS.KARABINER_CHECK,
+    (): { driverInstalled: boolean; homebrewInstalled: boolean } => {
+      return {
+        driverInstalled: isKarabinerDriverInstalled(),
+        homebrewInstalled: isHomebrewInstalled(),
+      };
+    }
+  );
+
+  ipcMain.handle(IPC_CHANNELS.KARABINER_INSTALL, async (): Promise<boolean> => {
+    // Get the main window to send events to
+    const windows = BrowserWindow.getAllWindows();
+    const mainWindow = windows[0];
+
+    if (!mainWindow) {
+      return false;
+    }
+
+    // Reset any existing installer and create a new one
+    resetKarabinerInstaller();
+    const installer = getKarabinerInstaller();
+
+    // Forward output to renderer
+    installer.on("output", (line: string) => {
+      if (!mainWindow.isDestroyed()) {
+        mainWindow.webContents.send(IPC_CHANNELS.KARABINER_INSTALL_OUTPUT, line);
+      }
+    });
+
+    // Forward completion to renderer
+    installer.on("complete", (result: { success: boolean; error?: string }) => {
+      if (!mainWindow.isDestroyed()) {
+        mainWindow.webContents.send(IPC_CHANNELS.KARABINER_INSTALL_COMPLETE, result);
+      }
+    });
+
+    // Start the installation (don't await - it will complete asynchronously)
+    installer.install();
+
+    return true;
+  });
+
+  ipcMain.handle(
+    IPC_CHANNELS.KARABINER_CANCEL_INSTALL,
+    async (): Promise<void> => {
+      const installer = getKarabinerInstaller();
+      installer.cancel();
     }
   );
 }

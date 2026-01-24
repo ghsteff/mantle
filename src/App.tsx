@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { KeyInspector, LayerTabs } from "./components/editor";
 import { KeyboardGrid } from "./components/keyboard";
+import { KarabinerOnboardingModal } from "./components/onboarding";
 import { ProfileSwitcher, ImportExportButton } from "./components/profiles";
 import { PermissionModal, StatusIndicator } from "./components/status";
 import { Button, ResizablePanel } from "./components/ui";
 import {
   ConfigProvider,
   KanataProvider,
+  KarabinerProvider,
   useConfig,
   useKanata,
+  useKarabiner,
 } from "./contexts";
 import { cn } from "./lib/utils";
 import { qwertyPreset } from "./presets";
@@ -283,18 +286,48 @@ function MainContent() {
 }
 
 /**
+ * Karabiner onboarding flow shown when driver is not installed (macOS only).
+ */
+function KarabinerOnboarding() {
+  const { driverInstalled, checkStatus } = useKarabiner();
+  const { openInputMonitoringSettings } = useKanata();
+  const [dismissed, setDismissed] = useState(false);
+
+  // Only show on macOS when driver is not installed
+  const isMac = window.navigator.platform.toLowerCase().includes("mac");
+  const showOnboarding = isMac && driverInstalled === false && !dismissed;
+
+  const handleComplete = useCallback(() => {
+    setDismissed(true);
+    // Re-check status in case user completed installation
+    checkStatus();
+  }, [checkStatus]);
+
+  return (
+    <KarabinerOnboardingModal
+      open={showOnboarding}
+      onComplete={handleComplete}
+      onOpenInputMonitoringSettings={openInputMonitoringSettings}
+    />
+  );
+}
+
+/**
  * Root application component.
  */
 export function App() {
   return (
-    <KanataProvider>
-      <ConfigProvider>
-        <div className="h-full flex flex-col bg-bg-primary">
-          <Header />
-          <MainContent />
-          <LogPanel />
-        </div>
-      </ConfigProvider>
-    </KanataProvider>
+    <KarabinerProvider>
+      <KanataProvider>
+        <ConfigProvider>
+          <div className="h-full flex flex-col bg-bg-primary">
+            <KarabinerOnboarding />
+            <Header />
+            <MainContent />
+            <LogPanel />
+          </div>
+        </ConfigProvider>
+      </KanataProvider>
+    </KarabinerProvider>
   );
 }
