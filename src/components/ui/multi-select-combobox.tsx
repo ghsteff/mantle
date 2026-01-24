@@ -163,7 +163,7 @@ export function MultiSelectComboboxChips({
       <PopoverTrigger asChild>
         <div
           className={cn(
-            "flex min-h-[38px] w-full flex-wrap items-center gap-1.5 rounded-none border border-border bg-bg-tertiary px-3 py-1.5 text-sm hover:bg-bg-hover",
+            "flex min-h-[38px] w-full flex-wrap items-center gap-1.5 rounded-sm border border-border bg-bg-tertiary px-3 py-1.5 text-sm hover:bg-bg-hover",
             className
           )}
           onClick={() => setOpen(true)}
@@ -175,13 +175,13 @@ export function MultiSelectComboboxChips({
               <div
                 key={option.value}
                 className={cn(
-                  "bg-bg-hover text-text-primary flex items-center gap-1 rounded-none px-2 py-0.5 text-xs font-medium",
+                  "bg-bg-hover text-text-primary flex items-center gap-1 rounded-sm px-2 py-0.5 text-xs font-medium",
                   chipsClassName
                 )}
               >
                 {option.label}
                 <X
-                  className="h-3 w-3 cursor-pointer opacity-70 hover:opacity-100"
+                  className="h-3 w-3 opacity-70 hover:opacity-100"
                   onClick={(e) => removeValue(option.value, e)}
                 />
               </div>

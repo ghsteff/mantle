@@ -2,7 +2,7 @@
   "name": "mantle",
   "productName": "Mantle",
   "version": "1.0.0",
-  "description": "My Electron application description",
+  "description": "A keyboard remapper for MacOS",
   "main": ".vite/build/main.js",
   "scripts": {
     "start": "electron-forge start",

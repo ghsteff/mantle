@@ -96,6 +96,26 @@
   box-sizing: border-box;
 }
 
+button,
+[role="button"],
+[role="checkbox"],
+[role="radio"],
+[role="switch"],
+[role="option"],
+[role="menuitem"],
+[role="menuitemcheckbox"],
+[role="menuitemradio"],
+[role="tab"],
+[role="combobox"],
+[role="listbox"],
+a,
+label,
+select,
+summary,
+[tabindex]:not([tabindex="-1"]) {
+  cursor: default !important;
+}
+
 html,
 body,
 #root {

@@ -101,7 +101,7 @@ export function TerminalKeyInput({
         <PopoverTrigger asChild>
           <div
             className={cn(
-              "flex min-h-[38px] w-full flex-wrap items-center gap-1.5 rounded-none border border-border bg-bg-tertiary px-3 py-1.5 text-sm hover:bg-bg-hover cursor-text",
+              "flex min-h-[38px] w-full flex-wrap items-center gap-1.5 rounded-sm border border-border bg-bg-tertiary px-3 py-1.5 text-sm hover:bg-bg-hover cursor-text",
               open && "ring-1 ring-accent"
             )}
             onClick={() => setOpen(true)}
@@ -112,11 +112,11 @@ export function TerminalKeyInput({
               selectedOptions.map((option) => (
                 <div
                   key={option.value}
-                  className="bg-bg-hover text-text-primary flex items-center gap-1 rounded-none px-2 py-0.5 text-xs font-medium font-mono"
+                  className="bg-bg-hover text-text-primary flex items-center gap-1 rounded-sm px-2 py-0.5 text-xs font-medium font-mono"
                 >
                   <code className="text-xs">{option.value}</code>
                   <X
-                    className="h-3 w-3 cursor-pointer opacity-70 hover:opacity-100"
+                    className="h-3 w-3 opacity-70 hover:opacity-100"
                     onClick={(e) => removeKey(option.value, e)}
                   />
                 </div>
@@ -125,7 +125,7 @@ export function TerminalKeyInput({
             <div className="ml-auto flex items-center gap-1">
               {selectedOptions.length > 0 && (
                 <X
-                  className="h-4 w-4 cursor-pointer opacity-50 hover:opacity-100"
+                  className="h-4 w-4 opacity-50 hover:opacity-100"
                   onClick={(e) => {
                     e.stopPropagation();
                     clearAll();
