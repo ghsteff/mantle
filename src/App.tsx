@@ -290,7 +290,8 @@ function MainContent() {
  */
 function KarabinerOnboarding() {
   const { driverInstalled, checkStatus } = useKarabiner();
-  const { openInputMonitoringSettings } = useKanata();
+  const { openInputMonitoringSettings, start, status } = useKanata();
+  const { hasProfiles, isLoading } = useConfig();
   const [onboardingStarted, setOnboardingStarted] = useState(false);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 
@@ -314,6 +315,36 @@ function KarabinerOnboarding() {
     checkStatus();
   }, [checkStatus]);
 
+  // Auto-start server after onboarding is completed
+  const hasStartedAfterOnboardingRef = useRef(false);
+
+  useEffect(() => {
+    console.log("[OnboardingAutoStart] Checking conditions", {
+      onboardingCompleted,
+      driverInstalled,
+      status,
+      hasProfiles,
+      isLoading,
+      hasStarted: hasStartedAfterOnboardingRef.current,
+    });
+
+    if (
+      onboardingCompleted &&
+      driverInstalled &&
+      status === "stopped" &&
+      !isLoading &&
+      hasProfiles &&
+      !hasStartedAfterOnboardingRef.current
+    ) {
+      console.log("[OnboardingAutoStart] Starting server after onboarding");
+      hasStartedAfterOnboardingRef.current = true;
+      // Small delay to let the user see the UI before starting
+      setTimeout(() => {
+        start();
+      }, 500);
+    }
+  }, [onboardingCompleted, driverInstalled, status, hasProfiles, isLoading, start]);
+
   return (
     <KarabinerOnboardingModal
       open={showOnboarding}
@@ -321,6 +352,53 @@ function KarabinerOnboarding() {
       onOpenInputMonitoringSettings={openInputMonitoringSettings}
     />
   );
+}
+
+/**
+ * Auto-start the Kanata server on app boot if conditions are met.
+ */
+function AutoStartServer() {
+  const { driverInstalled } = useKarabiner();
+  const { status, start } = useKanata();
+  const { hasProfiles, isLoading } = useConfig();
+  const hasAttemptedStartRef = useRef(false);
+
+  useEffect(() => {
+    console.log("[AutoStart] Effect running", {
+      driverInstalled,
+      status,
+      hasProfiles,
+      isLoading,
+      hasAttemptedStart: hasAttemptedStartRef.current,
+    });
+
+    // Only auto-start once per app session
+    if (hasAttemptedStartRef.current) {
+      console.log("[AutoStart] Already attempted, skipping");
+      return;
+    }
+
+    // Check if we should auto-start:
+    // 1. Driver is installed (null means still checking, false means not installed)
+    // 2. Server is stopped
+    // 3. Config is loaded and has profiles
+    // 4. We haven't tried starting yet
+    if (
+      driverInstalled === true &&
+      status === "stopped" &&
+      !isLoading &&
+      hasProfiles
+    ) {
+      console.log("[AutoStart] All conditions met, starting immediately");
+      hasAttemptedStartRef.current = true;
+      // Start immediately - no delay needed since all conditions are met
+      start();
+    } else {
+      console.log("[AutoStart] Conditions not met, waiting");
+    }
+  }, [driverInstalled, status, hasProfiles, isLoading, start]);
+
+  return null;
 }
 
 /**
@@ -333,6 +411,7 @@ export function App() {
         <ConfigProvider>
           <div className="h-full flex flex-col bg-bg-primary">
             <KarabinerOnboarding />
+            <AutoStartServer />
             <Header />
             <MainContent />
             <LogPanel />
