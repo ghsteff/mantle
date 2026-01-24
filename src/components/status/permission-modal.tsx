@@ -36,10 +36,12 @@ export function PermissionModal({
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          <p className="text-sm text-text-secondary">
-            Drag the kanata binary from Finder into Input Monitoring settings,
-            then click Start to try again.
-          </p>
+          <ol className="text-sm text-text-secondary list-decimal list-inside space-y-2">
+            <li>Click the button below to open System Settings and reveal the kanata binary in Finder</li>
+            <li>Drag the kanata binary from Finder into the Input Monitoring list</li>
+            <li>Make sure the <strong>toggle is turned ON</strong> for the entry</li>
+            <li>Click Start to try again</li>
+          </ol>
 
           <img
             src="input_monitoring_screenshot.png"
