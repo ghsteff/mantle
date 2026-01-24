@@ -49,6 +49,7 @@ export const IPC_CHANNELS = {
   KANATA_STATUS_CHANGE: "kanata:status-change",
   KANATA_CRASH: "kanata:crash",
   KANATA_ERROR: "kanata:error",
+  KANATA_PERMISSION_DENIED: "kanata:permission-denied",
 } as const;
 
 /**
@@ -314,6 +315,13 @@ export function setupProcessEventForwarding(mainWindow: BrowserWindow): void {
   processManager.on("error", (error: string) => {
     if (!mainWindow.isDestroyed()) {
       mainWindow.webContents.send(IPC_CHANNELS.KANATA_ERROR, error);
+    }
+  });
+
+  // Forward permission denied events to renderer
+  processManager.on("permission-denied", () => {
+    if (!mainWindow.isDestroyed()) {
+      mainWindow.webContents.send(IPC_CHANNELS.KANATA_PERMISSION_DENIED);
     }
   });
 }

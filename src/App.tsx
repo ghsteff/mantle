@@ -88,7 +88,13 @@ const DEFAULT_LOG_PANEL_HEIGHT = 160;
  * Log panel to display Kanata process logs.
  */
 function LogPanel() {
-  const { logs, clearLogs, openInputMonitoringSettings } = useKanata();
+  const {
+    logs,
+    clearLogs,
+    openInputMonitoringSettings,
+    permissionDenied,
+    clearPermissionDenied,
+  } = useKanata();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const shouldAutoScrollRef = useRef(true);
 
@@ -98,23 +104,33 @@ function LogPanel() {
     logs.length > MAX_VISIBLE_LOGS ? logs.slice(-MAX_VISIBLE_LOGS) : logs;
   const hiddenLogCount = logs.length - visibleLogs.length;
 
-  // Check if there's an Input Monitoring permission error
+  // Check if there's an Input Monitoring permission error in logs (for UI button)
   const hasPermissionError = logs.some(
     (log) =>
       log.message.includes("not permitted") ||
       log.message.includes("Input Monitoring")
   );
 
-  // Show permission modal automatically when permission error is detected
+  // Permission modal state - triggered by the permission-denied event from main process
   const [showPermissionModal, setShowPermissionModal] = useState(false);
-  const hasShownModalRef = useRef(false);
 
+  // Show modal when permission denied event fires
   useEffect(() => {
-    if (hasPermissionError && !hasShownModalRef.current) {
-      hasShownModalRef.current = true;
+    if (permissionDenied) {
       setShowPermissionModal(true);
     }
-  }, [hasPermissionError]);
+  }, [permissionDenied]);
+
+  // Clear the permission denied flag when modal is closed
+  const handleModalClose = useCallback(
+    (open: boolean) => {
+      setShowPermissionModal(open);
+      if (!open) {
+        clearPermissionDenied();
+      }
+    },
+    [clearPermissionDenied]
+  );
 
   // Auto-scroll to bottom when new logs arrive
   useEffect(() => {
@@ -192,7 +208,7 @@ function LogPanel() {
       </div>
       <PermissionModal
         open={showPermissionModal}
-        onOpenChange={setShowPermissionModal}
+        onOpenChange={handleModalClose}
         onOpenSettings={openInputMonitoringSettings}
       />
     </ResizablePanel>

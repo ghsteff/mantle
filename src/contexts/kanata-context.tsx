@@ -25,6 +25,8 @@ interface KanataContextValue {
   clearLogs: () => void;
   setAutoRestart: (enabled: boolean) => Promise<void>;
   openInputMonitoringSettings: () => Promise<void>;
+  permissionDenied: boolean;
+  clearPermissionDenied: () => void;
 }
 
 const KanataContext = createContext<KanataContextValue | null>(null);
@@ -37,6 +39,7 @@ const isElectron = typeof window !== "undefined" && window.kanata !== undefined;
 export function KanataProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<KanataStatus>("stopped");
   const [logs, setLogs] = useState<KanataLogEntry[]>([]);
+  const [permissionDenied, setPermissionDenied] = useState(false);
 
   // Fetch initial status
   useEffect(() => {
@@ -100,11 +103,16 @@ export function KanataProvider({ children }: { children: ReactNode }) {
       });
     });
 
+    const unsubPermissionDenied = window.kanata.onPermissionDenied(() => {
+      setPermissionDenied(true);
+    });
+
     return () => {
       unsubStatus();
       unsubLog();
       unsubCrash();
       unsubError();
+      unsubPermissionDenied();
     };
   }, []);
 
@@ -140,6 +148,10 @@ export function KanataProvider({ children }: { children: ReactNode }) {
     await window.kanata.openInputMonitoringSettings();
   }, []);
 
+  const clearPermissionDenied = useCallback(() => {
+    setPermissionDenied(false);
+  }, []);
+
   const value: KanataContextValue = {
     status,
     logs,
@@ -150,6 +162,8 @@ export function KanataProvider({ children }: { children: ReactNode }) {
     clearLogs,
     setAutoRestart,
     openInputMonitoringSettings,
+    permissionDenied,
+    clearPermissionDenied,
   };
 
   return (

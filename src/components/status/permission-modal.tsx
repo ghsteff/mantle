@@ -38,7 +38,7 @@ export function PermissionModal({
         <div className="space-y-4 py-2">
           <p className="text-sm text-text-secondary">
             Drag the kanata binary from Finder into Input Monitoring settings,
-            then restart Mantle.
+            then click Start to try again.
           </p>
 
           <img

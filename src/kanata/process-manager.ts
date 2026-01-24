@@ -18,6 +18,7 @@ export interface KanataProcessEvents {
   log: (entry: KanataLogEntry) => void;
   error: (error: string) => void;
   crash: (code: number | null, signal: string | null) => void;
+  "permission-denied": () => void;
 }
 
 const isMacOS = process.platform === "darwin";
@@ -60,6 +61,7 @@ export class KanataProcessManager extends EventEmitter {
   private logFile = "";
   private logTailInterval: NodeJS.Timeout | null = null;
   private lastLogPosition = 0;
+  private handlingPermissionError = false;
 
   getStatus(): KanataStatus {
     return this.status;
@@ -130,6 +132,7 @@ export class KanataProcessManager extends EventEmitter {
     }
 
     this.intentionalStop = false;
+    this.handlingPermissionError = false;
     this.setStatus("starting");
 
     try {
@@ -318,7 +321,13 @@ export class KanataProcessManager extends EventEmitter {
   }
 
   private checkInputMonitoringError(line: string): void {
-    if (line.includes("not permitted") && line.includes("IOHIDDeviceOpen")) {
+    if (
+      line.includes("not permitted") &&
+      line.includes("IOHIDDeviceOpen") &&
+      !this.handlingPermissionError
+    ) {
+      this.handlingPermissionError = true;
+
       this.emitLog("stderr", "⚠️ Input Monitoring permission required!");
       this.emitLog(
         "stderr",
@@ -328,6 +337,15 @@ export class KanataProcessManager extends EventEmitter {
         "stderr",
         "Then drag the kanata binary into the Input Monitoring list."
       );
+
+      // Auto-stop the broken process. The kanata process is still running but
+      // can't grab the keyboard, so we need to kill it. This will prompt for
+      // sudo password, but then the user can just click Start after fixing permissions.
+      this.emitLog("stdout", "Stopping broken process...");
+      this.stop().then(() => {
+        this.handlingPermissionError = false;
+        this.emit("permission-denied");
+      });
     }
   }
 

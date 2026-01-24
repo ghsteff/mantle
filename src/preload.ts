@@ -41,6 +41,7 @@ const IPC_CHANNELS = {
   KANATA_STATUS_CHANGE: "kanata:status-change",
   KANATA_CRASH: "kanata:crash",
   KANATA_ERROR: "kanata:error",
+  KANATA_PERMISSION_DENIED: "kanata:permission-denied",
 } as const;
 
 export type KanataStatus = "stopped" | "starting" | "running" | "error";
@@ -130,6 +131,7 @@ export interface KanataApi {
   onStatusChange: (callback: (status: KanataStatus) => void) => () => void;
   onCrash: (callback: (info: CrashInfo) => void) => () => void;
   onError: (callback: (error: string) => void) => () => void;
+  onPermissionDenied: (callback: () => void) => () => void;
 }
 
 /**
@@ -184,6 +186,13 @@ const kanataApi: KanataApi = {
   onStatusChange: (callback) => createSubscription(IPC_CHANNELS.KANATA_STATUS_CHANGE, callback),
   onCrash: (callback) => createSubscription(IPC_CHANNELS.KANATA_CRASH, callback),
   onError: (callback) => createSubscription(IPC_CHANNELS.KANATA_ERROR, callback),
+  onPermissionDenied: (callback) => {
+    const handler = () => callback();
+    ipcRenderer.on(IPC_CHANNELS.KANATA_PERMISSION_DENIED, handler);
+    return () => {
+      ipcRenderer.removeListener(IPC_CHANNELS.KANATA_PERMISSION_DENIED, handler);
+    };
+  },
 };
 
 // Expose the API to the renderer
