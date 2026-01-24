@@ -1,4 +1,4 @@
-import { spawn, ChildProcess } from "child_process";
+import { spawn, execSync, ChildProcess } from "child_process";
 import { existsSync } from "fs";
 import { EventEmitter } from "events";
 
@@ -19,10 +19,58 @@ const HOMEBREW_PATHS = [
 ];
 
 /**
+ * Paths where Homebrew stores the Karabiner pkg file
+ */
+const KARABINER_PKG_PATHS = [
+  "/opt/homebrew/Caskroom/karabiner-elements", // Apple Silicon
+  "/usr/local/Caskroom/karabiner-elements", // Intel
+];
+
+/**
  * Check if the Karabiner driver is installed
  */
 export function isKarabinerDriverInstalled(): boolean {
   return KARABINER_DRIVER_PATHS.some((path) => existsSync(path));
+}
+
+/**
+ * Check if the Karabiner app is installed (not just downloaded)
+ */
+export function isKarabinerAppInstalled(): boolean {
+  return existsSync("/Applications/Karabiner-Elements.app");
+}
+
+/**
+ * Check if Karabiner pkg has been downloaded but not installed
+ */
+export function isKarabinerPkgDownloaded(): boolean {
+  return KARABINER_PKG_PATHS.some((path) => existsSync(path));
+}
+
+/**
+ * Get path to the Karabiner installer pkg if it exists
+ */
+export function getKarabinerPkgPath(): string | null {
+  try {
+    // Find the pkg file in the Caskroom
+    for (const basePath of KARABINER_PKG_PATHS) {
+      if (existsSync(basePath)) {
+        // Use find to locate the .pkg file
+        const result = execSync(
+          `find "${basePath}" -name "*.pkg" -type f 2>/dev/null | head -1`,
+          { encoding: "utf8" }
+        ).trim();
+
+        if (result) {
+          return result;
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error finding Karabiner pkg:", error);
+  }
+
+  return null;
 }
 
 /**

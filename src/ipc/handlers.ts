@@ -12,6 +12,9 @@ import {
 import type { ProfileInfo } from "../kanata/config-manager";
 import {
   isKarabinerDriverInstalled,
+  isKarabinerAppInstalled,
+  isKarabinerPkgDownloaded,
+  getKarabinerPkgPath,
   isHomebrewInstalled,
   getKarabinerInstaller,
   resetKarabinerInstaller,
@@ -54,6 +57,7 @@ export const IPC_CHANNELS = {
   KARABINER_CHECK: "karabiner:check",
   KARABINER_INSTALL: "karabiner:install",
   KARABINER_CANCEL_INSTALL: "karabiner:cancel-install",
+  KARABINER_OPEN_PKG: "karabiner:open-pkg",
 
   // Events sent to renderer (via webContents.send)
   KANATA_LOG: "kanata:log",
@@ -301,10 +305,19 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(
     IPC_CHANNELS.KARABINER_CHECK,
-    (): { driverInstalled: boolean; homebrewInstalled: boolean } => {
+    (): {
+      driverInstalled: boolean;
+      appInstalled: boolean;
+      pkgDownloaded: boolean;
+      homebrewInstalled: boolean;
+      pkgPath: string | null;
+    } => {
       return {
         driverInstalled: isKarabinerDriverInstalled(),
+        appInstalled: isKarabinerAppInstalled(),
+        pkgDownloaded: isKarabinerPkgDownloaded(),
         homebrewInstalled: isHomebrewInstalled(),
+        pkgPath: getKarabinerPkgPath(),
       };
     }
   );
@@ -347,6 +360,23 @@ export function registerIpcHandlers(): void {
     async (): Promise<void> => {
       const installer = getKarabinerInstaller();
       installer.cancel();
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.KARABINER_OPEN_PKG,
+    async (): Promise<boolean> => {
+      const pkgPath = getKarabinerPkgPath();
+      if (pkgPath) {
+        try {
+          await shell.openPath(pkgPath);
+          return true;
+        } catch (error) {
+          console.error("Failed to open pkg:", error);
+          return false;
+        }
+      }
+      return false;
     }
   );
 }

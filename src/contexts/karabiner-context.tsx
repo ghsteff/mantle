@@ -11,7 +11,10 @@ export type KarabinerInstallStatus = "idle" | "installing" | "success" | "error"
 
 interface KarabinerContextValue {
   driverInstalled: boolean | null;
+  appInstalled: boolean | null;
+  pkgDownloaded: boolean | null;
   homebrewInstalled: boolean | null;
+  pkgPath: string | null;
   installStatus: KarabinerInstallStatus;
   installOutput: string[];
   installError: string | null;
@@ -19,6 +22,7 @@ interface KarabinerContextValue {
   startInstall: () => Promise<void>;
   cancelInstall: () => Promise<void>;
   clearInstallOutput: () => void;
+  openPkg: () => Promise<boolean>;
 }
 
 const KarabinerContext = createContext<KarabinerContextValue | null>(null);
@@ -31,7 +35,10 @@ const isMac = typeof process !== "undefined"
 
 export function KarabinerProvider({ children }: { children: ReactNode }) {
   const [driverInstalled, setDriverInstalled] = useState<boolean | null>(null);
+  const [appInstalled, setAppInstalled] = useState<boolean | null>(null);
+  const [pkgDownloaded, setPkgDownloaded] = useState<boolean | null>(null);
   const [homebrewInstalled, setHomebrewInstalled] = useState<boolean | null>(null);
+  const [pkgPath, setPkgPath] = useState<string | null>(null);
   const [installStatus, setInstallStatus] = useState<KarabinerInstallStatus>("idle");
   const [installOutput, setInstallOutput] = useState<string[]>([]);
   const [installError, setInstallError] = useState<string | null>(null);
@@ -40,19 +47,28 @@ export function KarabinerProvider({ children }: { children: ReactNode }) {
     if (!isElectron || !isMac) {
       // On non-Mac or outside Electron, assume driver is installed
       setDriverInstalled(true);
+      setAppInstalled(true);
+      setPkgDownloaded(false);
       setHomebrewInstalled(true);
+      setPkgPath(null);
       return;
     }
 
     try {
       const result = await window.kanata.checkKarabiner();
       setDriverInstalled(result.driverInstalled);
+      setAppInstalled(result.appInstalled);
+      setPkgDownloaded(result.pkgDownloaded);
       setHomebrewInstalled(result.homebrewInstalled);
+      setPkgPath(result.pkgPath);
     } catch (error) {
       console.error("Failed to check Karabiner status:", error);
       // Assume installed on error to not block the user
       setDriverInstalled(true);
+      setAppInstalled(true);
+      setPkgDownloaded(false);
       setHomebrewInstalled(true);
+      setPkgPath(null);
     }
   }, []);
 
@@ -97,6 +113,16 @@ export function KarabinerProvider({ children }: { children: ReactNode }) {
     setInstallStatus("idle");
   }, []);
 
+  const openPkg = useCallback(async () => {
+    if (!isElectron) return false;
+    try {
+      return await window.kanata.openKarabinerPkg();
+    } catch (error) {
+      console.error("Failed to open pkg:", error);
+      return false;
+    }
+  }, []);
+
   // Check status on mount
   useEffect(() => {
     checkStatus();
@@ -130,7 +156,10 @@ export function KarabinerProvider({ children }: { children: ReactNode }) {
 
   const value: KarabinerContextValue = {
     driverInstalled,
+    appInstalled,
+    pkgDownloaded,
     homebrewInstalled,
+    pkgPath,
     installStatus,
     installOutput,
     installError,
@@ -138,6 +167,7 @@ export function KarabinerProvider({ children }: { children: ReactNode }) {
     startInstall,
     cancelInstall,
     clearInstallOutput,
+    openPkg,
   };
 
   return (

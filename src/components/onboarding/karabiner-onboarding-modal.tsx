@@ -24,6 +24,8 @@ export function KarabinerOnboardingModal({
 }: KarabinerOnboardingModalProps) {
   const {
     driverInstalled,
+    appInstalled,
+    pkgDownloaded,
     homebrewInstalled,
     installStatus,
     installOutput,
@@ -31,6 +33,7 @@ export function KarabinerOnboardingModal({
     startInstall,
     cancelInstall,
     checkStatus,
+    openPkg,
   } = useKarabiner();
 
   const [step, setStep] = useState<OnboardingStep>("install");
@@ -43,19 +46,19 @@ export function KarabinerOnboardingModal({
     }
   }, [installOutput]);
 
-  // If driver becomes installed, advance to permission step
-  useEffect(() => {
-    if (driverInstalled && step === "install") {
-      setStep("permission");
-    }
-  }, [driverInstalled, step]);
-
   // Re-check driver status after install success
   useEffect(() => {
     if (installStatus === "success") {
       checkStatus();
     }
   }, [installStatus, checkStatus]);
+
+  // When modal opens, start at install step (or permission if driver already installed)
+  useEffect(() => {
+    if (open) {
+      setStep(driverInstalled ? "permission" : "install");
+    }
+  }, [open, driverInstalled]);
 
   const handleInstall = () => {
     startInstall();
@@ -73,8 +76,24 @@ export function KarabinerOnboardingModal({
     onComplete();
   };
 
+  const handleNext = () => {
+    setStep("permission");
+  };
+
+  const handleOpenPkg = async () => {
+    await openPkg();
+  };
+
+  const handleRefresh = async () => {
+    await checkStatus();
+  };
+
   const isInstalling = installStatus === "installing";
   const installFailed = installStatus === "error";
+  const installCompleted = installStatus === "success" && driverInstalled;
+
+  // Pkg was downloaded but not installed yet
+  const needsManualInstall = pkgDownloaded && !appInstalled && !isInstalling;
 
   return (
     <Dialog open={open}>
@@ -133,12 +152,24 @@ export function KarabinerOnboardingModal({
                     <span
                       className={cn(
                         "size-2 rounded-full",
+                        appInstalled ? "bg-status-success" : pkgDownloaded ? "bg-accent" : "bg-text-muted"
+                      )}
+                    />
+                    <span className="text-text-secondary">
+                      Karabiner App:{" "}
+                      {appInstalled ? "Installed" : pkgDownloaded ? "Downloaded (needs install)" : "Not installed"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={cn(
+                        "size-2 rounded-full",
                         driverInstalled ? "bg-status-success" : "bg-text-muted"
                       )}
                     />
                     <span className="text-text-secondary">
                       Karabiner Driver:{" "}
-                      {driverInstalled ? "Installed" : "Not installed"}
+                      {driverInstalled ? "Active" : "Not active"}
                     </span>
                   </div>
                 </div>
@@ -167,8 +198,29 @@ export function KarabinerOnboardingModal({
                   </div>
                 )}
 
+                {/* Manual installation needed */}
+                {needsManualInstall && (
+                  <div className="border border-accent bg-accent/5 p-4 space-y-3">
+                    <div className="font-mono text-xs font-bold text-text-primary">
+                      Complete Installation
+                    </div>
+                    <div className="font-mono text-xs text-text-secondary space-y-2">
+                      <p>
+                        Karabiner-Elements has been downloaded but needs to be
+                        installed manually.
+                      </p>
+                      <ol className="list-decimal list-inside space-y-1 ml-2">
+                        <li>Click "Open Installer" below</li>
+                        <li>Follow the on-screen installation prompts</li>
+                        <li>Launch Karabiner-Elements.app once to activate the driver</li>
+                        <li>Click "Refresh Status" when complete</li>
+                      </ol>
+                    </div>
+                  </div>
+                )}
+
                 {/* Info about what will happen */}
-                {!isInstalling && installOutput.length === 0 && (
+                {!isInstalling && installOutput.length === 0 && !needsManualInstall && (
                   <div className="border border-border bg-bg-secondary p-4 space-y-3">
                     <div className="font-mono text-xs text-text-muted uppercase tracking-wider">
                       Installation will:
@@ -214,6 +266,8 @@ export function KarabinerOnboardingModal({
             <div className="font-mono text-xs text-text-muted">
               {step === "install" && isInstalling && "Installing..."}
               {step === "install" && installFailed && "Installation failed"}
+              {step === "install" && installCompleted && "Installation complete"}
+              {step === "install" && needsManualInstall && "Waiting for installation"}
             </div>
             <div className="flex items-center gap-3">
               {step === "install" ? (
@@ -226,6 +280,35 @@ export function KarabinerOnboardingModal({
                     >
                       CANCEL
                     </Button>
+                  ) : installCompleted ? (
+                    <Button
+                      onClick={handleNext}
+                      className={cn(
+                        "font-mono text-xs rounded-none min-w-32 tracking-wide",
+                        "bg-text-primary text-bg-primary hover:bg-text-primary/90"
+                      )}
+                    >
+                      NEXT &gt;
+                    </Button>
+                  ) : needsManualInstall ? (
+                    <>
+                      <Button
+                        variant="outline"
+                        onClick={handleRefresh}
+                        className="font-mono text-xs rounded-none border-border hover:bg-bg-tertiary"
+                      >
+                        REFRESH STATUS
+                      </Button>
+                      <Button
+                        onClick={handleOpenPkg}
+                        className={cn(
+                          "font-mono text-xs rounded-none min-w-32 tracking-wide",
+                          "bg-text-primary text-bg-primary hover:bg-text-primary/90"
+                        )}
+                      >
+                        OPEN INSTALLER
+                      </Button>
+                    </>
                   ) : (
                     <>
                       {installFailed && (

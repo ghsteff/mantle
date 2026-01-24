@@ -291,14 +291,25 @@ function MainContent() {
 function KarabinerOnboarding() {
   const { driverInstalled, checkStatus } = useKarabiner();
   const { openInputMonitoringSettings } = useKanata();
-  const [dismissed, setDismissed] = useState(false);
+  const [onboardingStarted, setOnboardingStarted] = useState(false);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 
-  // Only show on macOS when driver is not installed
+  // Only show on macOS
   const isMac = window.navigator.platform.toLowerCase().includes("mac");
-  const showOnboarding = isMac && driverInstalled === false && !dismissed;
+
+  // Start onboarding when driver is not installed
+  useEffect(() => {
+    if (isMac && driverInstalled === false && !onboardingStarted && !onboardingCompleted) {
+      setOnboardingStarted(true);
+    }
+  }, [isMac, driverInstalled, onboardingStarted, onboardingCompleted]);
+
+  // Keep modal open once started, until user clicks "Done"
+  const showOnboarding = onboardingStarted && !onboardingCompleted;
 
   const handleComplete = useCallback(() => {
-    setDismissed(true);
+    setOnboardingCompleted(true);
+    setOnboardingStarted(false);
     // Re-check status in case user completed installation
     checkStatus();
   }, [checkStatus]);
