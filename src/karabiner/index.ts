@@ -205,7 +205,7 @@ export class KarabinerInstaller extends EventEmitter {
   }
 
   /**
-   * Install Karabiner-Elements via Homebrew
+   * Download Karabiner-Elements PKG via Homebrew (fetch only, don't install)
    */
   private async installKarabiner(): Promise<KarabinerInstallResult> {
     return new Promise((resolve) => {
@@ -218,9 +218,11 @@ export class KarabinerInstaller extends EventEmitter {
         return;
       }
 
+      // Use 'fetch' to download the PKG without installing
+      // This avoids sudo prompts and lets the user complete installation via GUI
       this.currentProcess = spawn(
         brewPath,
-        ["install", "--cask", "karabiner-elements"],
+        ["fetch", "--cask", "karabiner-elements"],
         {
           env: {
             ...process.env,
@@ -242,16 +244,30 @@ export class KarabinerInstaller extends EventEmitter {
         }
       });
 
-      this.currentProcess.on("close", (code) => {
+      this.currentProcess.on("close", async (code) => {
         this.currentProcess = null;
         if (this.aborted) {
           resolve({ success: false, error: "Installation cancelled" });
         } else if (code === 0) {
-          resolve({ success: true });
+          // Homebrew fetched the PKG, now open it for the user
+          this.emit("output", "\nDownload complete! Opening installer...\n");
+          const pkgPath = getKarabinerPkgPath();
+          if (pkgPath) {
+            try {
+              execSync(`open "${pkgPath}"`, { encoding: "utf8" });
+              this.emit("output", "Please complete the installation in the opened PKG installer window.\n");
+              this.emit("output", "Click 'Check Status' below after installation completes.\n");
+              resolve({ success: true });
+            } catch (error) {
+              resolve({ success: false, error: "Failed to open PKG installer" });
+            }
+          } else {
+            resolve({ success: false, error: "PKG file not found after download" });
+          }
         } else {
           resolve({
             success: false,
-            error: `Karabiner installation failed with exit code ${code}`,
+            error: `Karabiner download failed with exit code ${code}`,
           });
         }
       });
@@ -279,5 +295,19 @@ export function resetKarabinerInstaller(): void {
     installerInstance.cancel();
     installerInstance.removeAllListeners();
     installerInstance = null;
+  }
+}
+
+/**
+ * Launch Karabiner-Elements app to activate the driver.
+ * The driver is only activated when the app is launched for the first time.
+ */
+export function launchKarabinerApp(): boolean {
+  try {
+    execSync('open -a "Karabiner-Elements"', { encoding: "utf8" });
+    return true;
+  } catch (error) {
+    console.error("Failed to launch Karabiner-Elements:", error);
+    return false;
   }
 }

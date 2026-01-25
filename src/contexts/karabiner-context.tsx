@@ -23,6 +23,7 @@ interface KarabinerContextValue {
   cancelInstall: () => Promise<void>;
   clearInstallOutput: () => void;
   openPkg: () => Promise<boolean>;
+  launchApp: () => Promise<boolean>;
 }
 
 const KarabinerContext = createContext<KarabinerContextValue | null>(null);
@@ -123,6 +124,23 @@ export function KarabinerProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const launchApp = useCallback(async () => {
+    if (!isElectron) return false;
+    try {
+      const success = await window.kanata.launchKarabinerApp();
+      if (success) {
+        // Wait a moment for the app to launch, then re-check driver status
+        setTimeout(() => {
+          checkStatus();
+        }, 2000);
+      }
+      return success;
+    } catch (error) {
+      console.error("Failed to launch app:", error);
+      return false;
+    }
+  }, [checkStatus]);
+
   // Check status on mount
   useEffect(() => {
     checkStatus();
@@ -168,6 +186,7 @@ export function KarabinerProvider({ children }: { children: ReactNode }) {
     cancelInstall,
     clearInstallOutput,
     openPkg,
+    launchApp,
   };
 
   return (

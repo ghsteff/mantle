@@ -4,7 +4,7 @@ import { Dialog, DialogContent } from "../ui/dialog";
 import { cn } from "../../lib/utils";
 import { useKarabiner } from "../../contexts/karabiner-context";
 
-type OnboardingStep = "install" | "permission";
+type OnboardingStep = "install" | "activate" | "permission";
 
 interface KarabinerOnboardingModalProps {
   open: boolean;
@@ -13,9 +13,10 @@ interface KarabinerOnboardingModalProps {
 }
 
 /**
- * Multi-step onboarding wizard for Karabiner driver installation.
- * Step 1: Install Karabiner via Homebrew
- * Step 2: Set up Input Monitoring permission
+ * Multi-step onboarding wizard for Karabiner driver setup.
+ * Step 1: Ensure Karabiner-Elements app is installed
+ * Step 2: Complete Karabiner setup and activate driver
+ * Step 3: Grant Kanata input monitoring permissions
  */
 export function KarabinerOnboardingModal({
   open,
@@ -25,7 +26,6 @@ export function KarabinerOnboardingModal({
   const {
     driverInstalled,
     appInstalled,
-    pkgDownloaded,
     homebrewInstalled,
     installStatus,
     installOutput,
@@ -33,10 +33,12 @@ export function KarabinerOnboardingModal({
     startInstall,
     cancelInstall,
     checkStatus,
-    openPkg,
+    launchApp,
   } = useKarabiner();
 
   const [step, setStep] = useState<OnboardingStep>("install");
+  const [step2Verified, setStep2Verified] = useState(false);
+  const [isCheckingStep2, setIsCheckingStep2] = useState(false);
   const terminalRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll terminal output
@@ -46,19 +48,42 @@ export function KarabinerOnboardingModal({
     }
   }, [installOutput]);
 
-  // Re-check driver status after install success
+  // Reset to step 1 and check status when modal opens
+  useEffect(() => {
+    if (open) {
+      setStep("install");
+      setStep2Verified(false);
+      setIsCheckingStep2(false);
+      // Check current status to show accurate info
+      checkStatus();
+    }
+  }, [open, checkStatus]);
+
+  // After successful install, re-check status
   useEffect(() => {
     if (installStatus === "success") {
-      checkStatus();
+      // Re-check status after a brief delay to ensure files are in place
+      setTimeout(() => {
+        checkStatus();
+      }, 500);
     }
   }, [installStatus, checkStatus]);
 
-  // When modal opens, start at install step (or permission if driver already installed)
+  // After app is confirmed installed, auto-launch Karabiner
   useEffect(() => {
-    if (open) {
-      setStep(driverInstalled ? "permission" : "install");
+    if (installStatus === "success" && appInstalled) {
+      // Automatically launch Karabiner-Elements so user can complete setup
+      launchApp();
     }
-  }, [open, driverInstalled]);
+  }, [installStatus, appInstalled, launchApp]);
+
+  // Update step 2 verification when status changes
+  useEffect(() => {
+    if (isCheckingStep2 && driverInstalled) {
+      setStep2Verified(true);
+      setIsCheckingStep2(false);
+    }
+  }, [isCheckingStep2, driverInstalled]);
 
   const handleInstall = () => {
     startInstall();
@@ -68,6 +93,28 @@ export function KarabinerOnboardingModal({
     cancelInstall();
   };
 
+  const handleCheckStep2 = async () => {
+    setIsCheckingStep2(true);
+    await checkStatus();
+  };
+
+  const handleNext = () => {
+    if (step === "install" && appInstalled) {
+      setStep("activate");
+    } else if (step === "activate" && step2Verified) {
+      setStep("permission");
+    }
+  };
+
+  const isInstalling = installStatus === "installing";
+  const installFailed = installStatus === "error";
+  const installSucceeded = installStatus === "success";
+  const installCompleted = installSucceeded && appInstalled;
+
+  const handleOpenKarabinerApp = async () => {
+    await launchApp();
+  };
+
   const handleOpenSettings = () => {
     onOpenInputMonitoringSettings();
   };
@@ -75,25 +122,6 @@ export function KarabinerOnboardingModal({
   const handleDone = () => {
     onComplete();
   };
-
-  const handleNext = () => {
-    setStep("permission");
-  };
-
-  const handleOpenPkg = async () => {
-    await openPkg();
-  };
-
-  const handleRefresh = async () => {
-    await checkStatus();
-  };
-
-  const isInstalling = installStatus === "installing";
-  const installFailed = installStatus === "error";
-  const installCompleted = installStatus === "success" && driverInstalled;
-
-  // Pkg was downloaded but not installed yet
-  const needsManualInstall = pkgDownloaded && !appInstalled && !isInstalling;
 
   return (
     <Dialog open={open}>
@@ -110,7 +138,7 @@ export function KarabinerOnboardingModal({
             </h1>
           </div>
           <div className="font-mono text-xs text-text-muted">
-            Step {step === "install" ? "01" : "02"} / 02
+            Step {step === "install" ? "01" : step === "activate" ? "02" : "03"} / 03
           </div>
         </div>
 
@@ -119,28 +147,30 @@ export function KarabinerOnboardingModal({
           <div className="px-6 py-6 border-b border-border bg-bg-primary">
             <h2 className="font-mono text-lg font-bold text-text-primary mb-2">
               {step === "install"
-                ? "KARABINER DRIVER REQUIRED"
-                : "INPUT MONITORING PERMISSION"}
+                ? "INSTALL KARABINER-ELEMENTS"
+                : step === "activate"
+                ? "ACTIVATE KARABINER DRIVER"
+                : "KANATA INPUT MONITORING"}
             </h2>
             <p className="font-mono text-xs text-text-muted max-w-xl">
               {step === "install"
                 ? "Mantle requires the Karabiner virtual keyboard driver to intercept and remap your keys. This driver is installed via Homebrew."
-                : "Mantle needs Input Monitoring permission to intercept your keyboard input."}
+                : step === "activate"
+                ? "Open Karabiner-Elements and complete its setup to activate the virtual keyboard driver."
+                : "Grant Kanata permission to monitor keyboard input."}
             </p>
           </div>
 
           <div className="flex-1 overflow-y-auto bg-bg-tertiary p-6">
             {step === "install" ? (
               <div className="space-y-4">
-                {/* Status info */}
+                {/* Status */}
                 <div className="space-y-2 font-mono text-xs">
                   <div className="flex items-center gap-2">
                     <span
                       className={cn(
                         "size-2 rounded-full",
-                        homebrewInstalled
-                          ? "bg-status-success"
-                          : "bg-text-muted"
+                        homebrewInstalled ? "bg-status-success" : "bg-text-muted"
                       )}
                     />
                     <span className="text-text-secondary">
@@ -152,24 +182,12 @@ export function KarabinerOnboardingModal({
                     <span
                       className={cn(
                         "size-2 rounded-full",
-                        appInstalled ? "bg-status-success" : pkgDownloaded ? "bg-accent" : "bg-text-muted"
+                        appInstalled ? "bg-status-success" : "bg-text-muted"
                       )}
                     />
                     <span className="text-text-secondary">
-                      Karabiner App:{" "}
-                      {appInstalled ? "Installed" : pkgDownloaded ? "Downloaded (needs install)" : "Not installed"}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={cn(
-                        "size-2 rounded-full",
-                        driverInstalled ? "bg-status-success" : "bg-text-muted"
-                      )}
-                    />
-                    <span className="text-text-secondary">
-                      Karabiner Driver:{" "}
-                      {driverInstalled ? "Active" : "Not active"}
+                      Karabiner-Elements:{" "}
+                      {appInstalled ? "Installed" : "Not installed"}
                     </span>
                   </div>
                 </div>
@@ -198,40 +216,87 @@ export function KarabinerOnboardingModal({
                   </div>
                 )}
 
-                {/* Manual installation needed */}
-                {needsManualInstall && (
-                  <div className="border border-accent bg-accent/5 p-4 space-y-3">
-                    <div className="font-mono text-xs font-bold text-text-primary">
-                      Complete Installation
-                    </div>
-                    <div className="font-mono text-xs text-text-secondary space-y-2">
-                      <p>
-                        Karabiner-Elements has been downloaded but needs to be
-                        installed manually.
-                      </p>
-                      <ol className="list-decimal list-inside space-y-1 ml-2">
-                        <li>Click "Open Installer" below</li>
-                        <li>Follow the on-screen installation prompts</li>
-                        <li>Launch Karabiner-Elements.app once to activate the driver</li>
-                        <li>Click "Refresh Status" when complete</li>
-                      </ol>
-                    </div>
-                  </div>
-                )}
-
                 {/* Info about what will happen */}
-                {!isInstalling && installOutput.length === 0 && !needsManualInstall && (
+                {!isInstalling && installOutput.length === 0 && !installSucceeded && (
                   <div className="border border-border bg-bg-secondary p-4 space-y-3">
                     <div className="font-mono text-xs text-text-muted uppercase tracking-wider">
-                      Installation will:
+                      What will happen:
                     </div>
                     <ul className="font-mono text-xs text-text-secondary space-y-1 list-disc list-inside">
                       {!homebrewInstalled && (
                         <li>Install Homebrew package manager</li>
                       )}
-                      <li>Install Karabiner-Elements via Homebrew</li>
-                      <li>Enable the virtual keyboard driver</li>
+                      <li>Download Karabiner-Elements installer</li>
+                      <li>Automatically open the installer for you</li>
+                      <li>You'll complete the installation with your admin password</li>
                     </ul>
+                  </div>
+                )}
+
+                {/* Success message */}
+                {installCompleted && (
+                  <div className="bg-status-success/10 border border-status-success/30 p-3 font-mono text-xs text-status-success">
+                    Installation complete! Karabiner-Elements has been launched. Complete its setup wizard, then click Next.
+                  </div>
+                )}
+
+                {/* Installation succeeded but app not detected - PKG needs to be completed */}
+                {installSucceeded && !appInstalled && (
+                  <div className="bg-accent/10 border border-accent/30 p-4 space-y-2">
+                    <div className="font-mono text-xs font-bold text-text-primary">
+                      Complete PKG Installation
+                    </div>
+                    <div className="font-mono text-xs text-text-secondary">
+                      <p>The Karabiner-Elements.pkg installer should have opened.</p>
+                      <ol className="list-decimal list-inside space-y-1 ml-2 mt-2">
+                        <li>Complete the installation in the opened window</li>
+                        <li>Click "Check Status" below once the installation finishes</li>
+                      </ol>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : step === "activate" ? (
+              <div className="space-y-4">
+                {/* Driver status indicator */}
+                <div className="space-y-2 font-mono text-xs">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={cn(
+                        "size-2 rounded-full",
+                        driverInstalled ? "bg-status-success" : "bg-text-muted"
+                      )}
+                    />
+                    <span className="text-text-secondary">
+                      Virtual Keyboard Driver:{" "}
+                      {driverInstalled ? "Active" : "Not active"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Instructions */}
+                <div className="border border-border bg-bg-secondary p-4 space-y-3">
+                  <div className="font-mono text-xs font-bold text-text-primary">
+                    Complete Karabiner Setup
+                  </div>
+                  <div className="font-mono text-xs text-text-secondary space-y-2">
+                    <p>
+                      The virtual keyboard driver must be activated before Mantle can work.
+                      This requires completing Karabiner's one-time setup.
+                    </p>
+                    <ol className="list-decimal list-inside space-y-1 ml-2">
+                      <li>If Karabiner-Elements didn't open automatically, click "Open Karabiner-Elements" below</li>
+                      <li>Follow Karabiner's setup wizard</li>
+                      <li>Grant all requested system permissions and approve the system extension</li>
+                      <li>Click "Check Status" to verify the driver is active</li>
+                    </ol>
+                  </div>
+                </div>
+
+                {/* Success message */}
+                {step2Verified && (
+                  <div className="bg-status-success/10 border border-status-success/30 p-3 font-mono text-xs text-status-success">
+                    Driver is active! Click Next to continue.
                   </div>
                 )}
               </div>
@@ -264,10 +329,11 @@ export function KarabinerOnboardingModal({
           {/* Footer */}
           <div className="p-4 border-t border-border bg-bg-secondary flex items-center justify-between">
             <div className="font-mono text-xs text-text-muted">
-              {step === "install" && isInstalling && "Installing..."}
-              {step === "install" && installFailed && "Installation failed"}
+              {step === "install" && isInstalling && "Downloading..."}
+              {step === "install" && installFailed && "Download failed"}
+              {step === "install" && installSucceeded && !appInstalled && "Waiting for installation"}
               {step === "install" && installCompleted && "Installation complete"}
-              {step === "install" && needsManualInstall && "Waiting for installation"}
+              {step === "activate" && (step2Verified ? "Driver is active" : "Waiting for driver activation")}
             </div>
             <div className="flex items-center gap-3">
               {step === "install" ? (
@@ -290,23 +356,25 @@ export function KarabinerOnboardingModal({
                     >
                       NEXT &gt;
                     </Button>
-                  ) : needsManualInstall ? (
+                  ) : installSucceeded && !appInstalled ? (
                     <>
                       <Button
                         variant="outline"
-                        onClick={handleRefresh}
+                        onClick={() => checkStatus()}
                         className="font-mono text-xs rounded-none border-border hover:bg-bg-tertiary"
                       >
-                        REFRESH STATUS
+                        CHECK STATUS
                       </Button>
                       <Button
-                        onClick={handleOpenPkg}
+                        onClick={handleNext}
+                        disabled={!appInstalled}
                         className={cn(
                           "font-mono text-xs rounded-none min-w-32 tracking-wide",
-                          "bg-text-primary text-bg-primary hover:bg-text-primary/90"
+                          "bg-text-primary text-bg-primary hover:bg-text-primary/90",
+                          "disabled:opacity-50 disabled:cursor-not-allowed"
                         )}
                       >
-                        OPEN INSTALLER
+                        NEXT &gt;
                       </Button>
                     </>
                   ) : (
@@ -330,11 +398,39 @@ export function KarabinerOnboardingModal({
                         )}
                       >
                         {homebrewInstalled
-                          ? "INSTALL KARABINER"
-                          : "INSTALL HOMEBREW & KARABINER"}
+                          ? "DOWNLOAD KARABINER"
+                          : "INSTALL HOMEBREW & DOWNLOAD KARABINER"}
                       </Button>
                     </>
                   )}
+                </>
+              ) : step === "activate" ? (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={handleOpenKarabinerApp}
+                    className="font-mono text-xs rounded-none border-border hover:bg-bg-tertiary"
+                  >
+                    OPEN KARABINER-ELEMENTS
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleCheckStep2}
+                    className="font-mono text-xs rounded-none border-border hover:bg-bg-tertiary"
+                  >
+                    CHECK STATUS
+                  </Button>
+                  <Button
+                    onClick={handleNext}
+                    disabled={!step2Verified}
+                    className={cn(
+                      "font-mono text-xs rounded-none min-w-32 tracking-wide",
+                      "bg-text-primary text-bg-primary hover:bg-text-primary/90",
+                      "disabled:opacity-50 disabled:cursor-not-allowed"
+                    )}
+                  >
+                    NEXT &gt;
+                  </Button>
                 </>
               ) : (
                 <>

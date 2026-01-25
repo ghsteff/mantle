@@ -18,6 +18,7 @@ import {
   isHomebrewInstalled,
   getKarabinerInstaller,
   resetKarabinerInstaller,
+  launchKarabinerApp,
 } from "../karabiner";
 
 /**
@@ -58,6 +59,7 @@ export const IPC_CHANNELS = {
   KARABINER_INSTALL: "karabiner:install",
   KARABINER_CANCEL_INSTALL: "karabiner:cancel-install",
   KARABINER_OPEN_PKG: "karabiner:open-pkg",
+  KARABINER_LAUNCH_APP: "karabiner:launch-app",
 
   // Events sent to renderer (via webContents.send)
   KANATA_LOG: "kanata:log",
@@ -377,6 +379,13 @@ export function registerIpcHandlers(): void {
         }
       }
       return false;
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.KARABINER_LAUNCH_APP,
+    async (): Promise<boolean> => {
+      return launchKarabinerApp();
     }
   );
 }

@@ -41,6 +41,7 @@ const IPC_CHANNELS = {
   KARABINER_INSTALL: "karabiner:install",
   KARABINER_CANCEL_INSTALL: "karabiner:cancel-install",
   KARABINER_OPEN_PKG: "karabiner:open-pkg",
+  KARABINER_LAUNCH_APP: "karabiner:launch-app",
 
   // Events from main process
   KANATA_LOG: "kanata:log",
@@ -152,6 +153,7 @@ export interface KanataApi {
   installKarabiner: () => Promise<boolean>;
   cancelKarabinerInstall: () => Promise<void>;
   openKarabinerPkg: () => Promise<boolean>;
+  launchKarabinerApp: () => Promise<boolean>;
 
   // Event subscriptions
   onLog: (callback: (entry: KanataLogEntry) => void) => () => void;
@@ -215,6 +217,7 @@ const kanataApi: KanataApi = {
   installKarabiner: () => ipcRenderer.invoke(IPC_CHANNELS.KARABINER_INSTALL),
   cancelKarabinerInstall: () => ipcRenderer.invoke(IPC_CHANNELS.KARABINER_CANCEL_INSTALL),
   openKarabinerPkg: () => ipcRenderer.invoke(IPC_CHANNELS.KARABINER_OPEN_PKG),
+  launchKarabinerApp: () => ipcRenderer.invoke(IPC_CHANNELS.KARABINER_LAUNCH_APP),
 
   // Event subscriptions
   onLog: (callback) => createSubscription(IPC_CHANNELS.KANATA_LOG, callback),
