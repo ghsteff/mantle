@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useConfig } from "../../contexts";
+import { useProfile } from "../../contexts";
 import { Button } from "../ui";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import {
@@ -26,7 +26,7 @@ interface KeyboardConfig {
  * Icon buttons for importing/exporting .kbd files.
  */
 export function ImportExportButton() {
-  const { exportKbd, importKbd, createProfile, switchProfile } = useConfig();
+  const { exportKbd, importKbd, createProfile, switchProfile } = useProfile();
 
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importedConfig, setImportedConfig] = useState<KeyboardConfig | null>(

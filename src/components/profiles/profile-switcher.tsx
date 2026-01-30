@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useConfig } from "../../contexts";
+import { useConfig, useProfile } from "../../contexts";
 import { Button } from "../ui";
 import { NewProfileDialog } from "../presets/new-profile-dialog";
 import type { Preset } from "../../presets";
@@ -38,14 +38,8 @@ import {
  * Dropdown to switch between saved profiles.
  */
 export function ProfileSwitcher() {
-  const {
-    profiles,
-    activeProfile,
-    switchProfile,
-    deleteProfile,
-    renameProfile,
-    createProfile,
-  } = useConfig();
+  const { profiles, activeProfile } = useConfig();
+  const { switchProfile, deleteProfile, renameProfile, createProfile } = useProfile();
 
   const [newProfileDialogOpen, setNewProfileDialogOpen] = useState(false);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);

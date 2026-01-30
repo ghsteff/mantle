@@ -1,12 +1,13 @@
 import { useMemo } from "react";
-import { useConfig } from "../../contexts";
+import { useConfig, useUI } from "../../contexts";
 import { ActionEditor } from "./action-editor";
 
 /**
  * Panel for inspecting and editing the selected key.
  */
 export function KeyInspector() {
-  const { config, selectedKey, activeLayer, updateKey } = useConfig();
+  const { config, updateKey } = useConfig();
+  const { selectedKey, activeLayer } = useUI();
 
   // Get the current action for the selected key
   const currentAction = useMemo(() => {

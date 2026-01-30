@@ -6,6 +6,8 @@ import { LogPanel } from "./components/LogPanel";
 import { MainContent } from "./components/MainContent";
 import {
   ConfigProvider,
+  UIProvider,
+  ProfileProvider,
   KanataProvider,
   KarabinerProvider,
 } from "./contexts";
@@ -19,15 +21,19 @@ export function App() {
   return (
     <KarabinerProvider>
       <KanataProvider>
-        <ConfigProvider>
-          <div className="h-full flex flex-col bg-bg-primary">
-            <KarabinerOnboarding onOnboardingStateChange={setOnboardingInProgress} />
-            <AutoStartServer onboardingInProgress={onboardingInProgress} />
-            <Header />
-            <MainContent />
-            <LogPanel />
-          </div>
-        </ConfigProvider>
+        <UIProvider>
+          <ConfigProvider>
+            <ProfileProvider>
+              <div className="h-full flex flex-col bg-bg-primary">
+                <KarabinerOnboarding onOnboardingStateChange={setOnboardingInProgress} />
+                <AutoStartServer onboardingInProgress={onboardingInProgress} />
+                <Header />
+                <MainContent />
+                <LogPanel />
+              </div>
+            </ProfileProvider>
+          </ConfigProvider>
+        </UIProvider>
       </KanataProvider>
     </KarabinerProvider>
   );

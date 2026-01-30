@@ -3,7 +3,7 @@ import { LayerTabs } from "./editor";
 import { ProfileSwitcher, ImportExportButton } from "./profiles";
 import { StatusIndicator } from "./status";
 import { Button } from "./ui";
-import { useConfig } from "../contexts";
+import { useConfig, useProfile } from "../contexts";
 import { cn } from "../lib/utils";
 
 /**
@@ -11,12 +11,13 @@ import { cn } from "../lib/utils";
  */
 export function Header() {
   const { isDirty, applyChanges, discardChanges, hasProfiles } = useConfig();
+  const { refreshProfiles } = useProfile();
   const [isApplying, setIsApplying] = useState(false);
 
   const handleApply = async () => {
     setIsApplying(true);
     try {
-      await applyChanges();
+      await applyChanges(refreshProfiles);
     } finally {
       setIsApplying(false);
     }

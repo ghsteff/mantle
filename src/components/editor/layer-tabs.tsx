@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useConfig } from "../../contexts";
+import { useConfig, useUI } from "../../contexts";
 import { Button } from "../ui";
 import { PlusIcon } from "lucide-react";
 
@@ -7,14 +7,8 @@ import { PlusIcon } from "lucide-react";
  * Tabs for switching between keyboard layers.
  */
 export function LayerTabs() {
-  const {
-    config,
-    activeLayer,
-    setActiveLayer,
-    addLayer,
-    removeLayer,
-    renameLayer,
-  } = useConfig();
+  const { config, addLayer, removeLayer, renameLayer } = useConfig();
+  const { activeLayer, setActiveLayer } = useUI();
   const [isAdding, setIsAdding] = useState(false);
   const [newLayerName, setNewLayerName] = useState("");
   const [editingLayer, setEditingLayer] = useState<string | null>(null);
@@ -26,6 +20,7 @@ export function LayerTabs() {
     const normalizedName = newLayerName.trim().toLowerCase().replace(/\s+/g, "-");
     if (normalizedName && !layers.find((l) => l.name === normalizedName)) {
       addLayer(normalizedName);
+      setActiveLayer(normalizedName);
       setNewLayerName("");
       setIsAdding(false);
     }
@@ -38,17 +33,23 @@ export function LayerTabs() {
 
   const handleRename = () => {
     if (editingLayer && editName.trim() && editName !== editingLayer) {
-      renameLayer(
-        editingLayer,
-        editName.trim().toLowerCase().replace(/\s+/g, "-")
-      );
+      const newName = editName.trim().toLowerCase().replace(/\s+/g, "-");
+      const newActiveLayer = renameLayer(editingLayer, newName, activeLayer);
+      setActiveLayer(newActiveLayer);
     }
     setEditingLayer(null);
   };
 
   const handleDelete = (layerName: string) => {
     if (layers.length > 1 && confirm(`Delete layer "${layerName}"?`)) {
-      removeLayer(layerName);
+      removeLayer(layerName, activeLayer);
+      // Switch to first layer if we deleted the active one
+      if (activeLayer === layerName && layers.length > 1) {
+        const remaining = layers.filter((l) => l.name !== layerName);
+        if (remaining.length > 0) {
+          setActiveLayer(remaining[0].name);
+        }
+      }
     }
   };
 
