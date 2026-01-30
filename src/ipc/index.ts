@@ -1,2 +1,3 @@
-export { IPC_CHANNELS, registerIpcHandlers, setupProcessEventForwarding } from "./handlers";
+export { IPC_CHANNELS } from "./channels";
+export { registerIpcHandlers, setupProcessEventForwarding } from "./handlers";
 
