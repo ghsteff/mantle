@@ -2,11 +2,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { PermissionModal } from "./status";
 import { Button, ResizablePanel } from "./ui";
 import { useKanata } from "../contexts";
+import {
+  DEFAULT_LOG_PANEL_HEIGHT,
+  MIN_LOG_PANEL_HEIGHT,
+  MAX_LOG_PANEL_HEIGHT,
+  MAX_VISIBLE_LOGS,
+} from "../constants";
 
 const LOG_PANEL_HEIGHT_KEY = "kanata-log-panel-height";
-const MIN_LOG_PANEL_HEIGHT = 100;
-const MAX_LOG_PANEL_HEIGHT = 600;
-const DEFAULT_LOG_PANEL_HEIGHT = 160;
 
 /**
  * Log panel to display Kanata process logs.
@@ -22,8 +25,7 @@ export function LogPanel() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const shouldAutoScrollRef = useRef(true);
 
-  // Limit visible logs to most recent 200 for performance
-  const MAX_VISIBLE_LOGS = 200;
+  // Limit visible logs for performance
   const visibleLogs =
     logs.length > MAX_VISIBLE_LOGS ? logs.slice(-MAX_VISIBLE_LOGS) : logs;
   const hiddenLogCount = logs.length - visibleLogs.length;

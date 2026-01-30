@@ -7,6 +7,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 import type { KanataStatus, KanataLogEntry } from "../types";
+import { MAX_RESTART_ATTEMPTS } from "../constants";
 
 export interface KanataProcessEvents {
   "status-change": (status: KanataStatus) => void;
@@ -83,7 +84,7 @@ export class KanataProcessManager extends EventEmitter {
   private status: KanataStatus = "stopped";
   private autoRestart = false;
   private restartAttempts = 0;
-  private maxRestartAttempts = 3;
+  private maxRestartAttempts = MAX_RESTART_ATTEMPTS;
   private restartDelay = 1000;
   private restartTimeoutId: NodeJS.Timeout | null = null;
   private intentionalStop = false;

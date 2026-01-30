@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import type { KanataStatus, KanataLogEntry } from "../types";
+import { MAX_LOGS } from "../constants";
 
 interface KanataContextValue {
   status: KanataStatus;
@@ -23,8 +24,6 @@ interface KanataContextValue {
 }
 
 const KanataContext = createContext<KanataContextValue | null>(null);
-
-const MAX_LOGS = 500;
 
 // Check if we're running in Electron with the preload script
 const isElectron = typeof window !== "undefined" && window.kanata !== undefined;
