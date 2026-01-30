@@ -16,15 +16,12 @@ export function KarabinerOnboarding({ onOnboardingStateChange }: KarabinerOnboar
   const [onboardingStarted, setOnboardingStarted] = useState(false);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 
-  // Only show on macOS
-  const isMac = window.navigator.platform.toLowerCase().includes("mac");
-
   // Start onboarding when driver is not installed
   useEffect(() => {
-    if (isMac && driverInstalled === false && !onboardingStarted && !onboardingCompleted) {
+    if (driverInstalled === false && !onboardingStarted && !onboardingCompleted) {
       setOnboardingStarted(true);
     }
-  }, [isMac, driverInstalled, onboardingStarted, onboardingCompleted]);
+  }, [driverInstalled, onboardingStarted, onboardingCompleted]);
 
   // Keep modal open once started, until user clicks "Done"
   const showOnboarding = onboardingStarted && !onboardingCompleted;

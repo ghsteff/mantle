@@ -12,16 +12,11 @@ if (started) {
 let mainWindow: BrowserWindow | null = null;
 
 const createWindow = () => {
-  // Create the browser window with integrated title bar on macOS only
-  const isMac = process.platform === "darwin";
-
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
-    ...(isMac && {
-      titleBarStyle: "hiddenInset",
-      trafficLightPosition: { x: 12, y: 15 },
-    }),
+    titleBarStyle: "hiddenInset",
+    trafficLightPosition: { x: 12, y: 15 },
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
     },
@@ -66,14 +61,10 @@ app.on("ready", () => {
   createWindow();
 });
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-  }
-});
+// On macOS, keep the app running when all windows are closed.
+// User quits explicitly with Cmd + Q.
+// eslint-disable-next-line @typescript-eslint/no-empty-function
+app.on("window-all-closed", () => {});
 
 app.on("activate", () => {
   // On OS X it's common to re-create a window in the app when the

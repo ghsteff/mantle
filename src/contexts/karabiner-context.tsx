@@ -30,9 +30,6 @@ const KarabinerContext = createContext<KarabinerContextValue | null>(null);
 
 // Check if we're running in Electron with the preload script
 const isElectron = typeof window !== "undefined" && window.kanata !== undefined;
-const isMac = typeof process !== "undefined"
-  ? process.platform === "darwin"
-  : typeof navigator !== "undefined" && navigator.platform.toLowerCase().includes("mac");
 
 export function KarabinerProvider({ children }: { children: ReactNode }) {
   const [driverInstalled, setDriverInstalled] = useState<boolean | null>(null);
@@ -45,8 +42,8 @@ export function KarabinerProvider({ children }: { children: ReactNode }) {
   const [installError, setInstallError] = useState<string | null>(null);
 
   const checkStatus = useCallback(async () => {
-    if (!isElectron || !isMac) {
-      // On non-Mac or outside Electron, assume driver is installed
+    if (!isElectron) {
+      // Outside Electron (e.g., in browser dev), assume driver is installed
       setDriverInstalled(true);
       setAppInstalled(true);
       setPkgDownloaded(false);

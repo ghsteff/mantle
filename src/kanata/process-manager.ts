@@ -1,4 +1,4 @@
-import { spawn, ChildProcess, execSync } from "node:child_process";
+import { ChildProcess, execSync } from "node:child_process";
 import { EventEmitter } from "node:events";
 import { getKanataBinaryPath } from "./binary-path";
 import { getConfigManager } from "./config-manager";
@@ -15,8 +15,6 @@ export interface KanataProcessEvents {
   crash: (code: number | null, signal: string | null) => void;
   "permission-denied": () => void;
 }
-
-const isMacOS = process.platform === "darwin";
 
 // LaunchDaemon configuration for macOS
 const DAEMON_LABEL = "com.mantle.kanata";
@@ -92,9 +90,7 @@ export class KanataProcessManager extends EventEmitter {
   private pollInterval: NodeJS.Timeout | null = null;
   private logFile = "";
   private logTailInterval: NodeJS.Timeout | null = null;
-  private lastLogPosition = 0;
   private handlingPermissionError = false;
-  private daemonInstalled = false;
 
   getStatus(): KanataStatus {
     return this.status;
@@ -112,26 +108,8 @@ export class KanataProcessManager extends EventEmitter {
    * Check if the LaunchDaemon is installed
    */
   isDaemonInstalled(): boolean {
-    if (!isMacOS) return false;
     try {
       return fs.existsSync(DAEMON_PLIST_PATH);
-    } catch {
-      return false;
-    }
-  }
-
-  /**
-   * Check if the LaunchDaemon is currently loaded
-   */
-  private isDaemonLoaded(): boolean {
-    try {
-      const result = execSync(
-        `launchctl list 2>/dev/null | grep ${DAEMON_LABEL} || true`,
-        {
-          encoding: "utf8",
-        }
-      ).trim();
-      return result.includes(DAEMON_LABEL);
     } catch {
       return false;
     }
@@ -142,11 +120,6 @@ export class KanataProcessManager extends EventEmitter {
    * Also configures passwordless sudo for launchctl commands.
    */
   async installDaemon(): Promise<boolean> {
-    if (!isMacOS) {
-      this.emitLog("stderr", "LaunchDaemon is only supported on macOS");
-      return false;
-    }
-
     const binaryPath = getKanataBinaryPath();
     const configPath = getConfigManager().getKbdConfigPath();
     const plistContent = generatePlist(binaryPath, configPath);
@@ -214,7 +187,6 @@ export class KanataProcessManager extends EventEmitter {
           return;
         }
 
-        this.daemonInstalled = true;
         this.emitLog("stdout", "Kanata service installed successfully!");
         this.emitLog(
           "stdout",
@@ -260,10 +232,8 @@ export class KanataProcessManager extends EventEmitter {
   }
 
   /**
-   * Starts the Kanata process.
-   * On macOS with daemon installed: uses launchctl (no password).
-   * On macOS without daemon: prompts to install, then uses daemon.
-   * On other platforms: spawns directly.
+   * Starts the Kanata process via LaunchDaemon.
+   * Uses launchctl (no password after initial setup).
    */
   async start(): Promise<boolean> {
     // Check for existing process first
@@ -286,27 +256,20 @@ export class KanataProcessManager extends EventEmitter {
     this.setStatus("starting");
 
     try {
-      const binaryPath = getKanataBinaryPath();
-      const configPath = getConfigManager().getKbdConfigPath();
-
       this.emitLog("stdout", "Starting Kanata...");
 
-      if (isMacOS) {
-        // Check if daemon is installed
-        if (!this.isDaemonInstalled()) {
-          this.emitLog("stdout", "First-time setup required...");
-          const installed = await this.installDaemon();
-          if (!installed) {
-            this.setStatus("stopped");
-            return false;
-          }
+      // Check if daemon is installed
+      if (!this.isDaemonInstalled()) {
+        this.emitLog("stdout", "First-time setup required...");
+        const installed = await this.installDaemon();
+        if (!installed) {
+          this.setStatus("stopped");
+          return false;
         }
-
-        // Start via launchctl (no password needed!)
-        return this.startViaDaemon();
-      } else {
-        return this.startDirect(binaryPath, configPath);
       }
+
+      // Start via launchctl (no password needed!)
+      return this.startViaDaemon();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.emitLog("stderr", `Failed to start Kanata: ${message}`);
@@ -322,8 +285,6 @@ export class KanataProcessManager extends EventEmitter {
   private async startViaDaemon(): Promise<boolean> {
     try {
       // Clear old log files before starting so we only see fresh output
-      // Use sudo because the log files are owned by root
-      this.lastLogPosition = 0;
       try {
         execSync(
           `sudo -n /usr/bin/truncate -s 0 "${DAEMON_STDOUT_LOG}" "${DAEMON_STDERR_LOG}" 2>/dev/null || true`,
@@ -464,25 +425,11 @@ export class KanataProcessManager extends EventEmitter {
     }
   }
 
-  /**
-   * Start Kanata directly (Linux/Windows)
-   */
-  private startDirect(binaryPath: string, configPath: string): boolean {
-    this.process = spawn(binaryPath, ["-n", "-c", configPath], {
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    this.setupProcessHandlers();
-    this.setStatus("running");
-    this.restartAttempts = 0;
-    return true;
-  }
-
   private startLogTailing(): void {
     this.stopLogTailing();
 
     // For daemon mode, we need to tail both stdout and stderr logs
-    const isDaemonMode = isMacOS && this.isDaemonInstalled();
+    const isDaemonMode = this.isDaemonInstalled();
 
     // Track positions for both log files
     let stdoutPos = 0;
@@ -664,8 +611,8 @@ export class KanataProcessManager extends EventEmitter {
       });
     }
 
-    // On macOS with daemon installed, use launchctl (no password thanks to sudoers!)
-    if (isMacOS && this.isDaemonInstalled()) {
+    // Use launchctl if daemon is installed (no password thanks to sudoers!)
+    if (this.isDaemonInstalled()) {
       try {
         this.emitLog("stdout", "Stopping Kanata...");
         execSync(`sudo -n /bin/launchctl stop ${DAEMON_LABEL}`, {
@@ -758,52 +705,6 @@ export class KanataProcessManager extends EventEmitter {
 
     this.emitLog("stdout", "Restarting Kanata to apply changes...");
     return this.restart();
-  }
-
-  private setupProcessHandlers(): void {
-    if (!this.process) return;
-
-    this.process.stdout?.on("data", (data: Buffer) => {
-      const message = data.toString().trim();
-      if (message) {
-        this.emitLog("stdout", message);
-      }
-    });
-
-    this.process.stderr?.on("data", (data: Buffer) => {
-      const message = data.toString().trim();
-      if (message) {
-        this.emitLog("stderr", message);
-      }
-    });
-
-    this.process.on("error", (error) => {
-      this.emitLog("stderr", `Process error: ${error.message}`);
-      this.setStatus("error");
-      this.emit("error", error.message);
-    });
-
-    this.process.on("exit", (code, signal) => {
-      this.process = null;
-
-      if (this.intentionalStop) {
-        this.emitLog("stdout", "Kanata stopped");
-        this.setStatus("stopped");
-        return;
-      }
-
-      this.emitLog(
-        "stderr",
-        `Kanata exited (code: ${code}, signal: ${signal})`
-      );
-      this.emit("crash", code, signal);
-
-      if (this.autoRestart && this.restartAttempts < this.maxRestartAttempts) {
-        this.scheduleRestart();
-      } else {
-        this.setStatus("error");
-      }
-    });
   }
 
   private scheduleRestart(): void {

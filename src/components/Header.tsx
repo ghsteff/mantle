@@ -4,7 +4,6 @@ import { ProfileSwitcher, ImportExportButton } from "./profiles";
 import { StatusIndicator } from "./status";
 import { Button } from "./ui";
 import { useConfig, useProfile } from "../contexts";
-import { cn } from "../lib/utils";
 
 /**
  * Header with layer tabs, apply changes button, and status indicator.
@@ -23,18 +22,11 @@ export function Header() {
     }
   };
 
-  const isMac = window.navigator.platform.toLowerCase().includes("mac");
-
   return (
     <header
-      className={cn(
-        "h-12 bg-bg-secondary border-b border-border flex items-center justify-between",
-        isMac ? "drag-region pl-20 pr-4" : "px-4"
-      )}
+      className="h-12 bg-bg-secondary border-b border-border flex items-center justify-between drag-region pl-20 pr-4"
     >
-      <div
-        className={cn("flex items-center gap-4", isMac ? "no-drag-region" : "")}
-      >
+      <div className="flex items-center gap-4 no-drag-region">
         <h1 className="text-sm font-semibold text-text-primary">Mantle</h1>
         {hasProfiles && (
           <>
@@ -44,8 +36,7 @@ export function Header() {
           </>
         )}
       </div>
-      <div
-        className={cn("flex items-center gap-3", isMac ? "no-drag-region" : "")}
+      <div className="flex items-center gap-3 no-drag-region"
       >
         {isDirty && (
           <div className="flex items-center gap-2">
