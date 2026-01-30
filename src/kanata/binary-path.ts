@@ -12,11 +12,6 @@ export function getKanataBinaryPath(): string {
   const platform = process.platform;
   const arch = process.arch;
 
-  console.log("[Kanata] Resolving binary path...");
-  console.log("[Kanata] isDev:", isDev);
-  console.log("[Kanata] platform:", platform);
-  console.log("[Kanata] arch:", arch);
-
   let binaryName: string;
 
   if (platform === "win32") {
@@ -31,8 +26,6 @@ export function getKanataBinaryPath(): string {
     binaryName = "kanata_linux_x64";
   }
 
-  console.log("[Kanata] binaryName:", binaryName);
-
   let binaryPath: string;
 
   if (isDev) {
@@ -43,21 +36,15 @@ export function getKanataBinaryPath(): string {
     binaryPath = path.join(process.resourcesPath, binaryName);
   }
 
-  console.log("[Kanata] Resolved binary path:", binaryPath);
-
   // Check if the file exists
   if (fs.existsSync(binaryPath)) {
-    console.log("[Kanata] Binary exists: YES");
     // Check if executable (on Unix)
     if (platform !== "win32") {
       try {
         fs.accessSync(binaryPath, fs.constants.X_OK);
-        console.log("[Kanata] Binary is executable: YES");
       } catch {
-        console.log("[Kanata] Binary is executable: NO - will try to chmod");
         try {
           fs.chmodSync(binaryPath, 0o755);
-          console.log("[Kanata] chmod successful");
         } catch (e) {
           console.error("[Kanata] Failed to chmod:", e);
         }
@@ -71,8 +58,7 @@ export function getKanataBinaryPath(): string {
     // List what's in resourcesPath for debugging
     if (!isDev) {
       try {
-        const files = fs.readdirSync(process.resourcesPath);
-        console.log("[Kanata] Files in resourcesPath:", files);
+        fs.readdirSync(process.resourcesPath);
       } catch (e) {
         console.error("[Kanata] Failed to list resourcesPath:", e);
       }

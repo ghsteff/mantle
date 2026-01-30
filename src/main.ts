@@ -53,10 +53,7 @@ app.on("ready", () => {
 
   // Initialize the config manager and ensure default config exists
   const configManager = getConfigManager();
-  const config = configManager.loadOrCreateDefault();
-  console.log("Kanata config loaded from:", configManager.getJsonConfigPath());
-  console.log("Kanata .kbd file at:", configManager.getKbdConfigPath());
-  console.log("Config has", config.layers.length, "layers");
+  configManager.loadOrCreateDefault();
 
   createWindow();
 });

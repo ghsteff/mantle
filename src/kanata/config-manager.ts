@@ -309,7 +309,6 @@ export class ConfigManager {
       return null;
     }
 
-    console.log("[ConfigManager] Migrating legacy config to profiles system");
     try {
       const content = fs.readFileSync(legacyPath, "utf-8");
       const config = JSON.parse(content) as KeyboardConfig;
@@ -333,11 +332,9 @@ export class ConfigManager {
    */
   private migrateConfig(config: KeyboardConfig): KeyboardConfig {
     const functionRow = ["esc", "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12"];
-    
+
     // Check if function row is missing
     if (!config.sourceKeys.includes("esc") && !config.sourceKeys.includes("f1")) {
-      console.log("[ConfigManager] Migrating config to add function row");
-      
       config.sourceKeys = [...functionRow, ...config.sourceKeys];
       
       for (const layer of config.layers) {
