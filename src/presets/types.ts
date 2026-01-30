@@ -1,4 +1,4 @@
-import type { KeyboardConfig } from "../kanata/types";
+import type { KeyboardConfig } from "../types";
 
 /**
  * Metadata for a keyboard preset.

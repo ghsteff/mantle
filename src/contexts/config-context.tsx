@@ -6,37 +6,13 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-
-// Types matching preload.ts
-interface KeyboardLayer {
-  name: string;
-  keys: Record<string, string>;
-}
-
-interface KeyboardConfig {
-  sourceKeys: string[];
-  layers: KeyboardLayer[];
-  aliases?: Record<string, string>;
-}
-
-interface ProfileInfo {
-  name: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface ExportResult {
-  success: boolean;
-  path?: string;
-  error?: string;
-}
-
-interface ImportResult {
-  success: boolean;
-  config?: KeyboardConfig;
-  suggestedName?: string;
-  error?: string;
-}
+import type {
+  KeyboardLayer,
+  KeyboardConfig,
+  ProfileInfo,
+  ExportResult,
+  ImportResult,
+} from "../types";
 
 interface ConfigContextValue {
   config: KeyboardConfig | null;

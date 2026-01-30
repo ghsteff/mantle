@@ -8,8 +8,8 @@ import {
   type KanataStatus,
   type KanataLogEntry,
   type ParseResult,
+  type ProfileInfo,
 } from "../kanata";
-import type { ProfileInfo } from "../kanata/config-manager";
 import {
   isKarabinerDriverInstalled,
   isKarabinerAppInstalled,

@@ -1,18 +1,9 @@
 import { app } from "electron";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { KeyboardConfig } from "./types";
+import type { KeyboardConfig, ProfileInfo } from "../types";
 import { generateKanataConfig, createExampleConfig } from "./generator";
 import { parseKbdFile, type ParseResult } from "./parser";
-
-/**
- * Metadata for a saved profile.
- */
-export interface ProfileInfo {
-  name: string;
-  createdAt: string;
-  updatedAt: string;
-}
 
 /**
  * Structure of the profiles.json file.

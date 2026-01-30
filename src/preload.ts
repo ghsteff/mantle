@@ -2,6 +2,18 @@
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
 
 import { contextBridge, ipcRenderer, IpcRendererEvent } from "electron";
+import type {
+  KanataStatus,
+  KanataLogEntry,
+  KeyboardConfig,
+  ConfigPaths,
+  CrashInfo,
+  ExportResult,
+  ImportResult,
+  ProfileInfo,
+  KarabinerStatus,
+  KarabinerInstallResult,
+} from "./types";
 
 /**
  * IPC Channel names - keep in sync with ipc/handlers.ts
@@ -52,68 +64,6 @@ const IPC_CHANNELS = {
   KARABINER_INSTALL_OUTPUT: "karabiner:install-output",
   KARABINER_INSTALL_COMPLETE: "karabiner:install-complete",
 } as const;
-
-export type KanataStatus = "stopped" | "starting" | "running" | "error";
-
-export interface KanataLogEntry {
-  type: "stdout" | "stderr";
-  message: string;
-  timestamp: number;
-}
-
-export interface KeyboardLayer {
-  name: string;
-  keys: Record<string, string>;
-}
-
-export interface KeyboardConfig {
-  sourceKeys: string[];
-  layers: KeyboardLayer[];
-  aliases?: Record<string, string>;
-}
-
-export interface ConfigPaths {
-  json: string;
-  kbd: string;
-  dir: string;
-}
-
-export interface CrashInfo {
-  code: number | null;
-  signal: string | null;
-}
-
-export interface ExportResult {
-  success: boolean;
-  path?: string;
-  error?: string;
-}
-
-export interface ImportResult {
-  success: boolean;
-  config?: KeyboardConfig;
-  suggestedName?: string;
-  error?: string;
-}
-
-export interface ProfileInfo {
-  name: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface KarabinerStatus {
-  driverInstalled: boolean;
-  appInstalled: boolean;
-  pkgDownloaded: boolean;
-  homebrewInstalled: boolean;
-  pkgPath: string | null;
-}
-
-export interface KarabinerInstallResult {
-  success: boolean;
-  error?: string;
-}
 
 /**
  * The API exposed to the renderer process via contextBridge.

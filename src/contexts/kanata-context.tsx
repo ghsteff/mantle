@@ -6,14 +6,7 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-
-type KanataStatus = "stopped" | "starting" | "running" | "error";
-
-interface KanataLogEntry {
-  type: "stdout" | "stderr";
-  message: string;
-  timestamp: number;
-}
+import type { KanataStatus, KanataLogEntry } from "../types";
 
 interface KanataContextValue {
   status: KanataStatus;

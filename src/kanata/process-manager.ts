@@ -6,14 +6,7 @@ import * as sudoPrompt from "@vscode/sudo-prompt";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-
-export type KanataStatus = "stopped" | "starting" | "running" | "error";
-
-export interface KanataLogEntry {
-  type: "stdout" | "stderr";
-  message: string;
-  timestamp: number;
-}
+import type { KanataStatus, KanataLogEntry } from "../types";
 
 export interface KanataProcessEvents {
   "status-change": (status: KanataStatus) => void;
@@ -132,9 +125,12 @@ export class KanataProcessManager extends EventEmitter {
    */
   private isDaemonLoaded(): boolean {
     try {
-      const result = execSync(`launchctl list 2>/dev/null | grep ${DAEMON_LABEL} || true`, {
-        encoding: "utf8",
-      }).trim();
+      const result = execSync(
+        `launchctl list 2>/dev/null | grep ${DAEMON_LABEL} || true`,
+        {
+          encoding: "utf8",
+        }
+      ).trim();
       return result.includes(DAEMON_LABEL);
     } catch {
       return false;
@@ -209,7 +205,10 @@ export class KanataProcessManager extends EventEmitter {
           ) {
             this.emitLog("stdout", "Setup cancelled");
           } else {
-            this.emitLog("stderr", `Failed to install service: ${error.message}`);
+            this.emitLog(
+              "stderr",
+              `Failed to install service: ${error.message}`
+            );
           }
           resolve(false);
           return;
@@ -217,7 +216,10 @@ export class KanataProcessManager extends EventEmitter {
 
         this.daemonInstalled = true;
         this.emitLog("stdout", "Kanata service installed successfully!");
-        this.emitLog("stdout", "You won't need to enter your password again to start/stop Kanata.");
+        this.emitLog(
+          "stdout",
+          "You won't need to enter your password again to start/stop Kanata."
+        );
         resolve(true);
       });
     });
@@ -332,7 +334,9 @@ export class KanataProcessManager extends EventEmitter {
       }
 
       // Use sudo -n (non-interactive) - works without password due to sudoers config
-      execSync(`sudo -n /bin/launchctl start ${DAEMON_LABEL}`, { encoding: "utf8" });
+      execSync(`sudo -n /bin/launchctl start ${DAEMON_LABEL}`, {
+        encoding: "utf8",
+      });
 
       // Wait for process to start
       return new Promise((resolve) => {
@@ -369,7 +373,10 @@ export class KanataProcessManager extends EventEmitter {
         // Check for permission errors even if process started
         // (it can start but fail to grab the keyboard)
         const stderrContent = this.readDaemonStderrLog();
-        if (stderrContent.includes("not permitted") && stderrContent.includes("IOHIDDeviceOpen")) {
+        if (
+          stderrContent.includes("not permitted") &&
+          stderrContent.includes("IOHIDDeviceOpen")
+        ) {
           // Show the permission error in logs
           for (const line of stderrContent.split("\n")) {
             const trimmed = line.trim();
@@ -386,7 +393,10 @@ export class KanataProcessManager extends EventEmitter {
 
       // Check logs for errors
       const logContent = this.readDaemonLogs();
-      if (logContent.includes("[ERROR]") || logContent.includes("not permitted")) {
+      if (
+        logContent.includes("[ERROR]") ||
+        logContent.includes("not permitted")
+      ) {
         this.showDaemonLogErrors();
         this.setStatus("error");
         resolve(false);
@@ -506,7 +516,10 @@ export class KanataProcessManager extends EventEmitter {
             for (const line of buffer.toString("utf8").split("\n")) {
               const parsed = parseLogLine(line);
               if (parsed) {
-                this.emitLog(parsed.isError ? "stderr" : "stdout", parsed.clean);
+                this.emitLog(
+                  parsed.isError ? "stderr" : "stdout",
+                  parsed.clean
+                );
                 this.checkInputMonitoringError(parsed.clean);
               }
             }
@@ -655,7 +668,9 @@ export class KanataProcessManager extends EventEmitter {
     if (isMacOS && this.isDaemonInstalled()) {
       try {
         this.emitLog("stdout", "Stopping Kanata...");
-        execSync(`sudo -n /bin/launchctl stop ${DAEMON_LABEL}`, { encoding: "utf8" });
+        execSync(`sudo -n /bin/launchctl stop ${DAEMON_LABEL}`, {
+          encoding: "utf8",
+        });
 
         // Wait for process to stop
         await new Promise((r) => setTimeout(r, 500));
@@ -664,9 +679,12 @@ export class KanataProcessManager extends EventEmitter {
         const pid = this.findKanataPid();
         if (pid) {
           // Force kill if still running
-          execSync(`sudo -n /bin/launchctl kill SIGKILL system/${DAEMON_LABEL} 2>/dev/null || true`, {
-            encoding: "utf8",
-          });
+          execSync(
+            `sudo -n /bin/launchctl kill SIGKILL system/${DAEMON_LABEL} 2>/dev/null || true`,
+            {
+              encoding: "utf8",
+            }
+          );
           await new Promise((r) => setTimeout(r, 500));
         }
 

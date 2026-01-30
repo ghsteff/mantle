@@ -1,11 +1,4 @@
-/**
- * Represents a single layer in the keyboard configuration.
- * Each layer maps physical keys to their actions.
- */
-export interface KeyboardLayer {
-  name: string;
-  keys: Record<string, string>; // Map physical key to action
-}
+import type { KeyboardLayer } from "../types";
 
 /**
  * A tap-hold action that performs one action on tap and another on hold.
@@ -63,18 +56,6 @@ export type KeyAction =
 export interface KeyboardLayerExtended {
   name: string;
   keys: Record<string, KeyAction>;
-}
-
-/**
- * The complete keyboard configuration.
- */
-export interface KeyboardConfig {
-  /** The source keys layout (physical keyboard) */
-  sourceKeys: string[];
-  /** All configured layers */
-  layers: KeyboardLayer[];
-  /** Optional: define aliases for complex actions */
-  aliases?: Record<string, string>;
 }
 
 /**

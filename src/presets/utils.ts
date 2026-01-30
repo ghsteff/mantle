@@ -1,4 +1,4 @@
-import type { KeyboardConfig, KeyboardLayer } from "../kanata/types";
+import type { KeyboardConfig, KeyboardLayer } from "../types";
 
 /**
  * Standard source keys for a US QWERTY keyboard.
