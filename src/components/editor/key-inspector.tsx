@@ -32,8 +32,8 @@ export function KeyInspector() {
     return (
       <div className="w-72 bg-card border-l border-border p-4 flex flex-col z-10 transition-all duration-200">
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-center text-muted-foreground">
-            <Keyboard className="size-8 text-muted-foreground/40 mb-3" strokeWidth={1} />
+          <div className="flex flex-col items-center text-muted-foreground">
+            <Keyboard className="size-8 text-muted-foreground/40 mb-3 mx-auto" strokeWidth={1} />
             <p className="text-sm text-muted-foreground">Click a key to configure</p>
           </div>
         </div>

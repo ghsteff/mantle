@@ -36,7 +36,7 @@ const EXTENDED_FUNCTION_KEYS: KeyOption[] = Array.from(
     value: `f${i + 13}`,
     label: `F${i + 13}`,
     category: "Function Keys",
-  })
+  }),
 );
 
 // Modifiers
@@ -238,10 +238,4 @@ export const KEY_CATEGORIES = [
 // Helper to find a key option by value
 export function findKeyOption(value: string): KeyOption | undefined {
   return ALL_KANATA_KEYS.find((k) => k.value === value);
-}
-
-// Helper to get display label for a key
-export function getKeyDisplayLabel(value: string): string {
-  const option = findKeyOption(value);
-  return option?.label || value;
 }
