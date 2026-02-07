@@ -3,14 +3,15 @@ import { LayerTabs } from "./editor";
 import { ProfileSwitcher, ImportExportButton } from "./profiles";
 import { StatusIndicator } from "./status";
 import { Button } from "./ui";
-import { useConfig, useProfile } from "../contexts";
+import { useConfigActions, useConfigState, useProfile } from "../contexts";
 import { cn } from "@/lib/utils";
 
 /**
  * Header with layer tabs, apply changes button, and status indicator.
  */
 export function Header() {
-  const { isDirty, applyChanges, discardChanges, hasProfiles } = useConfig();
+  const { isDirty, hasProfiles } = useConfigState();
+  const { applyChanges, discardChanges } = useConfigActions();
   const { refreshProfiles } = useProfile();
   const [isApplying, setIsApplying] = useState(false);
 

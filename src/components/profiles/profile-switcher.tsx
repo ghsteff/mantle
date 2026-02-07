@@ -1,8 +1,9 @@
-import { useState } from "react";
-import { useConfig, useProfile } from "../../contexts";
+import { useCallback, useState } from "react";
+import { useConfigState, useProfile } from "../../contexts";
 import { Button } from "../ui";
 import { NewProfileDialog } from "../presets/new-profile-dialog";
 import type { Preset } from "../../presets";
+import { ProfileListItem } from "./profile-list-item";
 import {
   Dialog,
   DialogContent,
@@ -28,9 +29,6 @@ import {
 } from "../ui/command";
 import {
   ChevronsUpDown,
-  PencilIcon,
-  TrashIcon,
-  CheckIcon,
   PlusIcon,
 } from "lucide-react";
 
@@ -38,7 +36,7 @@ import {
  * Dropdown to switch between saved profiles.
  */
 export function ProfileSwitcher() {
-  const { profiles, activeProfile } = useConfig();
+  const { profiles, activeProfile } = useConfigState();
   const { switchProfile, deleteProfile, renameProfile, createProfile } = useProfile();
 
   const [newProfileDialogOpen, setNewProfileDialogOpen] = useState(false);
@@ -46,40 +44,66 @@ export function ProfileSwitcher() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [targetProfile, setTargetProfile] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
+  const [open, setOpen] = useState(false);
 
-  const handleRenameClick = (name: string) => {
+  const handleRenameClick = useCallback((name: string) => {
     setTargetProfile(name);
     setNewName(name);
     setRenameDialogOpen(true);
-  };
+  }, []);
 
-  const handleDeleteClick = (name: string) => {
+  const handleDeleteClick = useCallback((name: string) => {
     setTargetProfile(name);
     setDeleteDialogOpen(true);
-  };
+  }, []);
 
-  const handleRename = async () => {
+  const handleRename = useCallback(async () => {
     if (targetProfile && newName.trim() && newName !== targetProfile) {
       await renameProfile(targetProfile, newName.trim());
     }
     setRenameDialogOpen(false);
     setTargetProfile(null);
     setNewName("");
-  };
+  }, [newName, renameProfile, targetProfile]);
 
-  const handleDelete = async () => {
+  const handleDelete = useCallback(async () => {
     if (targetProfile) {
       await deleteProfile(targetProfile);
     }
     setDeleteDialogOpen(false);
     setTargetProfile(null);
-  };
+  }, [deleteProfile, targetProfile]);
 
-  const handleCreateProfile = async (name: string, preset: Preset) => {
-    await createProfile(name, preset.config);
-  };
+  const handleCreateProfile = useCallback(
+    async (name: string, preset: Preset) => {
+      await createProfile(name, preset.config);
+    },
+    [createProfile]
+  );
 
-  const [open, setOpen] = useState(false);
+  const handleSelectProfile = useCallback(
+    (name: string) => {
+      switchProfile(name);
+      setOpen(false);
+    },
+    [switchProfile]
+  );
+
+  const handleItemRename = useCallback(
+    (name: string) => {
+      handleRenameClick(name);
+      setOpen(false);
+    },
+    [handleRenameClick]
+  );
+
+  const handleItemDelete = useCallback(
+    (name: string) => {
+      handleDeleteClick(name);
+      setOpen(false);
+    },
+    [handleDeleteClick]
+  );
 
   if (profiles.length === 0) {
     return null;
@@ -106,60 +130,15 @@ export function ProfileSwitcher() {
               <CommandEmpty>No profiles found.</CommandEmpty>
               <CommandGroup heading="Profiles">
                 {profiles.map((profile) => (
-                  <CommandItem
+                  <ProfileListItem
                     key={profile.name}
-                    value={profile.name}
-                    onSelect={() => {
-                      switchProfile(profile.name);
-                      setOpen(false);
-                    }}
-                    className="justify-between"
-                  >
-                    <span className="flex items-center gap-2">
-                      <CheckIcon
-                        className={`size-3 ${
-                          profile.name === activeProfile
-                            ? "opacity-100"
-                            : "opacity-0"
-                        }`}
-                      />
-                      <span
-                        className={
-                          profile.name === activeProfile ? "font-medium" : ""
-                        }
-                      >
-                        {profile.name}
-                      </span>
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRenameClick(profile.name);
-                          setOpen(false);
-                        }}
-                        className="p-1 hover:bg-accent rounded"
-                        title="Rename profile"
-                      >
-                        <PencilIcon className="size-3" />
-                      </button>
-                      {profiles.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteClick(profile.name);
-                            setOpen(false);
-                          }}
-                          className="p-1 hover:bg-destructive/20 rounded text-destructive"
-                          title="Delete profile"
-                        >
-                          <TrashIcon className="size-3" />
-                        </button>
-                      )}
-                    </span>
-                  </CommandItem>
+                    name={profile.name}
+                    isActive={profile.name === activeProfile}
+                    canDelete={profiles.length > 1}
+                    onSelect={handleSelectProfile}
+                    onRename={handleItemRename}
+                    onDelete={handleItemDelete}
+                  />
                 ))}
               </CommandGroup>
               <CommandSeparator />

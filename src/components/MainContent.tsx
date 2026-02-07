@@ -1,14 +1,14 @@
 import { useEffect } from "react";
 import { KeyInspector } from "./editor";
 import { KeyboardGrid } from "./keyboard";
-import { useConfig, useProfile } from "../contexts";
+import { useConfigState, useProfile } from "../contexts";
 import { qwertyPreset } from "../presets";
 
 /**
  * Main content area with keyboard grid and inspector.
  */
 export function MainContent() {
-  const { isLoading, error, hasProfiles } = useConfig();
+  const { isLoading, error, hasProfiles } = useConfigState();
   const { createProfile, switchProfile, refreshProfiles } = useProfile();
 
   // Auto-create default profile if none exists

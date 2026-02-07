@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { KarabinerOnboardingModal } from "./onboarding";
-import { useConfig, useKanata, useKarabiner } from "../contexts";
+import {
+  useConfigState,
+  useKanataActions,
+  useKanataState,
+  useKarabinerActions,
+  useKarabinerState,
+} from "../contexts";
 
 interface KarabinerOnboardingProps {
   onOnboardingStateChange: (inProgress: boolean) => void;
@@ -10,9 +16,11 @@ interface KarabinerOnboardingProps {
  * Karabiner onboarding flow shown when driver is not installed (macOS only).
  */
 export function KarabinerOnboarding({ onOnboardingStateChange }: KarabinerOnboardingProps) {
-  const { driverInstalled, checkStatus } = useKarabiner();
-  const { openInputMonitoringSettings, start, status } = useKanata();
-  const { hasProfiles, isLoading } = useConfig();
+  const { driverInstalled } = useKarabinerState();
+  const { checkStatus } = useKarabinerActions();
+  const { status } = useKanataState();
+  const { openInputMonitoringSettings, start } = useKanataActions();
+  const { hasProfiles, isLoading } = useConfigState();
   const [onboardingStarted, setOnboardingStarted] = useState(false);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 

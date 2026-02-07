@@ -19,11 +19,11 @@ export function App() {
   const [onboardingInProgress, setOnboardingInProgress] = useState(false);
 
   return (
-    <KarabinerProvider>
-      <KanataProvider>
-        <UIProvider>
-          <ConfigProvider>
-            <ProfileProvider>
+    <ConfigProvider>
+      <UIProvider>
+        <ProfileProvider>
+          <KanataProvider>
+            <KarabinerProvider>
               <div className="h-full flex flex-col bg-background">
                 <KarabinerOnboarding onOnboardingStateChange={setOnboardingInProgress} />
                 <AutoStartServer onboardingInProgress={onboardingInProgress} />
@@ -31,10 +31,10 @@ export function App() {
                 <MainContent />
                 <LogPanel />
               </div>
-            </ProfileProvider>
-          </ConfigProvider>
-        </UIProvider>
-      </KanataProvider>
-    </KarabinerProvider>
+            </KarabinerProvider>
+          </KanataProvider>
+        </ProfileProvider>
+      </UIProvider>
+    </ConfigProvider>
   );
 }

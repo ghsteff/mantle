@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { PermissionModal } from "./status";
 import {
@@ -8,7 +8,7 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "./ui";
-import { useKanata } from "../contexts";
+import { useKanataActions, useKanataState } from "../contexts";
 import { cn } from "@/lib/utils";
 import {
   DEFAULT_LOG_PANEL_HEIGHT,
@@ -32,26 +32,31 @@ function formatTimestamp(timestamp: number): string {
  * Log panel to display Kanata process logs.
  */
 export function LogPanel() {
+  const { logs, permissionDenied } = useKanataState();
   const {
-    logs,
     clearLogs,
     openInputMonitoringSettings,
-    permissionDenied,
     clearPermissionDenied,
-  } = useKanata();
+  } = useKanataActions();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const shouldAutoScrollRef = useRef(true);
 
   // Limit visible logs for performance
-  const visibleLogs =
-    logs.length > MAX_VISIBLE_LOGS ? logs.slice(-MAX_VISIBLE_LOGS) : logs;
+  const visibleLogs = useMemo(
+    () => (logs.length > MAX_VISIBLE_LOGS ? logs.slice(-MAX_VISIBLE_LOGS) : logs),
+    [logs]
+  );
   const hiddenLogCount = logs.length - visibleLogs.length;
 
   // Check if there's an Input Monitoring permission error in logs (for UI button)
-  const hasPermissionError = logs.some(
-    (log) =>
-      log.message.includes("not permitted") ||
-      log.message.includes("Input Monitoring")
+  const hasPermissionError = useMemo(
+    () =>
+      logs.some(
+        (log) =>
+          log.message.includes("not permitted") ||
+          log.message.includes("Input Monitoring")
+      ),
+    [logs]
   );
 
   // Permission modal state - triggered by the permission-denied event from main process

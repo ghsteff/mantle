@@ -8,16 +8,20 @@ import {
 } from "react";
 import { assertContext } from "../lib/errors";
 
-interface UIContextValue {
+interface UIState {
   selectedKey: string | null;
   activeLayer: string;
   showActions: boolean;
+}
+
+interface UIActions {
   setSelectedKey: (key: string | null) => void;
   setActiveLayer: (layerName: string) => void;
   setShowActions: (show: boolean) => void;
 }
 
-const UIContext = createContext<UIContextValue | null>(null);
+const UIStateContext = createContext<UIState | null>(null);
+const UIActionsContext = createContext<UIActions | null>(null);
 
 // LocalStorage key for showActions preference
 const SHOW_ACTIONS_STORAGE_KEY = "mantle.showActions";
@@ -53,27 +57,47 @@ export function UIProvider({ children }: { children: ReactNode }) {
     saveShowActionsPreference(showActions);
   }, [showActions]);
 
-  const value = useMemo<UIContextValue>(() => ({
-    selectedKey,
-    activeLayer,
-    showActions,
-    setSelectedKey,
-    setActiveLayer,
-    setShowActions,
-  }), [
-    selectedKey,
-    activeLayer,
-    showActions,
-    setSelectedKey,
-    setActiveLayer,
-    setShowActions,
-  ]);
+  const stateValue = useMemo<UIState>(
+    () => ({
+      selectedKey,
+      activeLayer,
+      showActions,
+    }),
+    [selectedKey, activeLayer, showActions]
+  );
 
-  return <UIContext.Provider value={value}>{children}</UIContext.Provider>;
+  const actionsValue = useMemo<UIActions>(
+    () => ({
+      setSelectedKey,
+      setActiveLayer,
+      setShowActions,
+    }),
+    [setSelectedKey, setActiveLayer, setShowActions]
+  );
+
+  return (
+    <UIStateContext.Provider value={stateValue}>
+      <UIActionsContext.Provider value={actionsValue}>
+        {children}
+      </UIActionsContext.Provider>
+    </UIStateContext.Provider>
+  );
 }
 
-export function useUI(): UIContextValue {
-  const context = useContext(UIContext);
-  assertContext(context, "useUI", "UIProvider");
+export function useUIState(): UIState {
+  const context = useContext(UIStateContext);
+  assertContext(context, "useUIState", "UIProvider");
   return context;
+}
+
+export function useUIActions(): UIActions {
+  const context = useContext(UIActionsContext);
+  assertContext(context, "useUIActions", "UIProvider");
+  return context;
+}
+
+export function useUI(): UIState & UIActions {
+  const state = useUIState();
+  const actions = useUIActions();
+  return useMemo(() => ({ ...state, ...actions }), [state, actions]);
 }

@@ -1,5 +1,10 @@
 import { useEffect, useRef } from "react";
-import { useConfig, useKanata, useKarabiner } from "../contexts";
+import {
+  useConfigState,
+  useKanataActions,
+  useKanataState,
+  useKarabinerState,
+} from "../contexts";
 
 interface AutoStartServerProps {
   onboardingInProgress: boolean;
@@ -9,9 +14,10 @@ interface AutoStartServerProps {
  * Auto-start the Kanata server on app boot if conditions are met.
  */
 export function AutoStartServer({ onboardingInProgress }: AutoStartServerProps) {
-  const { driverInstalled } = useKarabiner();
-  const { status, start } = useKanata();
-  const { hasProfiles, isLoading } = useConfig();
+  const { driverInstalled } = useKarabinerState();
+  const { status } = useKanataState();
+  const { start } = useKanataActions();
+  const { hasProfiles, isLoading } = useConfigState();
   const hasAttemptedStartRef = useRef(false);
 
   useEffect(() => {

@@ -9,8 +9,8 @@ import {
 import type { KeyboardConfig, KeyboardLayer, ProfileInfo } from "../types";
 import { toErrorMessage, assertContext } from "../lib/errors";
 
-// Public interface for components
-interface ConfigContextValue {
+// State values for components
+interface ConfigState {
   config: KeyboardConfig | null;
   isLoading: boolean;
   error: string | null;
@@ -19,6 +19,10 @@ interface ConfigContextValue {
   profiles: ProfileInfo[];
   activeProfile: string | null;
   hasProfiles: boolean;
+}
+
+// Public actions for components
+interface ConfigActions {
   // Layer operations
   updateKey: (layerName: string, keyId: string, action: string) => void;
   addLayer: (name: string) => void;
@@ -30,8 +34,8 @@ interface ConfigContextValue {
   reloadConfig: () => Promise<KeyboardConfig | null>;
 }
 
-// Internal interface for ProfileContext to use
-interface ConfigInternalValue extends ConfigContextValue {
+// Internal actions for ProfileContext to use
+interface ConfigInternalActions extends ConfigActions {
   setConfig: (config: KeyboardConfig | null) => void;
   setIsLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -41,7 +45,8 @@ interface ConfigInternalValue extends ConfigContextValue {
   loadConfig: () => Promise<KeyboardConfig | null>;
 }
 
-const ConfigContext = createContext<ConfigInternalValue | null>(null);
+const ConfigStateContext = createContext<ConfigState | null>(null);
+const ConfigActionsContext = createContext<ConfigInternalActions | null>(null);
 
 // Check if we're running in Electron with the preload script
 const isElectron = typeof window !== "undefined" && window.kanata !== undefined;
@@ -222,100 +227,95 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     await loadConfig();
   }, [loadConfig]);
 
-  const value = useMemo<ConfigInternalValue>(() => ({
-    config,
-    isLoading,
-    error,
-    isDirty,
-    profiles,
-    activeProfile,
-    hasProfiles,
-    updateKey,
-    addLayer,
-    removeLayer,
-    renameLayer,
-    applyChanges,
-    discardChanges,
-    reloadConfig: loadConfig,
-    // Internal setters
-    setConfig,
-    setIsLoading,
-    setError,
-    setIsDirty,
-    setProfiles,
-    setActiveProfile,
-    loadConfig,
-  }), [
-    config,
-    isLoading,
-    error,
-    isDirty,
-    profiles,
-    activeProfile,
-    hasProfiles,
-    updateKey,
-    addLayer,
-    removeLayer,
-    renameLayer,
-    applyChanges,
-    discardChanges,
-    loadConfig,
-    setConfig,
-    setIsLoading,
-    setError,
-    setIsDirty,
-    setProfiles,
-    setActiveProfile,
-  ]);
+  const stateValue = useMemo<ConfigState>(
+    () => ({
+      config,
+      isLoading,
+      error,
+      isDirty,
+      profiles,
+      activeProfile,
+      hasProfiles,
+    }),
+    [config, isLoading, error, isDirty, profiles, activeProfile, hasProfiles]
+  );
+
+  const actionsValue = useMemo<ConfigInternalActions>(
+    () => ({
+      updateKey,
+      addLayer,
+      removeLayer,
+      renameLayer,
+      applyChanges,
+      discardChanges,
+      reloadConfig: loadConfig,
+      // Internal setters
+      setConfig,
+      setIsLoading,
+      setError,
+      setIsDirty,
+      setProfiles,
+      setActiveProfile,
+      loadConfig,
+    }),
+    [
+      updateKey,
+      addLayer,
+      removeLayer,
+      renameLayer,
+      applyChanges,
+      discardChanges,
+      loadConfig,
+      setConfig,
+      setIsLoading,
+      setError,
+      setIsDirty,
+      setProfiles,
+      setActiveProfile,
+    ]
+  );
 
   return (
-    <ConfigContext.Provider value={value}>{children}</ConfigContext.Provider>
+    <ConfigStateContext.Provider value={stateValue}>
+      <ConfigActionsContext.Provider value={actionsValue}>
+        {children}
+      </ConfigActionsContext.Provider>
+    </ConfigStateContext.Provider>
   );
 }
 
-// Public hook for components - returns only the public interface
-export function useConfig(): ConfigContextValue {
-  const context = useContext(ConfigContext);
-  assertContext(context, "useConfig", "ConfigProvider");
-  // Return only public properties
-  const {
-    config,
-    isLoading,
-    error,
-    isDirty,
-    profiles,
-    activeProfile,
-    hasProfiles,
-    updateKey,
-    addLayer,
-    removeLayer,
-    renameLayer,
-    applyChanges,
-    discardChanges,
-    reloadConfig,
-  } = context;
-
-  return {
-    config,
-    isLoading,
-    error,
-    isDirty,
-    profiles,
-    activeProfile,
-    hasProfiles,
-    updateKey,
-    addLayer,
-    removeLayer,
-    renameLayer,
-    applyChanges,
-    discardChanges,
-    reloadConfig,
-  };
+export function useConfigState(): ConfigState {
+  const context = useContext(ConfigStateContext);
+  assertContext(context, "useConfigState", "ConfigProvider");
+  return context;
 }
 
-// Internal hook for ProfileContext - returns full interface including setters
-export function useConfigInternal(): ConfigInternalValue {
-  const context = useContext(ConfigContext);
-  assertContext(context, "useConfigInternal", "ConfigProvider");
+export function useConfigActions(): ConfigActions {
+  const context = useContext(ConfigActionsContext);
+  assertContext(context, "useConfigActions", "ConfigProvider");
+  return useMemo(
+    () => ({
+      updateKey: context.updateKey,
+      addLayer: context.addLayer,
+      removeLayer: context.removeLayer,
+      renameLayer: context.renameLayer,
+      applyChanges: context.applyChanges,
+      discardChanges: context.discardChanges,
+      reloadConfig: context.reloadConfig,
+    }),
+    [context]
+  );
+}
+
+export function useConfig(): ConfigState & ConfigActions {
+  const state = useConfigState();
+  const actions = useConfigActions();
+  return useMemo(() => ({ ...state, ...actions }), [state, actions]);
+}
+
+// Internal hook for ProfileContext - returns full action interface including setters
+export function useConfigActionsInternal(): ConfigInternalActions {
+  const context = useContext(ConfigActionsContext);
+  assertContext(context, "useConfigActionsInternal", "ConfigProvider");
   return context;
 }

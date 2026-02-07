@@ -1,13 +1,20 @@
 import { useCallback, useState } from "react";
-import { useConfig, useUI } from "../../contexts";
+import {
+  useConfigActions,
+  useConfigState,
+  useUIActions,
+  useUIState,
+} from "../../contexts";
 import { PlusIcon } from "lucide-react";
 
 /**
  * Tabs for switching between keyboard layers.
  */
 export function LayerTabs() {
-  const { config, addLayer, removeLayer, renameLayer } = useConfig();
-  const { activeLayer, setActiveLayer } = useUI();
+  const { config } = useConfigState();
+  const { addLayer, removeLayer, renameLayer } = useConfigActions();
+  const { activeLayer } = useUIState();
+  const { setActiveLayer } = useUIActions();
   const [isAdding, setIsAdding] = useState(false);
   const [newLayerName, setNewLayerName] = useState("");
   const [editingLayer, setEditingLayer] = useState<string | null>(null);

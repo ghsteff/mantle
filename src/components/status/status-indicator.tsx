@@ -1,11 +1,12 @@
-import { useKanata } from "../../contexts";
+import { useKanataActions, useKanataState } from "../../contexts";
 
 /**
  * Status indicator badge showing Kanata process state.
  * Clicking toggles start/stop.
  */
 export function StatusIndicator() {
-  const { status, start, stop, isRunning } = useKanata();
+  const { status, isRunning } = useKanataState();
+  const { start, stop } = useKanataActions();
 
   const handleClick = async () => {
     if (isRunning) {

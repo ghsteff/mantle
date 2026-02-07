@@ -19,7 +19,7 @@ interface KarabinerStatus {
   pkgPath: string | null;
 }
 
-interface KarabinerContextValue {
+interface KarabinerState {
   driverInstalled: boolean | null;
   appInstalled: boolean | null;
   pkgDownloaded: boolean | null;
@@ -28,6 +28,9 @@ interface KarabinerContextValue {
   installStatus: KarabinerInstallStatus;
   installOutput: string[];
   installError: string | null;
+}
+
+interface KarabinerActions {
   checkStatus: () => Promise<void>;
   startInstall: () => Promise<void>;
   cancelInstall: () => Promise<void>;
@@ -36,7 +39,8 @@ interface KarabinerContextValue {
   launchApp: () => Promise<boolean>;
 }
 
-const KarabinerContext = createContext<KarabinerContextValue | null>(null);
+const KarabinerStateContext = createContext<KarabinerState | null>(null);
+const KarabinerActionsContext = createContext<KarabinerActions | null>(null);
 
 // Check if we're running in Electron with the preload script
 const isElectron = typeof window !== "undefined" && window.kanata !== undefined;
@@ -183,43 +187,55 @@ export function KarabinerProvider({ children }: { children: ReactNode }) {
     };
   }, [checkStatus]);
 
-  const value = useMemo<KarabinerContextValue>(() => ({
-    driverInstalled: karabinerStatus?.driverInstalled ?? null,
-    appInstalled: karabinerStatus?.appInstalled ?? null,
-    pkgDownloaded: karabinerStatus?.pkgDownloaded ?? null,
-    homebrewInstalled: karabinerStatus?.homebrewInstalled ?? null,
-    pkgPath: karabinerStatus?.pkgPath ?? null,
-    installStatus,
-    installOutput,
-    installError,
-    checkStatus,
-    startInstall,
-    cancelInstall,
-    clearInstallOutput,
-    openPkg,
-    launchApp,
-  }), [
-    karabinerStatus,
-    installStatus,
-    installOutput,
-    installError,
-    checkStatus,
-    startInstall,
-    cancelInstall,
-    clearInstallOutput,
-    openPkg,
-    launchApp,
-  ]);
+  const stateValue = useMemo<KarabinerState>(
+    () => ({
+      driverInstalled: karabinerStatus?.driverInstalled ?? null,
+      appInstalled: karabinerStatus?.appInstalled ?? null,
+      pkgDownloaded: karabinerStatus?.pkgDownloaded ?? null,
+      homebrewInstalled: karabinerStatus?.homebrewInstalled ?? null,
+      pkgPath: karabinerStatus?.pkgPath ?? null,
+      installStatus,
+      installOutput,
+      installError,
+    }),
+    [karabinerStatus, installStatus, installOutput, installError]
+  );
+
+  const actionsValue = useMemo<KarabinerActions>(
+    () => ({
+      checkStatus,
+      startInstall,
+      cancelInstall,
+      clearInstallOutput,
+      openPkg,
+      launchApp,
+    }),
+    [checkStatus, startInstall, cancelInstall, clearInstallOutput, openPkg, launchApp]
+  );
 
   return (
-    <KarabinerContext.Provider value={value}>
-      {children}
-    </KarabinerContext.Provider>
+    <KarabinerStateContext.Provider value={stateValue}>
+      <KarabinerActionsContext.Provider value={actionsValue}>
+        {children}
+      </KarabinerActionsContext.Provider>
+    </KarabinerStateContext.Provider>
   );
 }
 
-export function useKarabiner(): KarabinerContextValue {
-  const context = useContext(KarabinerContext);
-  assertContext(context, "useKarabiner", "KarabinerProvider");
+export function useKarabinerState(): KarabinerState {
+  const context = useContext(KarabinerStateContext);
+  assertContext(context, "useKarabinerState", "KarabinerProvider");
   return context;
+}
+
+export function useKarabinerActions(): KarabinerActions {
+  const context = useContext(KarabinerActionsContext);
+  assertContext(context, "useKarabinerActions", "KarabinerProvider");
+  return context;
+}
+
+export function useKarabiner(): KarabinerState & KarabinerActions {
+  const state = useKarabinerState();
+  const actions = useKarabinerActions();
+  return useMemo(() => ({ ...state, ...actions }), [state, actions]);
 }

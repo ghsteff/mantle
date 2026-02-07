@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "../ui";
 import { Dialog, DialogContent } from "../ui/dialog";
 import { cn } from "../../lib/utils";
-import { useKarabiner } from "../../contexts/karabiner-context";
+import { useKarabinerActions, useKarabinerState } from "../../contexts";
 
 type OnboardingStep = "install" | "activate" | "permission";
 
@@ -30,11 +30,13 @@ export function KarabinerOnboardingModal({
     installStatus,
     installOutput,
     installError,
+  } = useKarabinerState();
+  const {
     startInstall,
     cancelInstall,
     checkStatus,
     launchApp,
-  } = useKarabiner();
+  } = useKarabinerActions();
 
   const [step, setStep] = useState<OnboardingStep>("install");
   const [step2Verified, setStep2Verified] = useState(false);

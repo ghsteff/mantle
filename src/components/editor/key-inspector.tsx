@@ -1,14 +1,15 @@
 import { useMemo } from "react";
 import { Keyboard } from "lucide-react";
-import { useConfig, useUI } from "../../contexts";
+import { useConfigActions, useConfigState, useUIState } from "../../contexts";
 import { ActionEditor } from "./action-editor";
 
 /**
  * Panel for inspecting and editing the selected key.
  */
 export function KeyInspector() {
-  const { config, updateKey } = useConfig();
-  const { selectedKey, activeLayer } = useUI();
+  const { config } = useConfigState();
+  const { updateKey } = useConfigActions();
+  const { selectedKey, activeLayer } = useUIState();
 
   // Get the current action for the selected key
   const currentAction = useMemo(() => {

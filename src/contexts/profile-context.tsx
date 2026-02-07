@@ -8,8 +8,8 @@ import {
   type ReactNode,
 } from "react";
 import type { KeyboardConfig, ExportResult, ImportResult } from "../types";
-import { useConfigInternal } from "./config-context";
-import { useUI } from "./ui-context";
+import { useConfigActionsInternal, useConfigState } from "./config-context";
+import { useUIActions, useUIState } from "./ui-context";
 import { toErrorMessage, assertContext } from "../lib/errors";
 
 interface ProfileContextValue {
@@ -28,18 +28,18 @@ const ProfileContext = createContext<ProfileContextValue | null>(null);
 const isElectron = typeof window !== "undefined" && window.kanata !== undefined;
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
+  const { isDirty, activeProfile } = useConfigState();
   const {
-    isDirty,
-    activeProfile,
     setConfig,
     setActiveProfile,
     setProfiles,
     setIsDirty,
     setError,
     loadConfig,
-  } = useConfigInternal();
+  } = useConfigActionsInternal();
 
-  const { activeLayer, setActiveLayer, setSelectedKey } = useUI();
+  const { activeLayer } = useUIState();
+  const { setActiveLayer, setSelectedKey } = useUIActions();
   const hasInitialized = useRef(false);
 
   // Load profiles list

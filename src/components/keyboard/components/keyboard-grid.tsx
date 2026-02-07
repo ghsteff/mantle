@@ -6,7 +6,11 @@ import {
   getLayoutHeight,
   type KeyDef,
 } from "../utils/layout";
-import { useConfig, useUI } from "../../../contexts";
+import {
+  useConfigState,
+  useUIActions,
+  useUIState,
+} from "../../../contexts";
 import { Switch } from "../../ui";
 
 interface KeyboardGridProps {
@@ -17,14 +21,9 @@ interface KeyboardGridProps {
  * Renders the full keyboard grid.
  */
 export function KeyboardGrid({ layout = TKL_LAYOUT }: KeyboardGridProps) {
-  const { config } = useConfig();
-  const {
-    selectedKey,
-    activeLayer,
-    setSelectedKey,
-    showActions,
-    setShowActions,
-  } = useUI();
+  const { config } = useConfigState();
+  const { selectedKey, activeLayer, showActions } = useUIState();
+  const { setSelectedKey, setShowActions } = useUIActions();
 
   // Get the current layer's key mappings
   const layerKeys = useMemo(() => {

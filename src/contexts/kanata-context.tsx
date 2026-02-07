@@ -11,21 +11,25 @@ import type { KanataStatus, KanataLogEntry } from "../types";
 import { MAX_LOGS } from "../constants";
 import { assertContext } from "../lib/errors";
 
-interface KanataContextValue {
+interface KanataState {
   status: KanataStatus;
   logs: KanataLogEntry[];
   isRunning: boolean;
+  permissionDenied: boolean;
+}
+
+interface KanataActions {
   start: () => Promise<boolean>;
   stop: () => Promise<boolean>;
   restart: () => Promise<boolean>;
   clearLogs: () => void;
   setAutoRestart: (enabled: boolean) => Promise<void>;
   openInputMonitoringSettings: () => Promise<void>;
-  permissionDenied: boolean;
   clearPermissionDenied: () => void;
 }
 
-const KanataContext = createContext<KanataContextValue | null>(null);
+const KanataStateContext = createContext<KanataState | null>(null);
+const KanataActionsContext = createContext<KanataActions | null>(null);
 
 // Check if we're running in Electron with the preload script
 const isElectron = typeof window !== "undefined" && window.kanata !== undefined;
@@ -146,38 +150,60 @@ export function KanataProvider({ children }: { children: ReactNode }) {
     setPermissionDenied(false);
   }, []);
 
-  const value = useMemo<KanataContextValue>(() => ({
-    status,
-    logs,
-    isRunning: status === "running",
-    start,
-    stop,
-    restart,
-    clearLogs,
-    setAutoRestart,
-    openInputMonitoringSettings,
-    permissionDenied,
-    clearPermissionDenied,
-  }), [
-    status,
-    logs,
-    start,
-    stop,
-    restart,
-    clearLogs,
-    setAutoRestart,
-    openInputMonitoringSettings,
-    permissionDenied,
-    clearPermissionDenied,
-  ]);
+  const stateValue = useMemo<KanataState>(
+    () => ({
+      status,
+      logs,
+      isRunning: status === "running",
+      permissionDenied,
+    }),
+    [status, logs, permissionDenied]
+  );
+
+  const actionsValue = useMemo<KanataActions>(
+    () => ({
+      start,
+      stop,
+      restart,
+      clearLogs,
+      setAutoRestart,
+      openInputMonitoringSettings,
+      clearPermissionDenied,
+    }),
+    [
+      start,
+      stop,
+      restart,
+      clearLogs,
+      setAutoRestart,
+      openInputMonitoringSettings,
+      clearPermissionDenied,
+    ]
+  );
 
   return (
-    <KanataContext.Provider value={value}>{children}</KanataContext.Provider>
+    <KanataStateContext.Provider value={stateValue}>
+      <KanataActionsContext.Provider value={actionsValue}>
+        {children}
+      </KanataActionsContext.Provider>
+    </KanataStateContext.Provider>
   );
 }
 
-export function useKanata(): KanataContextValue {
-  const context = useContext(KanataContext);
-  assertContext(context, "useKanata", "KanataProvider");
+export function useKanataState(): KanataState {
+  const context = useContext(KanataStateContext);
+  assertContext(context, "useKanataState", "KanataProvider");
   return context;
+}
+
+export function useKanataActions(): KanataActions {
+  const context = useContext(KanataActionsContext);
+  assertContext(context, "useKanataActions", "KanataProvider");
+  return context;
+}
+
+export function useKanata(): KanataState & KanataActions {
+  const state = useKanataState();
+  const actions = useKanataActions();
+  return useMemo(() => ({ ...state, ...actions }), [state, actions]);
 }
