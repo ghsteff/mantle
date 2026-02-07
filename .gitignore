@@ -88,5 +88,8 @@ typings/
 # Vite
 .vite/
 
+# npm lockfile (using pnpm)
+package-lock.json
+
 # Electron-Forge
 out/

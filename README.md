@@ -96,26 +96,26 @@ Files:
 ### Prerequisites
 
 - Node.js 18+
-- npm or pnpm
+- pnpm
 
 ### Setup
 
 ```bash
 git clone https://github.com/YOUR_USERNAME/mantle.git
 cd mantle
-npm install
+pnpm install
 ```
 
 ### Run in Development
 
 ```bash
-npm start
+pnpm start
 ```
 
 ### Build for Production
 
 ```bash
-npm run make
+pnpm run make
 ```
 
 Outputs are in the `out/make` folder.
