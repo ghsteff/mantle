@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useConfig, useUI } from "../../contexts";
 import { PlusIcon } from "lucide-react";
 
@@ -15,7 +15,7 @@ export function LayerTabs() {
 
   const layers = config?.layers || [];
 
-  const handleAddLayer = () => {
+  const handleAddLayer = useCallback(() => {
     const normalizedName = newLayerName.trim().toLowerCase().replace(/\s+/g, "-");
     if (normalizedName && !layers.find((l) => l.name === normalizedName)) {
       addLayer(normalizedName);
@@ -23,34 +23,37 @@ export function LayerTabs() {
       setNewLayerName("");
       setIsAdding(false);
     }
-  };
+  }, [addLayer, layers, newLayerName, setActiveLayer]);
 
-  const handleStartRename = (layerName: string) => {
+  const handleStartRename = useCallback((layerName: string) => {
     setEditingLayer(layerName);
     setEditName(layerName);
-  };
+  }, []);
 
-  const handleRename = () => {
+  const handleRename = useCallback(() => {
     if (editingLayer && editName.trim() && editName !== editingLayer) {
       const newName = editName.trim().toLowerCase().replace(/\s+/g, "-");
       const newActiveLayer = renameLayer(editingLayer, newName, activeLayer);
       setActiveLayer(newActiveLayer);
     }
     setEditingLayer(null);
-  };
+  }, [activeLayer, editName, editingLayer, renameLayer, setActiveLayer]);
 
-  const handleDelete = (layerName: string) => {
-    if (layers.length > 1 && confirm(`Delete layer "${layerName}"?`)) {
-      removeLayer(layerName, activeLayer);
-      // Switch to first layer if we deleted the active one
-      if (activeLayer === layerName && layers.length > 1) {
-        const remaining = layers.filter((l) => l.name !== layerName);
-        if (remaining.length > 0) {
-          setActiveLayer(remaining[0].name);
+  const handleDelete = useCallback(
+    (layerName: string) => {
+      if (layers.length > 1 && confirm(`Delete layer "${layerName}"?`)) {
+        removeLayer(layerName, activeLayer);
+        // Switch to first layer if we deleted the active one
+        if (activeLayer === layerName && layers.length > 1) {
+          const remaining = layers.filter((l) => l.name !== layerName);
+          if (remaining.length > 0) {
+            setActiveLayer(remaining[0].name);
+          }
         }
       }
-    }
-  };
+    },
+    [activeLayer, layers, removeLayer, setActiveLayer]
+  );
 
   return (
     <div className="flex items-center px-2">

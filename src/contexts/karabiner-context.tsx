@@ -11,6 +11,14 @@ import { assertContext } from "../lib/errors";
 
 export type KarabinerInstallStatus = "idle" | "installing" | "success" | "error";
 
+interface KarabinerStatus {
+  driverInstalled: boolean | null;
+  appInstalled: boolean | null;
+  pkgDownloaded: boolean | null;
+  homebrewInstalled: boolean | null;
+  pkgPath: string | null;
+}
+
 interface KarabinerContextValue {
   driverInstalled: boolean | null;
   appInstalled: boolean | null;
@@ -34,11 +42,9 @@ const KarabinerContext = createContext<KarabinerContextValue | null>(null);
 const isElectron = typeof window !== "undefined" && window.kanata !== undefined;
 
 export function KarabinerProvider({ children }: { children: ReactNode }) {
-  const [driverInstalled, setDriverInstalled] = useState<boolean | null>(null);
-  const [appInstalled, setAppInstalled] = useState<boolean | null>(null);
-  const [pkgDownloaded, setPkgDownloaded] = useState<boolean | null>(null);
-  const [homebrewInstalled, setHomebrewInstalled] = useState<boolean | null>(null);
-  const [pkgPath, setPkgPath] = useState<string | null>(null);
+  const [karabinerStatus, setKarabinerStatus] = useState<KarabinerStatus | null>(
+    null
+  );
   const [installStatus, setInstallStatus] = useState<KarabinerInstallStatus>("idle");
   const [installOutput, setInstallOutput] = useState<string[]>([]);
   const [installError, setInstallError] = useState<string | null>(null);
@@ -46,29 +52,35 @@ export function KarabinerProvider({ children }: { children: ReactNode }) {
   const checkStatus = useCallback(async () => {
     if (!isElectron) {
       // Outside Electron (e.g., in browser dev), assume driver is installed
-      setDriverInstalled(true);
-      setAppInstalled(true);
-      setPkgDownloaded(false);
-      setHomebrewInstalled(true);
-      setPkgPath(null);
+      setKarabinerStatus({
+        driverInstalled: true,
+        appInstalled: true,
+        pkgDownloaded: false,
+        homebrewInstalled: true,
+        pkgPath: null,
+      });
       return;
     }
 
     try {
       const result = await window.kanata.checkKarabiner();
-      setDriverInstalled(result.driverInstalled);
-      setAppInstalled(result.appInstalled);
-      setPkgDownloaded(result.pkgDownloaded);
-      setHomebrewInstalled(result.homebrewInstalled);
-      setPkgPath(result.pkgPath);
+      setKarabinerStatus({
+        driverInstalled: result.driverInstalled,
+        appInstalled: result.appInstalled,
+        pkgDownloaded: result.pkgDownloaded,
+        homebrewInstalled: result.homebrewInstalled,
+        pkgPath: result.pkgPath,
+      });
     } catch (error) {
       console.error("Failed to check Karabiner status:", error);
       // Assume installed on error to not block the user
-      setDriverInstalled(true);
-      setAppInstalled(true);
-      setPkgDownloaded(false);
-      setHomebrewInstalled(true);
-      setPkgPath(null);
+      setKarabinerStatus({
+        driverInstalled: true,
+        appInstalled: true,
+        pkgDownloaded: false,
+        homebrewInstalled: true,
+        pkgPath: null,
+      });
     }
   }, []);
 
@@ -172,11 +184,11 @@ export function KarabinerProvider({ children }: { children: ReactNode }) {
   }, [checkStatus]);
 
   const value = useMemo<KarabinerContextValue>(() => ({
-    driverInstalled,
-    appInstalled,
-    pkgDownloaded,
-    homebrewInstalled,
-    pkgPath,
+    driverInstalled: karabinerStatus?.driverInstalled ?? null,
+    appInstalled: karabinerStatus?.appInstalled ?? null,
+    pkgDownloaded: karabinerStatus?.pkgDownloaded ?? null,
+    homebrewInstalled: karabinerStatus?.homebrewInstalled ?? null,
+    pkgPath: karabinerStatus?.pkgPath ?? null,
     installStatus,
     installOutput,
     installError,
@@ -187,11 +199,7 @@ export function KarabinerProvider({ children }: { children: ReactNode }) {
     openPkg,
     launchApp,
   }), [
-    driverInstalled,
-    appInstalled,
-    pkgDownloaded,
-    homebrewInstalled,
-    pkgPath,
+    karabinerStatus,
     installStatus,
     installOutput,
     installError,

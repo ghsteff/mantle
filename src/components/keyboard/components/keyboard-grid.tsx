@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { Key } from "./key";
 import {
   TKL_LAYOUT,
@@ -44,6 +44,13 @@ export function KeyboardGrid({ layout = TKL_LAYOUT }: KeyboardGridProps) {
   const gridWidth = layoutWidth * unitSize;
   const gridHeight = layoutHeight * unitSize;
 
+  const handleSelectKey = useCallback(
+    (keyId: string) => {
+      setSelectedKey((current) => (current === keyId ? null : keyId));
+    },
+    [setSelectedKey]
+  );
+
   return (
     <div className="flex-1 flex items-center justify-center p-4 overflow-auto relative">
       {/* View mode toggle */}
@@ -70,10 +77,11 @@ export function KeyboardGrid({ layout = TKL_LAYOUT }: KeyboardGridProps) {
           return (
             <Key
               key={keyDef.id}
+              keyId={keyDef.id}
               keyDef={keyDef}
               action={action}
               isSelected={isSelected}
-              onClick={() => setSelectedKey(isSelected ? null : keyDef.id)}
+              onSelect={handleSelectKey}
               unitSize={unitSize}
               showAction={showActions}
             />

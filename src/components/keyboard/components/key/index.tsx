@@ -1,13 +1,15 @@
+import { memo, useCallback } from "react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../../ui";
 import { formatAction } from "../../utils/format-action";
 import { type KeyDef, getKeyLabel } from "../../utils/layout";
 import { parseActionDetails } from "./utils/parse-action-details";
 
 interface KeyProps {
+  keyId: string;
   keyDef: KeyDef;
   action: string;
   isSelected: boolean;
-  onClick: () => void;
+  onSelect: (keyId: string) => void;
   unitSize: number;
   showAction?: boolean;
 }
@@ -15,15 +17,19 @@ interface KeyProps {
 /**
  * Renders a single key on the keyboard grid.
  */
-export function Key({
+export const Key = memo(function Key({
+  keyId,
   keyDef,
   action,
   isSelected,
-  onClick,
+  onSelect,
   unitSize,
   showAction = false,
 }: KeyProps) {
   const { label, subLabel } = getKeyLabel(keyDef.id);
+  const handleClick = useCallback(() => {
+    onSelect(keyId);
+  }, [keyId, onSelect]);
 
   // Determine what to display based on showAction prop
   let displayLabel: string;
@@ -69,7 +75,7 @@ export function Key({
   const keyButton = (
     <button
       type="button"
-      onClick={onClick}
+      onClick={handleClick}
       className={`
         absolute font-mono text-xs select-none
         flex flex-col items-center justify-center overflow-hidden
@@ -143,4 +149,6 @@ export function Key({
       </TooltipContent>
     </Tooltip>
   );
-}
+});
+
+Key.displayName = "Key";
