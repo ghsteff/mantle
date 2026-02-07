@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 import { KarabinerOnboardingModal } from "./onboarding";
 import {
   useConfigState,
@@ -7,6 +7,8 @@ import {
   useKarabinerActions,
   useKarabinerState,
 } from "../contexts";
+import { useOnboardingFlow } from "@/hooks/use-onboarding-flow";
+import { usePlatform } from "@/hooks/use-platform";
 
 interface KarabinerOnboardingProps {
   onOnboardingStateChange: (inProgress: boolean) => void;
@@ -21,50 +23,25 @@ export function KarabinerOnboarding({ onOnboardingStateChange }: KarabinerOnboar
   const { status } = useKanataState();
   const { openInputMonitoringSettings, start } = useKanataActions();
   const { hasProfiles, isLoading } = useConfigState();
-  const [onboardingStarted, setOnboardingStarted] = useState(false);
-  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
-
-  // Start onboarding when driver is not installed
-  useEffect(() => {
-    if (driverInstalled === false && !onboardingStarted && !onboardingCompleted) {
-      setOnboardingStarted(true);
-    }
-  }, [driverInstalled, onboardingStarted, onboardingCompleted]);
-
-  // Keep modal open once started, until user clicks "Done"
-  const showOnboarding = onboardingStarted && !onboardingCompleted;
+  const { isMac } = usePlatform();
+  const { showOnboarding, handleComplete } = useOnboardingFlow({
+    driverInstalled,
+    status,
+    isLoading,
+    hasProfiles,
+    checkStatus,
+    start,
+    enabled: isMac,
+  });
 
   // Notify parent when onboarding state changes
   useEffect(() => {
     onOnboardingStateChange(showOnboarding);
   }, [showOnboarding, onOnboardingStateChange]);
 
-  const handleComplete = useCallback(() => {
-    setOnboardingCompleted(true);
-    setOnboardingStarted(false);
-    // Re-check status in case user completed installation
-    checkStatus();
-  }, [checkStatus]);
-
-  // Auto-start server after onboarding is completed
-  const hasStartedAfterOnboardingRef = useRef(false);
-
-  useEffect(() => {
-    if (
-      onboardingCompleted &&
-      driverInstalled &&
-      status === "stopped" &&
-      !isLoading &&
-      hasProfiles &&
-      !hasStartedAfterOnboardingRef.current
-    ) {
-      hasStartedAfterOnboardingRef.current = true;
-      // Small delay to let the user see the UI before starting
-      setTimeout(() => {
-        start();
-      }, 500);
-    }
-  }, [onboardingCompleted, driverInstalled, status, hasProfiles, isLoading, start]);
+  if (!isMac) {
+    return null;
+  }
 
   return (
     <KarabinerOnboardingModal

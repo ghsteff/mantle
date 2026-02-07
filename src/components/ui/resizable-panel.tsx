@@ -6,6 +6,8 @@ import {
   type ReactNode,
 } from "react";
 import { cn } from "@/lib/utils";
+import { useLocalStorage } from "@/hooks/use-local-storage";
+import { useWindowEvent } from "@/hooks/use-window-event";
 
 interface ResizablePanelProps {
   children: ReactNode;
@@ -35,26 +37,24 @@ export function ResizablePanel({
   const panelRef = useRef<HTMLDivElement>(null);
   const resizeStartYRef = useRef<number | null>(null);
   const resizeStartHeightRef = useRef<number>(defaultHeight);
+  const [isResizing, setIsResizing] = useState(false);
 
-  // Load saved height from localStorage or use default
-  const [panelHeight, setPanelHeight] = useState(() => {
-    if (!storageKey) return defaultHeight;
-    const saved = localStorage.getItem(storageKey);
-    return saved
-      ? Math.max(
-          minHeight,
-          Math.min(maxHeight, parseInt(saved, 10))
-        )
-      : defaultHeight;
-  });
-
-  // Save height to localStorage when it changes
-  useEffect(() => {
-    if (storageKey) {
-      localStorage.setItem(storageKey, panelHeight.toString());
+  const [panelHeight, setPanelHeight] = useLocalStorage<number>(
+    storageKey,
+    defaultHeight,
+    {
+      serialize: (value) => value.toString(),
+      deserialize: (raw) => {
+        const parsed = Number.parseInt(raw, 10);
+        if (Number.isNaN(parsed)) return defaultHeight;
+        return Math.max(minHeight, Math.min(maxHeight, parsed));
+      },
     }
+  );
+
+  useEffect(() => {
     onHeightChange?.(panelHeight);
-  }, [panelHeight, storageKey, onHeightChange]);
+  }, [panelHeight, onHeightChange]);
 
   // Handle resize drag start
   const handleResizeStart = useCallback(
@@ -63,10 +63,7 @@ export function ResizablePanel({
       if (!panelRef.current) return;
       resizeStartYRef.current = e.clientY;
       resizeStartHeightRef.current = panelHeight;
-      document.addEventListener("mousemove", handleResizeMove);
-      document.addEventListener("mouseup", handleResizeEnd);
-      document.body.style.cursor = "ns-resize";
-      document.body.style.userSelect = "none";
+      setIsResizing(true);
     },
     [panelHeight]
   );
@@ -91,19 +88,37 @@ export function ResizablePanel({
   // Handle resize drag end
   const handleResizeEnd = useCallback(() => {
     resizeStartYRef.current = null;
-    document.removeEventListener("mousemove", handleResizeMove);
-    document.removeEventListener("mouseup", handleResizeEnd);
-    document.body.style.cursor = "";
-    document.body.style.userSelect = "";
-  }, [handleResizeMove]);
+    setIsResizing(false);
+  }, []);
 
-  // Cleanup on unmount
+  const resizeEventTarget =
+    typeof document !== "undefined" ? document : null;
+  useWindowEvent(
+    "mousemove",
+    handleResizeMove,
+    undefined,
+    resizeEventTarget,
+    isResizing
+  );
+  useWindowEvent(
+    "mouseup",
+    handleResizeEnd,
+    undefined,
+    resizeEventTarget,
+    isResizing
+  );
+
   useEffect(() => {
-    return () => {
-      document.removeEventListener("mousemove", handleResizeMove);
-      document.removeEventListener("mouseup", handleResizeEnd);
-    };
-  }, [handleResizeMove, handleResizeEnd]);
+    if (typeof document === "undefined") return;
+    if (!isResizing) {
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      return;
+    }
+
+    document.body.style.cursor = "ns-resize";
+    document.body.style.userSelect = "none";
+  }, [isResizing]);
 
   return (
     <div
