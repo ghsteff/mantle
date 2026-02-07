@@ -3,6 +3,7 @@ import {
   useContext,
   useState,
   useEffect,
+  useMemo,
   type ReactNode,
 } from "react";
 import { assertContext } from "../lib/errors";
@@ -52,14 +53,21 @@ export function UIProvider({ children }: { children: ReactNode }) {
     saveShowActionsPreference(showActions);
   }, [showActions]);
 
-  const value: UIContextValue = {
+  const value = useMemo<UIContextValue>(() => ({
     selectedKey,
     activeLayer,
     showActions,
     setSelectedKey,
     setActiveLayer,
     setShowActions,
-  };
+  }), [
+    selectedKey,
+    activeLayer,
+    showActions,
+    setSelectedKey,
+    setActiveLayer,
+    setShowActions,
+  ]);
 
   return <UIContext.Provider value={value}>{children}</UIContext.Provider>;
 }

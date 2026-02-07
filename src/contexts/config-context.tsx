@@ -3,6 +3,7 @@ import {
   useContext,
   useState,
   useCallback,
+  useMemo,
   type ReactNode,
 } from "react";
 import type { KeyboardConfig, KeyboardLayer, ProfileInfo } from "../types";
@@ -37,7 +38,6 @@ interface ConfigInternalValue extends ConfigContextValue {
   setIsDirty: (dirty: boolean) => void;
   setProfiles: (profiles: ProfileInfo[]) => void;
   setActiveProfile: (profile: string | null) => void;
-  setHasProfiles: (has: boolean) => void;
   loadConfig: () => Promise<KeyboardConfig | null>;
 }
 
@@ -91,7 +91,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   // Profile state (managed by ProfileContext but stored here for easy access)
   const [profiles, setProfiles] = useState<ProfileInfo[]>([]);
   const [activeProfile, setActiveProfile] = useState<string | null>(null);
-  const [hasProfiles, setHasProfiles] = useState(false);
+  const hasProfiles = profiles.length > 0;
 
   // Load config from Electron or use mock
   const loadConfig = useCallback(async (): Promise<KeyboardConfig | null> => {
@@ -222,7 +222,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     await loadConfig();
   }, [loadConfig]);
 
-  const value: ConfigInternalValue = {
+  const value = useMemo<ConfigInternalValue>(() => ({
     config,
     isLoading,
     error,
@@ -244,9 +244,29 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     setIsDirty,
     setProfiles,
     setActiveProfile,
-    setHasProfiles,
     loadConfig,
-  };
+  }), [
+    config,
+    isLoading,
+    error,
+    isDirty,
+    profiles,
+    activeProfile,
+    hasProfiles,
+    updateKey,
+    addLayer,
+    removeLayer,
+    renameLayer,
+    applyChanges,
+    discardChanges,
+    loadConfig,
+    setConfig,
+    setIsLoading,
+    setError,
+    setIsDirty,
+    setProfiles,
+    setActiveProfile,
+  ]);
 
   return (
     <ConfigContext.Provider value={value}>{children}</ConfigContext.Provider>

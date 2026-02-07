@@ -3,6 +3,7 @@ import {
   useContext,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   type ReactNode,
 } from "react";
@@ -33,7 +34,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     setConfig,
     setActiveProfile,
     setProfiles,
-    setHasProfiles,
     setIsDirty,
     setError,
     loadConfig,
@@ -48,23 +48,20 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       // Mock data for development
       setProfiles([{ name: "default", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }]);
       setActiveProfile("default");
-      setHasProfiles(true);
       return;
     }
 
     try {
-      const [profilesList, active, has] = await Promise.all([
+      const [profilesList, active] = await Promise.all([
         window.kanata.listProfiles(),
         window.kanata.getActiveProfile(),
-        window.kanata.hasProfiles(),
       ]);
       setProfiles(profilesList);
       setActiveProfile(active);
-      setHasProfiles(has);
     } catch (err) {
       console.error("Failed to load profiles:", err);
     }
-  }, [setProfiles, setActiveProfile, setHasProfiles]);
+  }, [setProfiles, setActiveProfile]);
 
   // Initialize on mount: refresh profiles, load config, set active layer
   useEffect(() => {
@@ -72,8 +69,10 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     hasInitialized.current = true;
 
     const initialize = async () => {
-      await refreshProfiles();
-      const loadedConfig = await loadConfig();
+      const [, loadedConfig] = await Promise.all([
+        refreshProfiles(),
+        loadConfig(),
+      ]);
       if (loadedConfig) {
         // Set active layer to first layer if current isn't in the config
         const layerExists = loadedConfig.layers.find((l) => l.name === activeLayer);
@@ -211,7 +210,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const value: ProfileContextValue = {
+  const value = useMemo<ProfileContextValue>(() => ({
     createProfile,
     switchProfile,
     deleteProfile: deleteProfileAction,
@@ -219,7 +218,15 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     refreshProfiles,
     exportKbd,
     importKbd,
-  };
+  }), [
+    createProfile,
+    switchProfile,
+    deleteProfileAction,
+    renameProfileAction,
+    refreshProfiles,
+    exportKbd,
+    importKbd,
+  ]);
 
   return (
     <ProfileContext.Provider value={value}>{children}</ProfileContext.Provider>

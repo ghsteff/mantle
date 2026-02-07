@@ -4,6 +4,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   type ReactNode,
 } from "react";
 import { assertContext } from "../lib/errors";
@@ -170,7 +171,7 @@ export function KarabinerProvider({ children }: { children: ReactNode }) {
     };
   }, [checkStatus]);
 
-  const value: KarabinerContextValue = {
+  const value = useMemo<KarabinerContextValue>(() => ({
     driverInstalled,
     appInstalled,
     pkgDownloaded,
@@ -185,7 +186,22 @@ export function KarabinerProvider({ children }: { children: ReactNode }) {
     clearInstallOutput,
     openPkg,
     launchApp,
-  };
+  }), [
+    driverInstalled,
+    appInstalled,
+    pkgDownloaded,
+    homebrewInstalled,
+    pkgPath,
+    installStatus,
+    installOutput,
+    installError,
+    checkStatus,
+    startInstall,
+    cancelInstall,
+    clearInstallOutput,
+    openPkg,
+    launchApp,
+  ]);
 
   return (
     <KarabinerContext.Provider value={value}>

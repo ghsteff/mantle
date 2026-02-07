@@ -4,6 +4,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   type ReactNode,
 } from "react";
 import type { KanataStatus, KanataLogEntry } from "../types";
@@ -145,7 +146,7 @@ export function KanataProvider({ children }: { children: ReactNode }) {
     setPermissionDenied(false);
   }, []);
 
-  const value: KanataContextValue = {
+  const value = useMemo<KanataContextValue>(() => ({
     status,
     logs,
     isRunning: status === "running",
@@ -157,7 +158,18 @@ export function KanataProvider({ children }: { children: ReactNode }) {
     openInputMonitoringSettings,
     permissionDenied,
     clearPermissionDenied,
-  };
+  }), [
+    status,
+    logs,
+    start,
+    stop,
+    restart,
+    clearLogs,
+    setAutoRestart,
+    openInputMonitoringSettings,
+    permissionDenied,
+    clearPermissionDenied,
+  ]);
 
   return (
     <KanataContext.Provider value={value}>{children}</KanataContext.Provider>
