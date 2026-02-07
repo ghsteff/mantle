@@ -101,18 +101,18 @@ export function TerminalKeyInput({
         <PopoverTrigger asChild>
           <div
             className={cn(
-              "flex min-h-[38px] w-full flex-wrap items-center gap-1.5 rounded-sm border border-border bg-bg-tertiary px-3 py-1.5 text-sm hover:bg-bg-hover cursor-text",
-              open && "ring-1 ring-accent"
+              "flex min-h-[38px] w-full flex-wrap items-center gap-1.5 rounded-sm border border-border bg-secondary px-3 py-1.5 text-sm hover:bg-accent cursor-text",
+              open && "ring-1 ring-primary"
             )}
             onClick={() => setOpen(true)}
           >
             {selectedOptions.length === 0 ? (
-              <span className="text-text-muted font-mono">{placeholder}</span>
+              <span className="text-muted-foreground font-mono">{placeholder}</span>
             ) : (
               selectedOptions.map((option) => (
                 <div
                   key={option.value}
-                  className="bg-bg-hover text-text-primary flex items-center gap-1 rounded-sm px-2 py-0.5 text-xs font-medium font-mono"
+                  className="bg-accent text-foreground flex items-center gap-1 rounded-sm px-2 py-0.5 text-xs font-medium font-mono"
                 >
                   <code className="text-xs">{option.value}</code>
                   <X
@@ -164,7 +164,7 @@ export function TerminalKeyInput({
                         className="font-mono"
                       >
                         <code className="text-xs mr-2">{key.value}</code>
-                        <span className="text-text-muted">{key.label}</span>
+                        <span className="text-muted-foreground">{key.label}</span>
                       </CommandItem>
                     ))}
                   </CommandGroup>
@@ -175,7 +175,7 @@ export function TerminalKeyInput({
         </PopoverContent>
       </Popover>
       {keys.length === 0 && !open && (
-        <div className="text-text-muted text-xs mt-1">
+        <div className="text-muted-foreground text-xs mt-1">
           Click to select keys, use + for combos (e.g., lctl+lsft)
         </div>
       )}

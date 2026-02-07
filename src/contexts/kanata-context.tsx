@@ -8,6 +8,7 @@ import {
 } from "react";
 import type { KanataStatus, KanataLogEntry } from "../types";
 import { MAX_LOGS } from "../constants";
+import { assertContext } from "../lib/errors";
 
 interface KanataContextValue {
   status: KanataStatus;
@@ -165,8 +166,6 @@ export function KanataProvider({ children }: { children: ReactNode }) {
 
 export function useKanata(): KanataContextValue {
   const context = useContext(KanataContext);
-  if (!context) {
-    throw new Error("useKanata must be used within a KanataProvider");
-  }
+  assertContext(context, "useKanata", "KanataProvider");
   return context;
 }

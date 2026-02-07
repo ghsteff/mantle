@@ -5,6 +5,7 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
+import { assertContext } from "../lib/errors";
 
 interface UIContextValue {
   selectedKey: string | null;
@@ -18,7 +19,7 @@ interface UIContextValue {
 const UIContext = createContext<UIContextValue | null>(null);
 
 // LocalStorage key for showActions preference
-const SHOW_ACTIONS_STORAGE_KEY = "kanata-ui.showActions";
+const SHOW_ACTIONS_STORAGE_KEY = "mantle.showActions";
 
 // Load showActions preference from localStorage
 function loadShowActionsPreference(): boolean {
@@ -65,8 +66,6 @@ export function UIProvider({ children }: { children: ReactNode }) {
 
 export function useUI(): UIContextValue {
   const context = useContext(UIContext);
-  if (!context) {
-    throw new Error("useUI must be used within a UIProvider");
-  }
+  assertContext(context, "useUI", "UIProvider");
   return context;
 }

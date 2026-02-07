@@ -9,6 +9,7 @@ import {
 import type { KeyboardConfig, ExportResult, ImportResult } from "../types";
 import { useConfigInternal } from "./config-context";
 import { useUI } from "./ui-context";
+import { toErrorMessage, assertContext } from "../lib/errors";
 
 interface ProfileContextValue {
   createProfile: (name: string, config: KeyboardConfig) => Promise<boolean>;
@@ -103,7 +104,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       }
       return success;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create profile");
+      setError(toErrorMessage(err, "Failed to create profile"));
       return false;
     }
   }, [refreshProfiles, setConfig, setActiveLayer, setError]);
@@ -133,7 +134,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       }
       return false;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to switch profile");
+      setError(toErrorMessage(err, "Failed to switch profile"));
       return false;
     }
   }, [isDirty, refreshProfiles, setConfig, setActiveProfile, setActiveLayer, setIsDirty, setSelectedKey, setError]);
@@ -155,7 +156,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       }
       return success;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete profile");
+      setError(toErrorMessage(err, "Failed to delete profile"));
       return false;
     }
   }, [activeProfile, loadConfig, refreshProfiles, setError]);
@@ -173,7 +174,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       }
       return success;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to rename profile");
+      setError(toErrorMessage(err, "Failed to rename profile"));
       return false;
     }
   }, [refreshProfiles, setError]);
@@ -227,8 +228,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
 export function useProfile(): ProfileContextValue {
   const context = useContext(ProfileContext);
-  if (!context) {
-    throw new Error("useProfile must be used within a ProfileProvider");
-  }
+  assertContext(context, "useProfile", "ProfileProvider");
   return context;
 }

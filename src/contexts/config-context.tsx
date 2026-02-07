@@ -6,6 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import type { KeyboardConfig, KeyboardLayer, ProfileInfo } from "../types";
+import { toErrorMessage, assertContext } from "../lib/errors";
 
 // Public interface for components
 interface ConfigContextValue {
@@ -111,7 +112,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
       }
       return loadedConfig;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load config");
+      setError(toErrorMessage(err, "Failed to load config"));
       return null;
     } finally {
       setIsLoading(false);
@@ -210,7 +211,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
       }
       return success;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save config");
+      setError(toErrorMessage(err, "Failed to save config"));
       return false;
     }
   }, [config]);
@@ -255,9 +256,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
 // Public hook for components - returns only the public interface
 export function useConfig(): ConfigContextValue {
   const context = useContext(ConfigContext);
-  if (!context) {
-    throw new Error("useConfig must be used within a ConfigProvider");
-  }
+  assertContext(context, "useConfig", "ConfigProvider");
   // Return only public properties
   const {
     config,
@@ -297,8 +296,6 @@ export function useConfig(): ConfigContextValue {
 // Internal hook for ProfileContext - returns full interface including setters
 export function useConfigInternal(): ConfigInternalValue {
   const context = useContext(ConfigContext);
-  if (!context) {
-    throw new Error("useConfigInternal must be used within a ConfigProvider");
-  }
+  assertContext(context, "useConfigInternal", "ConfigProvider");
   return context;
 }

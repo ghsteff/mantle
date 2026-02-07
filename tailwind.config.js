@@ -4,26 +4,6 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        bg: {
-          primary: "var(--bg-primary)",
-          secondary: "var(--bg-secondary)",
-          tertiary: "var(--bg-tertiary)",
-          hover: "var(--bg-hover)",
-          active: "var(--bg-active)",
-        },
-        accent: {
-          DEFAULT: "var(--accent)",
-          hover: "var(--accent-hover)",
-          muted: "var(--accent-muted)",
-          foreground: "var(--accent-foreground)",
-        },
-        text: {
-          primary: "var(--text-primary)",
-          secondary: "var(--text-secondary)",
-          muted: "var(--text-muted)",
-          bright: "var(--text-bright)",
-          "on-accent": "var(--text-on-accent)",
-        },
         status: {
           success: "var(--success)",
           "success-bg": "var(--success-bg)",
@@ -43,6 +23,8 @@ module.exports = {
           border: "var(--key-border)",
           shadow: "var(--key-shadow)",
         },
+        active: "var(--active)",
+        "text-secondary": "var(--text-secondary)",
         primary: {
           DEFAULT: "var(--primary)",
           foreground: "var(--primary-foreground)",
@@ -54,6 +36,10 @@ module.exports = {
         muted: {
           DEFAULT: "var(--muted)",
           foreground: "var(--muted-foreground)",
+        },
+        accent: {
+          DEFAULT: "var(--accent)",
+          foreground: "var(--accent-foreground)",
         },
         card: {
           DEFAULT: "var(--card)",
@@ -90,9 +76,9 @@ module.exports = {
         mono: ['"JetBrains Mono"', '"Fira Code"', "Consolas", "monospace"],
       },
       boxShadow: {
-        key: "0 2px 0 0 var(--key-shadow), inset 0 -2px 0 0 rgba(0,0,0,0.2)",
+        key: "0 1px 3px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.04)",
         "key-pressed":
-          "0 1px 0 0 var(--key-shadow), inset 0 -1px 0 0 rgba(0,0,0,0.2)",
+          "0 0px 1px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.04)",
       },
     },
   },

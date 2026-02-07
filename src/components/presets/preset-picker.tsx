@@ -37,8 +37,8 @@ function PresetListItem({ preset, isSelected, onClick }: PresetListItemProps) {
       className={cn(
         "group flex items-center gap-4 p-4 text-left transition-colors font-mono w-full",
         isSelected
-          ? "bg-accent/10"
-          : "bg-bg-secondary hover:bg-bg-tertiary"
+          ? "bg-primary/10"
+          : "bg-card hover:bg-secondary"
       )}
     >
       {/* Selection Indicator / Icon */}
@@ -46,8 +46,8 @@ function PresetListItem({ preset, isSelected, onClick }: PresetListItemProps) {
         className={cn(
           "flex size-8 shrink-0 items-center justify-center border",
           isSelected
-            ? "border-accent text-accent bg-accent/10"
-            : "border-border text-text-muted group-hover:text-text-primary group-hover:border-text-muted"
+            ? "border-primary text-primary bg-primary/10"
+            : "border-border text-muted-foreground group-hover:text-foreground group-hover:border-muted-foreground"
         )}
       >
         {isSelected ? (
@@ -62,7 +62,7 @@ function PresetListItem({ preset, isSelected, onClick }: PresetListItemProps) {
         <div className="flex items-center gap-3 mb-1">
           <h3 className={cn(
             "text-sm font-bold uppercase tracking-tight truncate",
-            isSelected ? "text-accent" : "text-text-primary"
+            isSelected ? "text-primary" : "text-foreground"
           )}>
             {metadata.name}
           </h3>
@@ -77,7 +77,7 @@ function PresetListItem({ preset, isSelected, onClick }: PresetListItemProps) {
             {metadata.category}
           </span>
         </div>
-        <p className="text-xs text-text-muted truncate">
+        <p className="text-xs text-muted-foreground truncate">
           {metadata.description}
         </p>
       </div>

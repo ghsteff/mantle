@@ -102,7 +102,7 @@ export function NewProfileDialog({
           <div className="space-y-2">
             <label
               htmlFor="new-profile-name"
-              className="text-sm font-medium text-text-primary"
+              className="text-sm font-medium text-foreground"
             >
               Profile Name
             </label>
@@ -122,7 +122,7 @@ export function NewProfileDialog({
 
           {/* Optional Template Selection */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-text-primary">
+            <label className="text-sm font-medium text-foreground">
               Template (Optional)
             </label>
             <Select
@@ -148,7 +148,7 @@ export function NewProfileDialog({
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-text-muted font-normal">
+            <p className="text-xs text-muted-foreground font-normal">
               {selectedPreset && selectedPreset.metadata.description}
             </p>
           </div>

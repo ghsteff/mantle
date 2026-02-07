@@ -82,9 +82,9 @@ Layers let you have multiple keyboard layouts you can switch between:
 
 Mantle stores configuration in:
 
-- **macOS**: `~/Library/Application Support/kanata-ui/kanata/`
-- **Windows**: `%APPDATA%\kanata-ui\kanata\`
-- **Linux**: `~/.config/kanata-ui/kanata/`
+- **macOS**: `~/Library/Application Support/mantle/kanata/`
+- **Windows**: `%APPDATA%\mantle\kanata\`
+- **Linux**: `~/.config/mantle/kanata/`
 
 Files:
 
@@ -101,8 +101,8 @@ Files:
 ### Setup
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/kanata-ui.git
-cd kanata-ui
+git clone https://github.com/YOUR_USERNAME/mantle.git
+cd mantle
 npm install
 ```
 
@@ -123,7 +123,7 @@ Outputs are in the `out/make` folder.
 ### Project Structure
 
 ```
-kanata-ui/
+mantle/
 ├── bin/                    # Kanata binaries for each platform
 ├── src/
 │   ├── main.ts            # Electron main process

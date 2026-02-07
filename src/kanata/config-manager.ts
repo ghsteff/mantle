@@ -4,6 +4,7 @@ import * as path from "node:path";
 import type { KeyboardConfig, ProfileInfo } from "../types";
 import { generateKanataConfig, createExampleConfig } from "./generator";
 import { parseKbdFile, type ParseResult } from "./parser";
+import { logError } from "../lib/errors";
 
 /**
  * Structure of the profiles.json file.
@@ -77,8 +78,7 @@ export class ConfigManager {
       const content = fs.readFileSync(this.profilesPath, "utf-8");
       return JSON.parse(content) as ProfilesData;
     } catch (error) {
-      console.error("Failed to load profiles data:", error);
-      return null;
+      return logError("Failed to load profiles data:", error);
     }
   }
 
@@ -123,8 +123,7 @@ export class ConfigManager {
     
     // Check if profile already exists
     if (data.profiles.some((p) => p.name === name)) {
-      console.error(`Profile "${name}" already exists`);
-      return false;
+      return logError(`Profile "${name}" already exists`, undefined, false);
     }
 
     const now = new Date().toISOString();
@@ -167,8 +166,7 @@ export class ConfigManager {
 
     // Check if profile exists
     if (!data.profiles.some((p) => p.name === name)) {
-      console.error(`Profile "${name}" does not exist`);
-      return null;
+      return logError(`Profile "${name}" does not exist`);
     }
 
     // Load the profile's config
@@ -195,14 +193,12 @@ export class ConfigManager {
 
     const profileIndex = data.profiles.findIndex((p) => p.name === name);
     if (profileIndex === -1) {
-      console.error(`Profile "${name}" does not exist`);
-      return false;
+      return logError(`Profile "${name}" does not exist`, undefined, false);
     }
 
     // Can't delete if it's the only profile
     if (data.profiles.length === 1) {
-      console.error("Cannot delete the last profile");
-      return false;
+      return logError("Cannot delete the last profile", undefined, false);
     }
 
     // Remove from profiles list
@@ -234,13 +230,11 @@ export class ConfigManager {
 
     const profile = data.profiles.find((p) => p.name === oldName);
     if (!profile) {
-      console.error(`Profile "${oldName}" does not exist`);
-      return false;
+      return logError(`Profile "${oldName}" does not exist`, undefined, false);
     }
 
     if (data.profiles.some((p) => p.name === newName)) {
-      console.error(`Profile "${newName}" already exists`);
-      return false;
+      return logError(`Profile "${newName}" already exists`, undefined, false);
     }
 
     // Rename in profiles list
@@ -282,8 +276,7 @@ export class ConfigManager {
       const config = JSON.parse(content) as KeyboardConfig;
       return this.migrateConfig(config);
     } catch (error) {
-      console.error(`Failed to load config for profile "${profileName}":`, error);
-      return null;
+      return logError(`Failed to load config for profile "${profileName}":`, error);
     }
   }
 
@@ -322,8 +315,7 @@ export class ConfigManager {
       
       return config;
     } catch (error) {
-      console.error("Failed to migrate legacy config:", error);
-      return null;
+      return logError("Failed to migrate legacy config:", error);
     }
   }
 
@@ -355,7 +347,7 @@ export class ConfigManager {
   saveConfig(config: KeyboardConfig): void {
     const activeProfile = this.getActiveProfileName();
     if (!activeProfile) {
-      console.error("No active profile to save to");
+      logError("No active profile to save to");
       return;
     }
 
@@ -438,8 +430,7 @@ export class ConfigManager {
       fs.copyFileSync(configPath, backupPath);
       return backupPath;
     } catch (error) {
-      console.error("Failed to create backup:", error);
-      return null;
+      return logError("Failed to create backup:", error);
     }
   }
 
@@ -474,8 +465,7 @@ export class ConfigManager {
       this.saveConfig(config);
       return true;
     } catch (error) {
-      console.error("Failed to restore backup:", error);
-      return false;
+      return logError("Failed to restore backup:", error, false);
     }
   }
 
@@ -490,7 +480,7 @@ export class ConfigManager {
       try {
         fs.unlinkSync(backup);
       } catch (error) {
-        console.error(`Failed to delete backup ${backup}:`, error);
+        logError(`Failed to delete backup ${backup}:`, error);
       }
     }
   }
@@ -519,15 +509,13 @@ export class ConfigManager {
   exportKbdFile(targetPath: string): boolean {
     try {
       if (!fs.existsSync(this.kbdConfigPath)) {
-        console.error("No .kbd file exists to export");
-        return false;
+        return logError("No .kbd file exists to export", undefined, false);
       }
 
       fs.copyFileSync(this.kbdConfigPath, targetPath);
       return true;
     } catch (error) {
-      console.error("Failed to export .kbd file:", error);
-      return false;
+      return logError("Failed to export .kbd file:", error, false);
     }
   }
 

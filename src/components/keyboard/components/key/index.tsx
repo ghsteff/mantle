@@ -73,13 +73,13 @@ export function Key({
       className={`
         absolute font-mono text-xs select-none
         flex flex-col items-center justify-center overflow-hidden
-        rounded-none border transition-all duration-100
+        rounded-md border transition-all duration-150
         ${
           isSelected
-            ? "bg-key-bg-selected border-primary text-text-bright"
-            : "bg-key-bg border-key-border text-text-primary hover:bg-key-bg-hover"
+            ? "bg-key-bg border-white/20 text-foreground ring-1 ring-white/10 scale-[1.03]"
+            : "bg-key-bg border-key-border text-foreground hover:bg-key-bg-hover"
         }
-        ${isModified && !isSelected ? "border-accent/50" : ""}
+        ${isModified && !isSelected ? "border-primary/50" : ""}
         ${isTransparent ? "opacity-50" : ""}
         shadow-key active:shadow-key-pressed active:translate-y-[1px]
       `}
@@ -99,7 +99,7 @@ export function Key({
 
       {/* Sub-label (shifted character or action secondary info) */}
       {truncatedSubLabel && (
-        <span className="text-[9px] text-text-muted leading-none mt-0.5 truncate max-w-full px-1">
+        <span className="text-[9px] text-muted-foreground leading-none mt-0.5 truncate max-w-full px-1">
           {truncatedSubLabel}
         </span>
       )}

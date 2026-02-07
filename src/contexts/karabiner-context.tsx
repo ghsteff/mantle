@@ -6,6 +6,7 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
+import { assertContext } from "../lib/errors";
 
 export type KarabinerInstallStatus = "idle" | "installing" | "success" | "error";
 
@@ -195,8 +196,6 @@ export function KarabinerProvider({ children }: { children: ReactNode }) {
 
 export function useKarabiner(): KarabinerContextValue {
   const context = useContext(KarabinerContext);
-  if (!context) {
-    throw new Error("useKarabiner must be used within a KarabinerProvider");
-  }
+  assertContext(context, "useKarabiner", "KarabinerProvider");
   return context;
 }

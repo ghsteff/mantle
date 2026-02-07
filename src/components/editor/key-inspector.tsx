@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { Keyboard } from "lucide-react";
 import { useConfig, useUI } from "../../contexts";
 import { ActionEditor } from "./action-editor";
 
@@ -29,11 +30,11 @@ export function KeyInspector() {
 
   if (!selectedKey) {
     return (
-      <div className="w-72 bg-bg-secondary border-l border-border p-4 flex flex-col z-10">
+      <div className="w-72 bg-card border-l border-border p-4 flex flex-col z-10 transition-all duration-200">
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-center text-text-muted">
-            <div className="text-4xl mb-2">⌨️</div>
-            <div className="text-sm">Select a key to edit</div>
+          <div className="text-center text-muted-foreground">
+            <Keyboard className="size-8 text-muted-foreground/40 mb-3" strokeWidth={1} />
+            <p className="text-sm text-muted-foreground">Click a key to configure</p>
           </div>
         </div>
       </div>
@@ -41,7 +42,7 @@ export function KeyInspector() {
   }
 
   return (
-    <div className="w-72 bg-bg-secondary border-l border-border p-4 overflow-y-auto z-10">
+    <div className="w-72 bg-card border-l border-border p-4 overflow-y-auto z-10 transition-all duration-200">
       <ActionEditor
         keyId={selectedKey}
         currentAction={currentAction || selectedKey}

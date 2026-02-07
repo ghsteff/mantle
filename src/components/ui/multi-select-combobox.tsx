@@ -163,19 +163,19 @@ export function MultiSelectComboboxChips({
       <PopoverTrigger asChild>
         <div
           className={cn(
-            "flex min-h-[38px] w-full flex-wrap items-center gap-1.5 rounded-sm border border-border bg-bg-tertiary px-3 py-1.5 text-sm hover:bg-bg-hover",
+            "flex min-h-[38px] w-full flex-wrap items-center gap-1.5 rounded-sm border border-border bg-secondary px-3 py-1.5 text-sm hover:bg-accent",
             className
           )}
           onClick={() => setOpen(true)}
         >
           {selectedOptions.length === 0 ? (
-            <span className="text-text-muted">{placeholder}</span>
+            <span className="text-muted-foreground">{placeholder}</span>
           ) : (
             selectedOptions.map((option) => (
               <div
                 key={option.value}
                 className={cn(
-                  "bg-bg-hover text-text-primary flex items-center gap-1 rounded-sm px-2 py-0.5 text-xs font-medium",
+                  "bg-accent text-foreground flex items-center gap-1 rounded-sm px-2 py-0.5 text-xs font-medium",
                   chipsClassName
                 )}
               >

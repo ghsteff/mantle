@@ -31,7 +31,7 @@ export function MainContent() {
   if (isLoading || !hasProfiles) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="text-text-muted">Loading configuration...</div>
+        <div className="text-muted-foreground">Loading configuration...</div>
       </div>
     );
   }
@@ -41,24 +41,20 @@ export function MainContent() {
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
           <div className="text-status-error text-lg mb-2">Error</div>
-          <div className="text-text-muted">{error}</div>
+          <div className="text-muted-foreground">{error}</div>
         </div>
       </div>
     );
   }
 
   return (
-    <main className="flex-1 flex overflow-hidden relative">
-      <div
-        className="absolute inset-0 opacity-[0.4] pointer-events-none"
-        style={{
-          backgroundImage: `
-            linear-gradient(to right, var(--primary-foreground) 1px, transparent 1px),
-            linear-gradient(to bottom, var(--primary-foreground) 1px, transparent 1px)
-          `,
-          backgroundSize: "50px 50px",
-        }}
-      />
+    <main
+      className="flex-1 flex overflow-hidden relative"
+      style={{
+        background:
+          "radial-gradient(ellipse at 50% 50%, rgba(255,255,255,0.02), transparent)",
+      }}
+    >
       <KeyboardGrid />
       <KeyInspector />
     </main>

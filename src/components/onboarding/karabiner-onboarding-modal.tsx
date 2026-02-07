@@ -126,33 +126,33 @@ export function KarabinerOnboardingModal({
   return (
     <Dialog open={open}>
       <DialogContent
-        className="max-w-2xl max-h-[90vh] p-0 gap-0 bg-bg-primary border-border rounded-none shadow-none flex flex-col overflow-hidden"
+        className="max-w-2xl max-h-[90vh] p-0 gap-0 bg-background border-border rounded-none shadow-none flex flex-col overflow-hidden"
         showCloseButton={false}
       >
         {/* Header */}
-        <div className="h-12 border-b border-border flex items-center justify-between px-6 bg-bg-secondary select-none">
+        <div className="h-12 border-b border-border flex items-center justify-between px-6 bg-card select-none">
           <div className="flex items-center gap-4">
-            <div className="size-3 bg-accent" />
-            <h1 className="font-mono text-sm font-bold tracking-wider uppercase text-text-primary">
+            <div className="size-3 bg-primary" />
+            <h1 className="font-mono text-sm font-bold tracking-wider uppercase text-foreground">
               System Setup
             </h1>
           </div>
-          <div className="font-mono text-xs text-text-muted">
+          <div className="font-mono text-xs text-muted-foreground">
             Step {step === "install" ? "01" : step === "activate" ? "02" : "03"} / 03
           </div>
         </div>
 
         {/* Content */}
         <div className="flex-1 overflow-hidden flex flex-col">
-          <div className="px-6 py-6 border-b border-border bg-bg-primary">
-            <h2 className="font-mono text-lg font-bold text-text-primary mb-2">
+          <div className="px-6 py-6 border-b border-border bg-background">
+            <h2 className="font-mono text-lg font-bold text-foreground mb-2">
               {step === "install"
                 ? "INSTALL KARABINER-ELEMENTS"
                 : step === "activate"
                 ? "ACTIVATE KARABINER DRIVER"
                 : "KANATA INPUT MONITORING"}
             </h2>
-            <p className="font-mono text-xs text-text-muted max-w-xl">
+            <p className="font-mono text-xs text-muted-foreground max-w-xl">
               {step === "install"
                 ? "Mantle requires the Karabiner virtual keyboard driver to intercept and remap your keys. This driver is installed via Homebrew."
                 : step === "activate"
@@ -161,7 +161,7 @@ export function KarabinerOnboardingModal({
             </p>
           </div>
 
-          <div className="flex-1 overflow-y-auto bg-bg-tertiary p-6">
+          <div className="flex-1 overflow-y-auto bg-secondary p-6">
             {step === "install" ? (
               <div className="space-y-4">
                 {/* Status */}
@@ -170,7 +170,7 @@ export function KarabinerOnboardingModal({
                     <span
                       className={cn(
                         "size-2 rounded-full",
-                        homebrewInstalled ? "bg-status-success" : "bg-text-muted"
+                        homebrewInstalled ? "bg-status-success" : "bg-muted-foreground"
                       )}
                     />
                     <span className="text-text-secondary">
@@ -182,7 +182,7 @@ export function KarabinerOnboardingModal({
                     <span
                       className={cn(
                         "size-2 rounded-full",
-                        appInstalled ? "bg-status-success" : "bg-text-muted"
+                        appInstalled ? "bg-status-success" : "bg-muted-foreground"
                       )}
                     />
                     <span className="text-text-secondary">
@@ -196,7 +196,7 @@ export function KarabinerOnboardingModal({
                 {(isInstalling || installOutput.length > 0) && (
                   <div
                     ref={terminalRef}
-                    className="bg-bg-primary border border-border p-3 font-mono text-xs h-64 overflow-y-auto"
+                    className="bg-background border border-border p-3 font-mono text-xs h-64 overflow-y-auto"
                   >
                     {installOutput.map((line, i) => (
                       <div key={i} className="text-text-secondary whitespace-pre-wrap">
@@ -204,7 +204,7 @@ export function KarabinerOnboardingModal({
                       </div>
                     ))}
                     {isInstalling && (
-                      <div className="text-accent animate-pulse">_</div>
+                      <div className="text-primary animate-pulse">_</div>
                     )}
                   </div>
                 )}
@@ -218,8 +218,8 @@ export function KarabinerOnboardingModal({
 
                 {/* Info about what will happen */}
                 {!isInstalling && installOutput.length === 0 && !installSucceeded && (
-                  <div className="border border-border bg-bg-secondary p-4 space-y-3">
-                    <div className="font-mono text-xs text-text-muted uppercase tracking-wider">
+                  <div className="border border-border bg-card p-4 space-y-3">
+                    <div className="font-mono text-xs text-muted-foreground uppercase tracking-wider">
                       What will happen:
                     </div>
                     <ul className="font-mono text-xs text-text-secondary space-y-1 list-disc list-inside">
@@ -242,8 +242,8 @@ export function KarabinerOnboardingModal({
 
                 {/* Installation succeeded but app not detected - PKG needs to be completed */}
                 {installSucceeded && !appInstalled && (
-                  <div className="bg-accent/10 border border-accent/30 p-4 space-y-2">
-                    <div className="font-mono text-xs font-bold text-text-primary">
+                  <div className="bg-primary/10 border border-primary/30 p-4 space-y-2">
+                    <div className="font-mono text-xs font-bold text-foreground">
                       Complete PKG Installation
                     </div>
                     <div className="font-mono text-xs text-text-secondary">
@@ -264,7 +264,7 @@ export function KarabinerOnboardingModal({
                     <span
                       className={cn(
                         "size-2 rounded-full",
-                        driverInstalled ? "bg-status-success" : "bg-text-muted"
+                        driverInstalled ? "bg-status-success" : "bg-muted-foreground"
                       )}
                     />
                     <span className="text-text-secondary">
@@ -275,8 +275,8 @@ export function KarabinerOnboardingModal({
                 </div>
 
                 {/* Instructions */}
-                <div className="border border-border bg-bg-secondary p-4 space-y-3">
-                  <div className="font-mono text-xs font-bold text-text-primary">
+                <div className="border border-border bg-card p-4 space-y-3">
+                  <div className="font-mono text-xs font-bold text-foreground">
                     Complete Karabiner Setup
                   </div>
                   <div className="font-mono text-xs text-text-secondary space-y-2">
@@ -327,8 +327,8 @@ export function KarabinerOnboardingModal({
           </div>
 
           {/* Footer */}
-          <div className="p-4 border-t border-border bg-bg-secondary flex items-center justify-between">
-            <div className="font-mono text-xs text-text-muted">
+          <div className="p-4 border-t border-border bg-card flex items-center justify-between">
+            <div className="font-mono text-xs text-muted-foreground">
               {step === "install" && isInstalling && "Downloading..."}
               {step === "install" && installFailed && "Download failed"}
               {step === "install" && installSucceeded && !appInstalled && "Waiting for installation"}
@@ -342,7 +342,7 @@ export function KarabinerOnboardingModal({
                     <Button
                       variant="outline"
                       onClick={handleCancel}
-                      className="font-mono text-xs rounded-none border-border hover:bg-bg-tertiary"
+                      className="font-mono text-xs rounded-none border-border hover:bg-secondary"
                     >
                       CANCEL
                     </Button>
@@ -351,7 +351,7 @@ export function KarabinerOnboardingModal({
                       onClick={handleNext}
                       className={cn(
                         "font-mono text-xs rounded-none min-w-32 tracking-wide",
-                        "bg-text-primary text-bg-primary hover:bg-text-primary/90"
+                        "bg-foreground text-background hover:bg-foreground/90"
                       )}
                     >
                       NEXT &gt;
@@ -361,7 +361,7 @@ export function KarabinerOnboardingModal({
                       <Button
                         variant="outline"
                         onClick={() => checkStatus()}
-                        className="font-mono text-xs rounded-none border-border hover:bg-bg-tertiary"
+                        className="font-mono text-xs rounded-none border-border hover:bg-secondary"
                       >
                         CHECK STATUS
                       </Button>
@@ -370,7 +370,7 @@ export function KarabinerOnboardingModal({
                         disabled={!appInstalled}
                         className={cn(
                           "font-mono text-xs rounded-none min-w-32 tracking-wide",
-                          "bg-text-primary text-bg-primary hover:bg-text-primary/90",
+                          "bg-foreground text-background hover:bg-foreground/90",
                           "disabled:opacity-50 disabled:cursor-not-allowed"
                         )}
                       >
@@ -383,7 +383,7 @@ export function KarabinerOnboardingModal({
                         <Button
                           variant="outline"
                           onClick={handleInstall}
-                          className="font-mono text-xs rounded-none border-border hover:bg-bg-tertiary"
+                          className="font-mono text-xs rounded-none border-border hover:bg-secondary"
                         >
                           RETRY
                         </Button>
@@ -393,7 +393,7 @@ export function KarabinerOnboardingModal({
                         disabled={isInstalling}
                         className={cn(
                           "font-mono text-xs rounded-none min-w-40 tracking-wide",
-                          "bg-text-primary text-bg-primary hover:bg-text-primary/90",
+                          "bg-foreground text-background hover:bg-foreground/90",
                           "disabled:opacity-50 disabled:cursor-not-allowed"
                         )}
                       >
@@ -409,14 +409,14 @@ export function KarabinerOnboardingModal({
                   <Button
                     variant="outline"
                     onClick={handleOpenKarabinerApp}
-                    className="font-mono text-xs rounded-none border-border hover:bg-bg-tertiary"
+                    className="font-mono text-xs rounded-none border-border hover:bg-secondary"
                   >
                     OPEN KARABINER-ELEMENTS
                   </Button>
                   <Button
                     variant="outline"
                     onClick={handleCheckStep2}
-                    className="font-mono text-xs rounded-none border-border hover:bg-bg-tertiary"
+                    className="font-mono text-xs rounded-none border-border hover:bg-secondary"
                   >
                     CHECK STATUS
                   </Button>
@@ -425,7 +425,7 @@ export function KarabinerOnboardingModal({
                     disabled={!step2Verified}
                     className={cn(
                       "font-mono text-xs rounded-none min-w-32 tracking-wide",
-                      "bg-text-primary text-bg-primary hover:bg-text-primary/90",
+                      "bg-foreground text-background hover:bg-foreground/90",
                       "disabled:opacity-50 disabled:cursor-not-allowed"
                     )}
                   >
@@ -437,7 +437,7 @@ export function KarabinerOnboardingModal({
                   <Button
                     variant="outline"
                     onClick={handleOpenSettings}
-                    className="font-mono text-xs rounded-none border-border hover:bg-bg-tertiary"
+                    className="font-mono text-xs rounded-none border-border hover:bg-secondary"
                   >
                     OPEN SYSTEM SETTINGS
                   </Button>
@@ -445,7 +445,7 @@ export function KarabinerOnboardingModal({
                     onClick={handleDone}
                     className={cn(
                       "font-mono text-xs rounded-none min-w-32 tracking-wide",
-                      "bg-text-primary text-bg-primary hover:bg-text-primary/90"
+                      "bg-foreground text-background hover:bg-foreground/90"
                     )}
                   >
                     DONE

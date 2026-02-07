@@ -20,21 +20,21 @@ export function StatusIndicator() {
       case "running":
         return {
           label: "Live",
-          bgClass: "bg-status-success-bg",
+          bgClass: "bg-status-success/[0.06]",
           textClass: "text-status-success",
-          dotClass: "bg-status-success animate-pulse-glow",
+          dotClass: "bg-status-success animate-pulse-dot",
         };
       case "starting":
         return {
           label: "Starting...",
-          bgClass: "bg-status-warning-bg",
+          bgClass: "bg-status-warning/[0.06]",
           textClass: "text-status-warning",
           dotClass: "bg-status-warning animate-pulse-warning",
         };
       case "error":
         return {
           label: "Error",
-          bgClass: "bg-status-error-bg",
+          bgClass: "bg-status-error/[0.06]",
           textClass: "text-status-error",
           dotClass: "bg-status-error",
         };
@@ -42,9 +42,9 @@ export function StatusIndicator() {
       default:
         return {
           label: "Stopped",
-          bgClass: "bg-bg-tertiary",
-          textClass: "text-text-muted",
-          dotClass: "bg-text-muted",
+          bgClass: "bg-secondary",
+          textClass: "text-muted-foreground",
+          dotClass: "bg-muted-foreground",
         };
     }
   };
@@ -56,14 +56,14 @@ export function StatusIndicator() {
       type="button"
       onClick={handleClick}
       className={`
-        flex items-center gap-2 px-3 py-1.5
+        flex items-center gap-2 px-3 py-1.5 rounded-full
         ${config.bgClass} ${config.textClass}
-        text-sm font-medium transition-all
+        text-xs font-medium transition-all
         hover:opacity-80 active:scale-95
       `}
       title={isRunning ? "Click to stop Kanata" : "Click to start Kanata"}
     >
-      <span className={`w-2 h-2 rounded-full ${config.dotClass}`} />
+      <span className={`w-1.5 h-1.5 rounded-full ${config.dotClass}`} />
       <span>{config.label}</span>
     </button>
   );

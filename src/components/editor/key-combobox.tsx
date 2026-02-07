@@ -46,7 +46,7 @@ export function KeyCombobox({
           aria-expanded={open}
           className="w-full justify-between font-mono"
         >
-          <span className={value ? "text-text-primary" : "text-text-muted"}>
+          <span className={value ? "text-foreground" : "text-muted-foreground"}>
             {value ? displayValue : placeholder}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -103,9 +103,9 @@ export function KeyCombobox({
                         setOpen(false);
                         setSearch("");
                       }}
-                      className={value === key.value ? "bg-bg-hover" : ""}
+                      className={value === key.value ? "bg-accent" : ""}
                     >
-                      <code className="w-12 text-xs bg-bg-tertiary px-1.5 py-0.5 rounded font-mono text-center">
+                      <code className="w-12 text-xs bg-secondary px-1.5 py-0.5 rounded font-mono text-center">
                         {key.value}
                       </code>
                       <span className="truncate">{key.label}</span>

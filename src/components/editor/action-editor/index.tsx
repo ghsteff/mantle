@@ -55,52 +55,52 @@ export function ActionEditor({
   const isHoldActionSet = !isHoldKeyEmpty(holdKey);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="pb-3 border-b border-border">
-        <div className="text-text-bright text-sm font-mono flex items-center gap-1">
-          <span className="font-semibold uppercase tracking-wide">
-            EDITING:
-          </span>
-          <span className="text-muted-foreground">{label}</span>
-          <span className="text-muted-foreground">({keyId})</span>
+        <span className="text-muted-foreground text-xs">Editing</span>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          <span className="text-foreground font-mono text-base font-semibold">{label}</span>
+          <span className="text-muted-foreground text-xs">({keyId})</span>
         </div>
       </div>
 
       <div className="space-y-3">
         <div className="space-y-2">
-          <label className="text-text-secondary text-xs uppercase tracking-wide">
+          <label className="text-xs text-muted-foreground font-medium">
             Mode
           </label>
-          <div className="flex gap-2">
+          <div className="flex bg-secondary rounded-md p-0.5 border border-border">
             {(["simple", "tap-hold", "layer"] as const).map((type) => (
-              <Button
+              <button
                 key={type}
                 onClick={() => setActionType(type)}
-                variant={actionType === type ? "default" : "outline"}
-                size="xs"
-                className="flex items-center gap-1.5"
+                className={`flex-1 px-2 py-1.5 rounded-sm text-xs font-medium transition-colors flex items-center justify-center gap-1 whitespace-nowrap ${
+                  actionType === type
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
               >
-                {type === "simple" && <Pointer className="h-3 w-3" />}
-                {type === "tap-hold" && <Hand className="h-3 w-3" />}
-                {type === "layer" && <Layers className="h-3 w-3" />}
-                {type === "tap-hold" ? "Tap-Hold" : type}
-              </Button>
+                {type === "simple" && <Pointer className="h-3 w-3 shrink-0" />}
+                {type === "tap-hold" && <Hand className="h-3 w-3 shrink-0" />}
+                {type === "layer" && <Layers className="h-3 w-3 shrink-0" />}
+                {type === "tap-hold" ? "Tap-Hold" : type === "simple" ? "Simple" : "Layer"}
+              </button>
             ))}
           </div>
         </div>
 
         {actionType === "simple" && (
           <div className="space-y-2 pt-2">
-            <label className="text-text-secondary text-xs uppercase tracking-wide">
-              Key Output
+            <label className="text-xs text-muted-foreground font-medium">
+              Key output
             </label>
             <TerminalKeyInput
               value={simpleKey}
               onChange={setSimpleKey}
               placeholder="Select key..."
             />
-            <div className="text-text-muted text-xs">
-              Use <code className="bg-bg-hover px-1 rounded-sm">_</code> for
+            <div className="text-muted-foreground text-xs">
+              Use <code className="bg-accent px-1 rounded-sm">_</code> for
               transparent (inherit from lower layer)
             </div>
           </div>
@@ -111,8 +111,8 @@ export function ActionEditor({
             <div className="space-y-2 pt-2">
               <div className="flex items-center gap-2">
                 <Pointer className="h-3.5 w-3.5 text-muted-foreground" />
-                <label className="text-text-secondary text-xs uppercase tracking-wide">
-                  ON TAP
+                <label className="text-xs text-muted-foreground font-medium">
+                  On tap
                 </label>
               </div>
               <TerminalKeyInput
@@ -125,8 +125,8 @@ export function ActionEditor({
             <div className="space-y-2 pt-2">
               <div className="flex items-center gap-2">
                 <Hand className="h-3.5 w-3.5 text-muted-foreground" />
-                <label className="text-text-secondary text-xs uppercase tracking-wide">
-                  ON HOLD
+                <label className="text-xs text-muted-foreground font-medium">
+                  On hold
                 </label>
               </div>
               <div className="flex gap-2 mb-2">
@@ -170,9 +170,9 @@ export function ActionEditor({
                           : `(layer-toggle ${newLayer})`
                       );
                     }}
-                    className="w-full px-3 py-2 bg-bg-tertiary border border-border font-mono text-sm
-                               text-text-primary
-                               focus:border-accent focus:ring-1 focus:ring-accent outline-none"
+                    className="w-full px-3 py-2 bg-secondary border border-border font-mono text-sm
+                               text-foreground
+                               focus:border-primary focus:ring-1 focus:ring-primary outline-none"
                   >
                     {layers.map((layer) => (
                       <option key={layer} value={layer}>
@@ -206,7 +206,7 @@ export function ActionEditor({
                       Toggle
                     </Button>
                   </div>
-                  <div className="text-text-muted text-xs">
+                  <div className="text-muted-foreground text-xs">
                     {holdLayerMode === "momentary"
                       ? "Layer active while held"
                       : "Layer toggles on/off"}
@@ -223,8 +223,8 @@ export function ActionEditor({
 
             {isHoldActionSet && (
               <div className="space-y-2 pt-2">
-                <label className="text-text-secondary text-xs uppercase tracking-wide">
-                  HOLD TIMEOUT: {timeout}ms
+                <label className="text-xs text-muted-foreground font-medium">
+                  Hold timeout: {timeout}ms
                 </label>
                 <Slider
                   min={0}
@@ -233,7 +233,7 @@ export function ActionEditor({
                   value={[timeout]}
                   onValueChange={(values) => setTimeout(values[0])}
                 />
-                <div className="text-text-muted text-xs">
+                <div className="text-muted-foreground text-xs">
                   Time to distinguish between tap and hold
                 </div>
               </div>
@@ -246,8 +246,8 @@ export function ActionEditor({
             <div className="space-y-2 pt-2">
               <div className="flex items-center gap-2">
                 <Layers className="h-3.5 w-3.5 text-muted-foreground" />
-                <label className="text-text-secondary text-xs uppercase tracking-wide">
-                  TARGET LAYER
+                <label className="text-xs text-muted-foreground font-medium">
+                  Target layer
                 </label>
               </div>
               <Select value={layerName} onValueChange={setLayerName}>
@@ -265,8 +265,8 @@ export function ActionEditor({
             </div>
 
             <div className="space-y-2 pt-2">
-              <label className="text-text-secondary text-xs uppercase tracking-wide">
-                ACTIVATION MODE
+              <label className="text-xs text-muted-foreground font-medium">
+                Activation mode
               </label>
               <div className="flex gap-2">
                 {(["momentary", "toggle", "one-shot"] as const).map((mode) => (
@@ -280,7 +280,7 @@ export function ActionEditor({
                   </Button>
                 ))}
               </div>
-              <div className="text-text-muted text-xs">
+              <div className="text-muted-foreground text-xs">
                 {layerMode === "momentary" && "Layer active while key is held"}
                 {layerMode === "toggle" &&
                   "Toggle layer on/off with each press"}

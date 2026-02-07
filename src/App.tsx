@@ -24,7 +24,7 @@ export function App() {
         <UIProvider>
           <ConfigProvider>
             <ProfileProvider>
-              <div className="h-full flex flex-col bg-bg-primary">
+              <div className="h-full flex flex-col bg-background">
                 <KarabinerOnboarding onOnboardingStateChange={setOnboardingInProgress} />
                 <AutoStartServer onboardingInProgress={onboardingInProgress} />
                 <Header />

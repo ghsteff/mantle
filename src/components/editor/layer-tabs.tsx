@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useConfig, useUI } from "../../contexts";
-import { Button } from "../ui";
 import { PlusIcon } from "lucide-react";
 
 /**
@@ -54,54 +53,62 @@ export function LayerTabs() {
   };
 
   return (
-    <div className="flex items-center gap-1 px-2">
-      {layers.map((layer) => (
-        <div key={layer.name} className="group relative">
-          {editingLayer === layer.name ? (
-            <input
-              type="text"
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-              onBlur={handleRename}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleRename();
-                if (e.key === "Escape") setEditingLayer(null);
-              }}
-              className="px-3 py-1.5 bg-bg-tertiary border border-accent rounded text-sm
-                         text-text-primary font-mono w-24 outline-none"
-              autoFocus
-            />
-          ) : (
-            <Button
-              onClick={() => setActiveLayer(layer.name)}
-              onDoubleClick={() => handleStartRename(layer.name)}
-              variant={activeLayer === layer.name ? "default" : "outline"}
-            >
-              {layer.name}
-            </Button>
-          )}
-
-          {/* Delete button - shown on hover if more than 1 layer */}
-          {layers.length > 1 &&
-            activeLayer === layer.name &&
-            editingLayer !== layer.name && (
+    <div className="flex items-center px-2">
+      {/* Segmented control container */}
+      <div className="flex items-center bg-secondary rounded-md p-0.5 border border-border">
+        {layers.map((layer) => (
+          <div key={layer.name} className="group relative">
+            {editingLayer === layer.name ? (
+              <input
+                type="text"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                onBlur={handleRename}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleRename();
+                  if (e.key === "Escape") setEditingLayer(null);
+                }}
+                className="px-3 py-1 bg-secondary border border-primary rounded-sm text-xs
+                           text-foreground font-mono w-24 outline-none"
+                autoFocus
+              />
+            ) : (
               <button
                 type="button"
-                onClick={() => handleDelete(layer.name)}
-                className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-status-error
-                         text-white text-xs flex items-center justify-center
-                         opacity-0 group-hover:opacity-100 transition-opacity"
-                title="Delete layer"
+                onClick={() => setActiveLayer(layer.name)}
+                onDoubleClick={() => handleStartRename(layer.name)}
+                className={`px-3 py-1 rounded-sm text-xs font-medium transition-colors ${
+                  activeLayer === layer.name
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
               >
-                ×
+                {layer.name}
               </button>
             )}
-        </div>
-      ))}
 
-      {/* Add layer button */}
+            {/* Delete button - shown on hover if more than 1 layer */}
+            {layers.length > 1 &&
+              activeLayer === layer.name &&
+              editingLayer !== layer.name && (
+                <button
+                  type="button"
+                  onClick={() => handleDelete(layer.name)}
+                  className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-status-error
+                           text-white text-xs flex items-center justify-center
+                           opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="Delete layer"
+                >
+                  ×
+                </button>
+              )}
+          </div>
+        ))}
+      </div>
+
+      {/* Add layer button - outside the segmented container */}
       {isAdding ? (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 ml-2">
           <input
             type="text"
             value={newLayerName}
@@ -114,34 +121,38 @@ export function LayerTabs() {
               }
             }}
             placeholder="layer-name"
-            className="px-2 py-1 bg-bg-tertiary border border-border rounded text-sm
-                       text-text-primary font-mono w-24 outline-none
-                       focus:border-accent"
+            className="px-2 py-1 bg-secondary border border-border rounded text-sm
+                       text-foreground font-mono w-24 outline-none
+                       focus:border-primary"
             autoFocus
           />
-          <Button onClick={handleAddLayer} variant="default">
+          <button
+            type="button"
+            onClick={handleAddLayer}
+            className="px-2 py-1 rounded-sm text-xs font-medium bg-card text-foreground shadow-sm transition-colors"
+          >
             Add
-          </Button>
-          <Button
+          </button>
+          <button
             type="button"
             onClick={() => {
               setIsAdding(false);
               setNewLayerName("");
             }}
-            variant="outline"
+            className="px-2 py-1 rounded-sm text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
             Cancel
-          </Button>
+          </button>
         </div>
       ) : (
-        <Button
+        <button
+          type="button"
           onClick={() => setIsAdding(true)}
-          variant="ghost"
           title="Add new layer"
-          className="text-text-muted hover:text-text-primary"
+          className="ml-2 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
         >
-          <PlusIcon className="size-4" /> Add Layer
-        </Button>
+          <PlusIcon className="size-3.5" />
+        </button>
       )}
     </div>
   );

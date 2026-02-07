@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Trash2 } from "lucide-react";
 import { PermissionModal } from "./status";
-import { Button, ResizablePanel } from "./ui";
+import {
+  Button,
+  ResizablePanel,
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "./ui";
 import { useKanata } from "../contexts";
+import { cn } from "@/lib/utils";
 import {
   DEFAULT_LOG_PANEL_HEIGHT,
   MIN_LOG_PANEL_HEIGHT,
@@ -10,6 +18,15 @@ import {
 } from "../constants";
 
 const LOG_PANEL_HEIGHT_KEY = "kanata-log-panel-height";
+
+function formatTimestamp(timestamp: number): string {
+  return new Date(timestamp).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+}
 
 /**
  * Log panel to display Kanata process logs.
@@ -86,10 +103,10 @@ export function LogPanel() {
       maxHeight={MAX_LOG_PANEL_HEIGHT}
       storageKey={LOG_PANEL_HEIGHT_KEY}
       resizeHandlePosition="top"
-      className="bg-bg-secondary border-t border-border"
+      className="bg-card border-t border-border"
     >
       <div className="flex items-center justify-between px-3 py-1 border-b border-border">
-        <span className="text-xs text-text-muted uppercase">
+        <span className="text-xs text-muted-foreground">
           Logs
           {hiddenLogCount > 0 &&
             ` (showing last ${MAX_VISIBLE_LOGS} of ${logs.length})`}
@@ -103,18 +120,23 @@ export function LogPanel() {
               Fix Permission Issue
             </Button>
           )}
-          <Button onClick={clearLogs} variant="ghost">
-            Clear
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button onClick={clearLogs} variant="ghost" size="icon-xs">
+                <Trash2 className="size-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Clear logs</TooltipContent>
+          </Tooltip>
         </div>
       </div>
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-auto p-2 font-mono text-xs"
+        className="flex-1 overflow-auto p-2 font-mono text-[11px] leading-relaxed"
       >
         {hiddenLogCount > 0 && (
-          <div className="text-text-muted text-center py-1">
+          <div className="text-muted-foreground text-center py-1">
             ... {hiddenLogCount} older log{hiddenLogCount !== 1 ? "s" : ""}{" "}
             hidden ...
           </div>
@@ -122,12 +144,17 @@ export function LogPanel() {
         {visibleLogs.map((log, i) => (
           <div
             key={`${log.timestamp}-${i}`}
-            className={
+            className={cn(
+              "flex px-1",
               log.type === "stderr"
                 ? "text-status-error"
-                : "text-text-secondary"
-            }
+                : "text-muted-foreground",
+              i % 2 === 0 && "bg-white/[0.02]"
+            )}
           >
+            <span className="text-muted-foreground select-none mr-3 tabular-nums shrink-0">
+              {formatTimestamp(log.timestamp)}
+            </span>
             {log.message}
           </div>
         ))}

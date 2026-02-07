@@ -21,25 +21,6 @@
 @tailwind utilities;
 
 :root {
-  /* Background colors */
-  --bg-primary: #000000;
-  --bg-secondary: #0a0a0a;
-  --bg-tertiary: #111111;
-  --bg-hover: #1a1a1a;
-  --bg-active: #262626;
-
-  /* Accent colors */
-  --accent: #ffffff;
-  --accent-hover: #e5e5e5;
-  --accent-muted: #666666;
-
-  /* Text colors */
-  --text-primary: #ffffff;
-  --text-secondary: #a1a1a1;
-  --text-muted: #666666;
-  --text-bright: #ffffff;
-  --text-on-accent: #000000;
-
   /* Status colors */
   --success: #00ff88;
   --success-bg: rgba(0, 255, 136, 0.1);
@@ -59,37 +40,43 @@
   --key-border: #262626;
   --key-shadow: rgba(0, 0, 0, 0.8);
 
-  --background: oklch(0.141 0.005 285.823);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.21 0.006 285.885);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.21 0.006 285.885);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.92 0.004 286.32);
-  --primary-foreground: oklch(0.21 0.006 285.885);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.552 0.016 285.938);
+  /* Active state (no shadcn equivalent) */
+  --active: #262626;
+
+  /* Text secondary (between foreground and muted-foreground) */
+  --text-secondary: #a1a1a1;
+
+  /* shadcn/ui design tokens (hex values from custom system) */
+  --background: #000000;
+  --foreground: #ffffff;
+  --card: #0a0a0a;
+  --card-foreground: #ffffff;
+  --popover: #0a0a0a;
+  --popover-foreground: #ffffff;
+  --primary: #ffffff;
+  --primary-foreground: #000000;
+  --secondary: #111111;
+  --secondary-foreground: #ffffff;
+  --muted: #111111;
+  --muted-foreground: #666666;
+  --accent: #1a1a1a;
+  --accent-foreground: #ffffff;
+  --destructive: #ff3333;
+  --input: rgba(255, 255, 255, 0.15);
+  --ring: #ffffff;
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.21 0.006 285.885);
-  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar: #0a0a0a;
+  --sidebar-foreground: #ffffff;
   --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.274 0.006 286.033);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.552 0.016 285.938);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1a1a1a;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #262626;
+  --sidebar-ring: #ffffff;
 }
 
 * {
@@ -141,8 +128,8 @@ body {
     Oxygen,
     Ubuntu,
     sans-serif;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
+  background-color: var(--background);
+  color: var(--foreground);
   overflow: hidden;
 }
 
@@ -159,7 +146,7 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--bg-primary);
+  background: var(--background);
 }
 
 ::-webkit-scrollbar-thumb {
@@ -168,7 +155,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--bg-active);
+  background: var(--active);
 }
 
 /* Focus outline */
@@ -177,14 +164,14 @@ body {
   outline-offset: 2px;
 } */
 
-/* Key animations */
-@keyframes pulse-glow {
+/* Status dot animations */
+@keyframes pulse-dot {
   0%,
   100% {
-    box-shadow: 0 0 4px var(--success);
+    opacity: 1;
   }
   50% {
-    box-shadow: 0 0 12px var(--success);
+    opacity: 0.4;
   }
 }
 
@@ -198,8 +185,8 @@ body {
   }
 }
 
-.animate-pulse-glow {
-  animation: pulse-glow 2s ease-in-out infinite;
+.animate-pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
 }
 
 .animate-pulse-warning {
