@@ -131,11 +131,10 @@ export class KanataProcessManager extends EventEmitter {
     // Sudoers content to allow passwordless launchctl for this daemon
     const sudoersContent = [
       `# Mantle - Allow passwordless control of Kanata daemon`,
-      `${username} ALL=(root) NOPASSWD: /bin/launchctl load -w ${DAEMON_PLIST_PATH}`,
-      `${username} ALL=(root) NOPASSWD: /bin/launchctl unload ${DAEMON_PLIST_PATH}`,
-      `${username} ALL=(root) NOPASSWD: /bin/launchctl start ${DAEMON_LABEL}`,
-      `${username} ALL=(root) NOPASSWD: /bin/launchctl stop ${DAEMON_LABEL}`,
+      `${username} ALL=(root) NOPASSWD: /bin/launchctl bootstrap system/ ${DAEMON_PLIST_PATH}`,
+      `${username} ALL=(root) NOPASSWD: /bin/launchctl bootout system/${DAEMON_LABEL}`,
       `${username} ALL=(root) NOPASSWD: /bin/launchctl kickstart -k system/${DAEMON_LABEL}`,
+      `${username} ALL=(root) NOPASSWD: /bin/launchctl kickstart system/${DAEMON_LABEL}`,
       `${username} ALL=(root) NOPASSWD: /bin/launchctl kill * system/${DAEMON_LABEL}`,
       `${username} ALL=(root) NOPASSWD: /usr/bin/truncate -s 0 ${DAEMON_STDOUT_LOG} ${DAEMON_STDERR_LOG}`,
       "",
@@ -151,7 +150,7 @@ export class KanataProcessManager extends EventEmitter {
       this.emitLog("stdout", "Installing Kanata service (one-time setup)...");
       this.emitLog("stdout", "This requires administrator privileges.");
 
-      // Create log directory, copy plist and sudoers, set permissions, and load daemon
+      // Create log directory, copy plist and sudoers, set permissions, and bootstrap daemon
       const commands = [
         `mkdir -p "${DAEMON_LOG_DIR}"`,
         `cp "${tempPlist}" "${DAEMON_PLIST_PATH}"`,
@@ -160,7 +159,8 @@ export class KanataProcessManager extends EventEmitter {
         `cp "${tempSudoers}" "${SUDOERS_PATH}"`,
         `chown root:wheel "${SUDOERS_PATH}"`,
         `chmod 440 "${SUDOERS_PATH}"`,
-        `launchctl load -w "${DAEMON_PLIST_PATH}"`,
+        // Remove any stale legacy registration, then bootstrap with modern API
+        `launchctl bootout system/${DAEMON_LABEL} 2>/dev/null; launchctl bootstrap system/ "${DAEMON_PLIST_PATH}"`,
       ].join(" && ");
 
       sudoPrompt.exec(commands, { name: "Mantle" }, (error) => {
@@ -295,10 +295,11 @@ export class KanataProcessManager extends EventEmitter {
         // Ignore if truncate fails
       }
 
-      // Use sudo -n (non-interactive) - works without password due to sudoers config
-      execSync(`sudo -n /bin/launchctl start ${DAEMON_LABEL}`, {
-        encoding: "utf8",
-      });
+      // Use modern launchctl API — legacy `start` segfaults on macOS Sequoia
+      execSync(
+        `sudo -n /bin/launchctl kickstart -k system/${DAEMON_LABEL}`,
+        { encoding: "utf8" }
+      );
 
       // Wait for process to start
       return new Promise((resolve) => {
@@ -306,6 +307,39 @@ export class KanataProcessManager extends EventEmitter {
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      const needsReinstall =
+        message.includes("a password is required") ||
+        message.includes("cannot presently execute");
+
+      if (needsReinstall) {
+        // Either sudoers is missing/stale, or the daemon was loaded with
+        // legacy APIs and needs to be re-bootstrapped with modern launchctl.
+        this.emitLog("stdout", "Service needs re-setup. Re-running install...");
+        const installed = await this.installDaemon();
+        if (!installed) {
+          this.setStatus("stopped");
+          return false;
+        }
+
+        try {
+          execSync(
+            `sudo -n /bin/launchctl kickstart -k system/${DAEMON_LABEL}`,
+            { encoding: "utf8" }
+          );
+          return new Promise((resolve) => {
+            this.waitForKanataStartDaemon(resolve);
+          });
+        } catch (retryError) {
+          const retryMsg =
+            retryError instanceof Error
+              ? retryError.message
+              : String(retryError);
+          this.emitLog("stderr", `Failed to start via launchctl: ${retryMsg}`);
+          this.setStatus("error");
+          return false;
+        }
+      }
+
       this.emitLog("stderr", `Failed to start via launchctl: ${message}`);
       this.setStatus("error");
       return false;
@@ -616,9 +650,10 @@ export class KanataProcessManager extends EventEmitter {
     if (this.isDaemonInstalled()) {
       try {
         this.emitLog("stdout", "Stopping Kanata...");
-        execSync(`sudo -n /bin/launchctl stop ${DAEMON_LABEL}`, {
-          encoding: "utf8",
-        });
+        execSync(
+          `sudo -n /bin/launchctl kill SIGTERM system/${DAEMON_LABEL}`,
+          { encoding: "utf8" }
+        );
 
         // Wait for process to stop
         await new Promise((r) => setTimeout(r, 500));
