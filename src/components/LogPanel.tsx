@@ -153,8 +153,7 @@ export function LogPanel() {
               "flex px-1",
               log.type === "stderr"
                 ? "text-status-error"
-                : "text-muted-foreground",
-              i % 2 === 0 && "bg-white/[0.02]"
+                : "text-muted-foreground"
             )}
           >
             <span className="text-muted-foreground select-none mr-3 tabular-nums shrink-0">
