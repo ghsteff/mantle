@@ -15,7 +15,7 @@ export function KeyInspector() {
   const currentAction = useMemo(() => {
     if (!config || !selectedKey) return null;
     const layer = config.layers.find((l) => l.name === activeLayer);
-    return layer?.keys[selectedKey] || selectedKey;
+    return layer?.keys[selectedKey] ?? selectedKey;
   }, [config, selectedKey, activeLayer]);
 
   // Get layer names for the layer selector
@@ -46,7 +46,7 @@ export function KeyInspector() {
     <div className="w-72 bg-card border-l border-border p-4 overflow-y-auto z-10 transition-all duration-200">
       <ActionEditor
         keyId={selectedKey}
-        currentAction={currentAction || selectedKey}
+        currentAction={currentAction ?? selectedKey}
         onSave={handleSave}
         layers={layerNames}
       />
