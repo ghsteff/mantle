@@ -32,7 +32,7 @@ const ANSI_REGEX = /[\x1B]\[[0-9;]*m/g;
  * Strip ANSI color codes and classify log line
  */
 function parseLogLine(
-  line: string
+  line: string,
 ): { clean: string; isError: boolean } | null {
   const clean = line.replace(ANSI_REGEX, "").trim();
   if (!clean) return null;
@@ -181,7 +181,7 @@ export class KanataProcessManager extends EventEmitter {
           } else {
             this.emitLog(
               "stderr",
-              `Failed to install service: ${error.message}`
+              `Failed to install service: ${error.message}`,
             );
           }
           resolve(false);
@@ -191,7 +191,7 @@ export class KanataProcessManager extends EventEmitter {
         this.emitLog("stdout", "Kanata service installed successfully!");
         this.emitLog(
           "stdout",
-          "You won't need to enter your password again to start/stop Kanata."
+          "You won't need to enter your password again to start/stop Kanata.",
         );
         resolve(true);
       });
@@ -206,7 +206,7 @@ export class KanataProcessManager extends EventEmitter {
       // Match kanata_macos_arm64, kanata_macos_x64, kanata_linux_x64, etc.
       const result = execSync(
         `pgrep -f 'kanata_(macos|linux|windows)' 2>/dev/null | head -1`,
-        { encoding: "utf8" }
+        { encoding: "utf8" },
       ).trim();
 
       if (!result) return null;
@@ -240,11 +240,27 @@ export class KanataProcessManager extends EventEmitter {
     // Check for existing process first
     const existingPid = this.findKanataPid();
     if (existingPid) {
-      this.emitLog("stdout", `Kanata already running (PID: ${existingPid})`);
-      this.setStatus("running");
-      this.startProcessPolling(existingPid);
-      this.startLogTailing();
-      return true;
+      this.emitLog(
+        "stdout",
+        `Kanata already running (PID: ${existingPid}), restarting to apply latest config...`,
+      );
+
+      const stopped = await this.stop();
+      if (!stopped) {
+        this.emitLog("stderr", "Failed to stop existing Kanata process");
+        this.setStatus("error");
+        return false;
+      }
+
+      const remainingPid = this.findKanataPid();
+      if (remainingPid) {
+        this.emitLog(
+          "stderr",
+          `Existing Kanata process is still running (PID: ${remainingPid})`,
+        );
+        this.setStatus("error");
+        return false;
+      }
     }
 
     if (this.process) {
@@ -289,17 +305,16 @@ export class KanataProcessManager extends EventEmitter {
       try {
         execSync(
           `sudo -n /usr/bin/truncate -s 0 "${DAEMON_STDOUT_LOG}" "${DAEMON_STDERR_LOG}" 2>/dev/null || true`,
-          { encoding: "utf8" }
+          { encoding: "utf8" },
         );
       } catch {
         // Ignore if truncate fails
       }
 
       // Use modern launchctl API — legacy `start` segfaults on macOS Sequoia
-      execSync(
-        `sudo -n /bin/launchctl kickstart -k system/${DAEMON_LABEL}`,
-        { encoding: "utf8" }
-      );
+      execSync(`sudo -n /bin/launchctl kickstart -k system/${DAEMON_LABEL}`, {
+        encoding: "utf8",
+      });
 
       // Wait for process to start
       return new Promise((resolve) => {
@@ -324,7 +339,7 @@ export class KanataProcessManager extends EventEmitter {
         try {
           execSync(
             `sudo -n /bin/launchctl kickstart -k system/${DAEMON_LABEL}`,
-            { encoding: "utf8" }
+            { encoding: "utf8" },
           );
           return new Promise((resolve) => {
             this.waitForKanataStartDaemon(resolve);
@@ -351,7 +366,7 @@ export class KanataProcessManager extends EventEmitter {
    */
   private waitForKanataStartDaemon(
     resolve: (success: boolean) => void,
-    attempts = 0
+    attempts = 0,
   ): void {
     const maxAttempts = 10;
     const delay = 300;
@@ -500,7 +515,7 @@ export class KanataProcessManager extends EventEmitter {
               if (parsed) {
                 this.emitLog(
                   parsed.isError ? "stderr" : "stdout",
-                  parsed.clean
+                  parsed.clean,
                 );
                 this.checkInputMonitoringError(parsed.clean);
               }
@@ -551,11 +566,11 @@ export class KanataProcessManager extends EventEmitter {
       this.emitLog("stderr", "⚠️ Input Monitoring permission required!");
       this.emitLog(
         "stderr",
-        "Click the button below to open System Settings and reveal the kanata binary in Finder."
+        "Click the button below to open System Settings and reveal the kanata binary in Finder.",
       );
       this.emitLog(
         "stderr",
-        "Then drag the kanata binary into the Input Monitoring list."
+        "Then drag the kanata binary into the Input Monitoring list.",
       );
 
       // Auto-stop the broken process so user can just click Start after fixing permissions
@@ -650,10 +665,9 @@ export class KanataProcessManager extends EventEmitter {
     if (this.isDaemonInstalled()) {
       try {
         this.emitLog("stdout", "Stopping Kanata...");
-        execSync(
-          `sudo -n /bin/launchctl kill SIGTERM system/${DAEMON_LABEL}`,
-          { encoding: "utf8" }
-        );
+        execSync(`sudo -n /bin/launchctl kill SIGTERM system/${DAEMON_LABEL}`, {
+          encoding: "utf8",
+        });
 
         // Wait for process to stop
         await new Promise((r) => setTimeout(r, 500));
@@ -666,7 +680,7 @@ export class KanataProcessManager extends EventEmitter {
             `sudo -n /bin/launchctl kill SIGKILL system/${DAEMON_LABEL} 2>/dev/null || true`,
             {
               encoding: "utf8",
-            }
+            },
           );
           await new Promise((r) => setTimeout(r, 500));
         }
@@ -716,7 +730,7 @@ export class KanataProcessManager extends EventEmitter {
         () => {
           this.setStatus("stopped");
           resolve(true);
-        }
+        },
       );
     });
   }
@@ -749,7 +763,7 @@ export class KanataProcessManager extends EventEmitter {
 
     this.emitLog(
       "stdout",
-      `Restart ${this.restartAttempts}/${this.maxRestartAttempts} in ${delay}ms...`
+      `Restart ${this.restartAttempts}/${this.maxRestartAttempts} in ${delay}ms...`,
     );
 
     this.restartTimeoutId = setTimeout(() => {
