@@ -15,6 +15,7 @@ export interface KanataProcessEvents {
   error: (error: string) => void;
   crash: (code: number | null, signal: string | null) => void;
   "permission-denied": () => void;
+  "exclusive-access-denied": () => void;
 }
 
 // LaunchDaemon configuration for macOS
@@ -92,6 +93,7 @@ export class KanataProcessManager extends EventEmitter {
   private logFile = "";
   private logTailInterval: NodeJS.Timeout | null = null;
   private handlingPermissionError = false;
+  private handlingExclusiveAccessError = false;
 
   getStatus(): KanataStatus {
     return this.status;
@@ -381,20 +383,16 @@ export class KanataProcessManager extends EventEmitter {
         this.startProcessPolling(pid);
         this.startLogTailing();
 
-        // Check for permission errors even if process started
+        // Check for startup errors even if process started
         // (it can start but fail to grab the keyboard)
         const stderrContent = this.readDaemonStderrLog();
-        if (
-          stderrContent.includes("not permitted") &&
-          stderrContent.includes("IOHIDDeviceOpen")
-        ) {
-          // Show the permission error in logs
+        if (stderrContent.trim()) {
+          // Show startup errors in logs and detect critical runtime failures.
           for (const line of stderrContent.split("\n")) {
             const trimmed = line.trim();
-            if (trimmed) {
-              this.emitLog("stderr", trimmed);
-              this.checkInputMonitoringError(trimmed);
-            }
+            if (!trimmed) continue;
+            this.emitLog("stderr", trimmed);
+            this.checkCriticalRuntimeError(trimmed);
           }
         }
 
@@ -470,7 +468,7 @@ export class KanataProcessManager extends EventEmitter {
       const parsed = parseLogLine(line);
       if (parsed) {
         this.emitLog(parsed.isError ? "stderr" : "stdout", parsed.clean);
-        this.checkInputMonitoringError(parsed.clean);
+        this.checkCriticalRuntimeError(parsed.clean);
       }
     }
   }
@@ -517,7 +515,7 @@ export class KanataProcessManager extends EventEmitter {
                   parsed.isError ? "stderr" : "stdout",
                   parsed.clean,
                 );
-                this.checkInputMonitoringError(parsed.clean);
+                this.checkCriticalRuntimeError(parsed.clean);
               }
             }
             stdoutPos = stats.size;
@@ -542,7 +540,7 @@ export class KanataProcessManager extends EventEmitter {
                 const trimmed = line.trim();
                 if (trimmed) {
                   this.emitLog("stderr", trimmed);
-                  this.checkInputMonitoringError(trimmed);
+                  this.checkCriticalRuntimeError(trimmed);
                 }
               }
               stderrPos = stats.size;
@@ -555,7 +553,30 @@ export class KanataProcessManager extends EventEmitter {
     }, 1000);
   }
 
-  private checkInputMonitoringError(line: string): void {
+  private checkCriticalRuntimeError(line: string): void {
+    const isExclusiveAccessError =
+      line.includes("exclusive access") || line.includes("device already open");
+    if (isExclusiveAccessError && !this.handlingExclusiveAccessError) {
+      this.handlingExclusiveAccessError = true;
+
+      this.emitLog(
+        "stderr",
+        "⚠️ Keyboard is already controlled by another app (e.g. Karabiner).",
+      );
+      this.emitLog(
+        "stderr",
+        "Quit other keyboard remappers, then click Start again.",
+      );
+
+      // Stop the broken process so the user can recover cleanly.
+      this.emitLog("stdout", "Stopping...");
+      this.stop().then(() => {
+        this.handlingExclusiveAccessError = false;
+        this.emit("exclusive-access-denied");
+      });
+      return;
+    }
+
     if (
       line.includes("not permitted") &&
       line.includes("IOHIDDeviceOpen") &&

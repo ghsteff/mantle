@@ -62,6 +62,7 @@ export interface KanataApi {
   onCrash: (callback: (info: CrashInfo) => void) => () => void;
   onError: (callback: (error: string) => void) => () => void;
   onPermissionDenied: (callback: () => void) => () => void;
+  onExclusiveAccessDenied: (callback: () => void) => () => void;
   onKarabinerInstallOutput: (callback: (line: string) => void) => () => void;
   onKarabinerInstallComplete: (callback: (result: KarabinerInstallResult) => void) => () => void;
 }
@@ -130,6 +131,16 @@ const kanataApi: KanataApi = {
     ipcRenderer.on(IPC_CHANNELS.KANATA_PERMISSION_DENIED, handler);
     return () => {
       ipcRenderer.removeListener(IPC_CHANNELS.KANATA_PERMISSION_DENIED, handler);
+    };
+  },
+  onExclusiveAccessDenied: (callback) => {
+    const handler = () => callback();
+    ipcRenderer.on(IPC_CHANNELS.KANATA_EXCLUSIVE_ACCESS_DENIED, handler);
+    return () => {
+      ipcRenderer.removeListener(
+        IPC_CHANNELS.KANATA_EXCLUSIVE_ACCESS_DENIED,
+        handler,
+      );
     };
   },
   onKarabinerInstallOutput: (callback) => createSubscription(IPC_CHANNELS.KARABINER_INSTALL_OUTPUT, callback),

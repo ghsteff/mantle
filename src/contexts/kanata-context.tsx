@@ -16,6 +16,7 @@ interface KanataState {
   logs: KanataLogEntry[];
   isRunning: boolean;
   permissionDenied: boolean;
+  exclusiveAccessDenied: boolean;
 }
 
 interface KanataActions {
@@ -26,6 +27,7 @@ interface KanataActions {
   setAutoRestart: (enabled: boolean) => Promise<void>;
   openInputMonitoringSettings: () => Promise<void>;
   clearPermissionDenied: () => void;
+  clearExclusiveAccessDenied: () => void;
 }
 
 const KanataStateContext = createContext<KanataState | null>(null);
@@ -38,6 +40,7 @@ export function KanataProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<KanataStatus>("stopped");
   const [logs, setLogs] = useState<KanataLogEntry[]>([]);
   const [permissionDenied, setPermissionDenied] = useState(false);
+  const [exclusiveAccessDenied, setExclusiveAccessDenied] = useState(false);
 
   // Fetch initial status
   useEffect(() => {
@@ -104,6 +107,9 @@ export function KanataProvider({ children }: { children: ReactNode }) {
     const unsubPermissionDenied = window.kanata.onPermissionDenied(() => {
       setPermissionDenied(true);
     });
+    const unsubExclusiveAccessDenied = window.kanata.onExclusiveAccessDenied(() => {
+      setExclusiveAccessDenied(true);
+    });
 
     return () => {
       unsubStatus();
@@ -111,6 +117,7 @@ export function KanataProvider({ children }: { children: ReactNode }) {
       unsubCrash();
       unsubError();
       unsubPermissionDenied();
+      unsubExclusiveAccessDenied();
     };
   }, []);
 
@@ -150,14 +157,19 @@ export function KanataProvider({ children }: { children: ReactNode }) {
     setPermissionDenied(false);
   }, []);
 
+  const clearExclusiveAccessDenied = useCallback(() => {
+    setExclusiveAccessDenied(false);
+  }, []);
+
   const stateValue = useMemo<KanataState>(
     () => ({
       status,
       logs,
       isRunning: status === "running",
       permissionDenied,
+      exclusiveAccessDenied,
     }),
-    [status, logs, permissionDenied]
+    [status, logs, permissionDenied, exclusiveAccessDenied]
   );
 
   const actionsValue = useMemo<KanataActions>(
@@ -169,6 +181,7 @@ export function KanataProvider({ children }: { children: ReactNode }) {
       setAutoRestart,
       openInputMonitoringSettings,
       clearPermissionDenied,
+      clearExclusiveAccessDenied,
     }),
     [
       start,
@@ -178,6 +191,7 @@ export function KanataProvider({ children }: { children: ReactNode }) {
       setAutoRestart,
       openInputMonitoringSettings,
       clearPermissionDenied,
+      clearExclusiveAccessDenied,
     ]
   );
 

@@ -44,6 +44,7 @@ export const IPC_CHANNELS = {
   KANATA_CRASH: "kanata:crash",
   KANATA_ERROR: "kanata:error",
   KANATA_PERMISSION_DENIED: "kanata:permission-denied",
+  KANATA_EXCLUSIVE_ACCESS_DENIED: "kanata:exclusive-access-denied",
   KARABINER_INSTALL_OUTPUT: "karabiner:install-output",
   KARABINER_INSTALL_COMPLETE: "karabiner:install-complete",
 } as const;

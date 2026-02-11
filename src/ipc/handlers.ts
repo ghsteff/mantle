@@ -382,4 +382,11 @@ export function setupProcessEventForwarding(mainWindow: BrowserWindow): void {
       mainWindow.webContents.send(IPC_CHANNELS.KANATA_PERMISSION_DENIED);
     }
   });
+
+  // Forward exclusive access conflict events to renderer
+  processManager.on("exclusive-access-denied", () => {
+    if (!mainWindow.isDestroyed()) {
+      mainWindow.webContents.send(IPC_CHANNELS.KANATA_EXCLUSIVE_ACCESS_DENIED);
+    }
+  });
 }

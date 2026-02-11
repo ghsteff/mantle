@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Trash2 } from "lucide-react";
-import { PermissionModal } from "./status";
+import { ExclusiveAccessModal, PermissionModal } from "./status";
 import {
   Button,
   ResizablePanel,
@@ -32,11 +32,12 @@ function formatTimestamp(timestamp: number): string {
  * Log panel to display Kanata process logs.
  */
 export function LogPanel() {
-  const { logs, permissionDenied } = useKanataState();
+  const { logs, permissionDenied, exclusiveAccessDenied } = useKanataState();
   const {
     clearLogs,
     openInputMonitoringSettings,
     clearPermissionDenied,
+    clearExclusiveAccessDenied,
   } = useKanataActions();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const shouldAutoScrollRef = useRef(true);
@@ -61,6 +62,8 @@ export function LogPanel() {
 
   // Permission modal state - triggered by the permission-denied event from main process
   const [showPermissionModal, setShowPermissionModal] = useState(false);
+  // Exclusive access conflict modal (e.g. Karabiner running)
+  const [showExclusiveAccessModal, setShowExclusiveAccessModal] = useState(false);
 
   // Show modal when permission denied event fires
   useEffect(() => {
@@ -68,6 +71,12 @@ export function LogPanel() {
       setShowPermissionModal(true);
     }
   }, [permissionDenied]);
+
+  useEffect(() => {
+    if (exclusiveAccessDenied) {
+      setShowExclusiveAccessModal(true);
+    }
+  }, [exclusiveAccessDenied]);
 
   // Clear the permission denied flag when modal is closed
   const handleModalClose = useCallback(
@@ -78,6 +87,16 @@ export function LogPanel() {
       }
     },
     [clearPermissionDenied]
+  );
+
+  const handleExclusiveAccessModalClose = useCallback(
+    (open: boolean) => {
+      setShowExclusiveAccessModal(open);
+      if (!open) {
+        clearExclusiveAccessDenied();
+      }
+    },
+    [clearExclusiveAccessDenied]
   );
 
   // Auto-scroll to bottom when new logs arrive
@@ -167,6 +186,10 @@ export function LogPanel() {
         open={showPermissionModal}
         onOpenChange={handleModalClose}
         onOpenSettings={openInputMonitoringSettings}
+      />
+      <ExclusiveAccessModal
+        open={showExclusiveAccessModal}
+        onOpenChange={handleExclusiveAccessModalClose}
       />
     </ResizablePanel>
   );
