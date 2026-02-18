@@ -21,62 +21,85 @@
 @tailwind utilities;
 
 :root {
-  /* Status colors */
-  --success: #00ff88;
-  --success-bg: rgba(0, 255, 136, 0.1);
-  --warning: #ffaa00;
-  --warning-bg: rgba(255, 170, 0, 0.1);
-  --error: #ff3333;
-  --error-bg: rgba(255, 51, 51, 0.1);
+  /* Accent — clean white */
+  --accent: #ffffff;
+  --accent-soft: rgba(255, 255, 255, 0.10);
+  --accent-glow: rgba(255, 255, 255, 0.15);
+  --accent-foreground: #09090b;
 
-  /* Border colors */
-  --border: #262626;
-  --border-focus: #ffffff;
+  /* Status colors — refined, desaturated */
+  --success: #34d399;
+  --success-bg: rgba(52, 211, 153, 0.08);
+  --warning: #fbbf24;
+  --warning-bg: rgba(251, 191, 36, 0.08);
+  --error: #f87171;
+  --error-bg: rgba(248, 113, 113, 0.08);
 
-  /* Key specific */
-  --key-bg: #121212;
-  --key-bg-hover: #1a1a1a;
-  --key-bg-selected: rgba(255, 255, 255, 0.1);
-  --key-border: #262626;
-  --key-shadow: rgba(0, 0, 0, 0.8);
+  /* Surfaces — warm dark palette */
+  --background: #09090b;
+  --foreground: #fafafa;
+  --card: #0f0f12;
+  --card-foreground: #fafafa;
+  --popover: #0f0f12;
+  --popover-foreground: #fafafa;
 
-  /* Active state (no shadcn equivalent) */
-  --active: #262626;
+  /* Semantic */
+  --primary: #fafafa;
+  --primary-foreground: #09090b;
+  --secondary: #111114;
+  --secondary-foreground: #fafafa;
+  --muted: #18181b;
+  --muted-foreground: #71717a;
+  --destructive: #ef4444;
+  --input: rgba(255, 255, 255, 0.08);
+  --ring: rgba(255, 255, 255, 0.5);
 
-  /* Text secondary (between foreground and muted-foreground) */
-  --text-secondary: #a1a1a1;
+  /* Borders */
+  --border: rgba(255, 255, 255, 0.06);
+  --border-focus: rgba(255, 255, 255, 0.3);
+  --border-subtle: rgba(255, 255, 255, 0.03);
 
-  /* shadcn/ui design tokens (hex values from custom system) */
-  --background: #000000;
-  --foreground: #ffffff;
-  --card: #0a0a0a;
-  --card-foreground: #ffffff;
-  --popover: #0a0a0a;
-  --popover-foreground: #ffffff;
-  --primary: #ffffff;
-  --primary-foreground: #000000;
-  --secondary: #111111;
-  --secondary-foreground: #ffffff;
-  --muted: #111111;
-  --muted-foreground: #666666;
-  --accent: #1a1a1a;
-  --accent-foreground: #ffffff;
-  --destructive: #ff3333;
-  --input: rgba(255, 255, 255, 0.15);
-  --ring: #ffffff;
+  /* Text */
+  --text-secondary: #a1a1aa;
+
+  /* Key specific — elevated glass */
+  --key-bg: #111114;
+  --key-bg-hover: #16161a;
+  --key-bg-selected: rgba(255, 255, 255, 0.06);
+  --key-border: rgba(255, 255, 255, 0.06);
+  --key-border-hover: rgba(255, 255, 255, 0.12);
+  --key-border-selected: rgba(255, 255, 255, 0.25);
+  --key-shadow: rgba(0, 0, 0, 0.6);
+  --key-glow: rgba(255, 255, 255, 0.06);
+  --key-inner-glow: rgba(255, 255, 255, 0.02);
+
+  /* Active state */
+  --active: #27272a;
+
+  /* Glass effect */
+  --glass-bg: rgba(15, 15, 18, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.06);
+
+  /* Easing — spring-like curves per Emil Kowalski */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-soft: cubic-bezier(0.33, 1, 0.68, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* Chart tokens (kept for compatibility) */
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: #0a0a0a;
-  --sidebar-foreground: #ffffff;
+  --sidebar: #0f0f12;
+  --sidebar-foreground: #fafafa;
   --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #1a1a1a;
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #262626;
-  --sidebar-ring: #ffffff;
+  --sidebar-primary-foreground: #fafafa;
+  --sidebar-accent: #1a1a1e;
+  --sidebar-accent-foreground: #fafafa;
+  --sidebar-border: rgba(255, 255, 255, 0.06);
+  --sidebar-ring: rgba(255, 255, 255, 0.5);
 }
 
 * {
@@ -112,7 +135,6 @@ body,
   overflow: hidden;
 }
 
-/* Ensure the app fills the entire window, including title bar area */
 #root {
   display: flex;
   flex-direction: column;
@@ -124,76 +146,113 @@ body {
     -apple-system,
     BlinkMacSystemFont,
     "Segoe UI",
-    Roboto,
-    Oxygen,
-    Ubuntu,
+    system-ui,
     sans-serif;
   background-color: var(--background);
   color: var(--foreground);
   overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Monospace font for key labels */
 .font-mono {
   font-family:
     "Geist Mono", "JetBrains Mono", "Fira Code", "Consolas", monospace;
 }
 
-/* Custom scrollbar - Vercel style */
+/* Custom scrollbar — invisible until hover */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--background);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--active);
+  background: rgba(255, 255, 255, 0.14);
 }
 
-/* Focus outline */
-/* :focus-visible {
-  outline: 1px solid var(--border-focus);
-  outline-offset: 2px;
-} */
+/* ---- Animations ---- */
 
-/* Status dot animations */
 @keyframes pulse-dot {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.4;
-  }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
 }
 
 @keyframes pulse-warning {
-  0%,
-  100% {
-    opacity: 1;
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes glow-breathe {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px var(--key-border-selected),
+      0 0 12px 0 var(--key-glow);
   }
   50% {
-    opacity: 0.6;
+    box-shadow:
+      0 0 0 1px var(--key-border-selected),
+      0 0 20px 2px var(--accent-glow);
   }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slide-up-fade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 .animate-pulse-dot {
-  animation: pulse-dot 2s ease-in-out infinite;
+  animation: pulse-dot 2s var(--ease-in-out) infinite;
 }
 
 .animate-pulse-warning {
-  animation: pulse-warning 1s ease-in-out infinite;
+  animation: pulse-warning 1.2s var(--ease-in-out) infinite;
 }
 
-/* Window drag region for macOS title bar integration */
+.animate-glow-breathe {
+  animation: glow-breathe 2.5s var(--ease-in-out) infinite;
+}
+
+.animate-fade-in {
+  animation: fade-in 200ms var(--ease-out) both;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 250ms var(--ease-out) both;
+}
+
+.animate-slide-up-fade {
+  animation: slide-up-fade 200ms var(--ease-out) both;
+}
+
+.animate-scale-in {
+  animation: scale-in 200ms var(--ease-out) both;
+}
+
+/* Window drag regions — macOS title bar integration */
 .drag-region {
   -webkit-app-region: drag;
   app-region: drag;
@@ -202,4 +261,47 @@ body {
 .no-drag-region {
   -webkit-app-region: no-drag;
   app-region: no-drag;
+}
+
+/* Glass surface utility */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  border: 1px solid var(--glass-border);
+}
+
+/* Ambient background for keyboard area */
+.ambient-bg {
+  position: relative;
+}
+
+.ambient-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 40%, rgba(255, 255, 255, 0.015), transparent),
+    radial-gradient(ellipse 40% 40% at 30% 60%, rgba(99, 102, 241, 0.015), transparent);
+  pointer-events: none;
+}
+
+/* Noise texture overlay for depth */
+.noise-overlay::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.015;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  pointer-events: none;
+  mix-blend-mode: overlay;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

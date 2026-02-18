@@ -15,13 +15,23 @@ module.exports = {
         border: {
           DEFAULT: "var(--border)",
           focus: "var(--border-focus)",
+          subtle: "var(--border-subtle)",
         },
         key: {
           bg: "var(--key-bg)",
           "bg-hover": "var(--key-bg-hover)",
           "bg-selected": "var(--key-bg-selected)",
           border: "var(--key-border)",
+          "border-hover": "var(--key-border-hover)",
+          "border-selected": "var(--key-border-selected)",
           shadow: "var(--key-shadow)",
+          glow: "var(--key-glow)",
+        },
+        accent: {
+          DEFAULT: "var(--accent)",
+          soft: "var(--accent-soft)",
+          glow: "var(--accent-glow)",
+          foreground: "var(--accent-foreground)",
         },
         active: "var(--active)",
         "text-secondary": "var(--text-secondary)",
@@ -37,10 +47,6 @@ module.exports = {
           DEFAULT: "var(--muted)",
           foreground: "var(--muted-foreground)",
         },
-        accent: {
-          DEFAULT: "var(--accent)",
-          foreground: "var(--accent-foreground)",
-        },
         card: {
           DEFAULT: "var(--card)",
           foreground: "var(--card-foreground)",
@@ -54,6 +60,10 @@ module.exports = {
         destructive: "var(--destructive)",
         input: "var(--input)",
         ring: "var(--ring)",
+        glass: {
+          bg: "var(--glass-bg)",
+          border: "var(--glass-border)",
+        },
         chart: {
           1: "var(--chart-1)",
           2: "var(--chart-2)",
@@ -73,12 +83,23 @@ module.exports = {
         },
       },
       fontFamily: {
-        mono: ['"JetBrains Mono"', '"Fira Code"', "Consolas", "monospace"],
+        mono: ['"Geist Mono"', '"JetBrains Mono"', '"Fira Code"', "Consolas", "monospace"],
       },
       boxShadow: {
-        key: "0 1px 3px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.04)",
-        "key-pressed":
-          "0 0px 1px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.04)",
+        key: "0 1px 2px rgba(0,0,0,0.4), 0 0 0 1px var(--key-border), inset 0 1px 0 0 var(--key-inner-glow)",
+        "key-hover": "0 2px 8px rgba(0,0,0,0.3), 0 0 0 1px var(--key-border-hover), inset 0 1px 0 0 rgba(255,255,255,0.04)",
+        "key-pressed": "0 0 1px rgba(0,0,0,0.4), 0 0 0 1px var(--key-border), inset 0 1px 2px rgba(0,0,0,0.3)",
+        "key-selected": "0 0 0 1px var(--key-border-selected), 0 0 16px 0 var(--key-glow)",
+        glass: "0 4px 24px rgba(0,0,0,0.2), 0 0 0 1px var(--glass-border)",
+        glow: "0 0 20px 4px var(--accent-glow)",
+      },
+      transitionTimingFunction: {
+        "out": "var(--ease-out)",
+        "out-soft": "var(--ease-out-soft)",
+        "spring": "var(--ease-spring)",
+      },
+      borderRadius: {
+        key: "8px",
       },
     },
   },
