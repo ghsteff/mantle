@@ -32,9 +32,6 @@ import {
   PlusIcon,
 } from "lucide-react";
 
-/**
- * Dropdown to switch between saved profiles.
- */
 export function ProfileSwitcher() {
   const { profiles, activeProfile } = useConfigState();
   const { switchProfile, deleteProfile, renameProfile, createProfile } = useProfile();
@@ -117,15 +114,15 @@ export function ProfileSwitcher() {
             variant="ghost"
             role="combobox"
             aria-expanded={open}
-            className="gap-1 font-medium justify-between"
+            className="gap-1.5 font-medium justify-between text-[12px] h-7 px-2"
           >
-            {activeProfile || "Select Profile"}
-            <ChevronsUpDown className="size-4 opacity-50" />
+            <span className="text-foreground/80">{activeProfile || "Select Profile"}</span>
+            <ChevronsUpDown className="size-3 opacity-40" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-64 p-0" align="start">
           <Command>
-            <CommandInput placeholder="Search profiles..." />
+            <CommandInput placeholder="Search profiles…" />
             <CommandList>
               <CommandEmpty>No profiles found.</CommandEmpty>
               <CommandGroup heading="Profiles">
@@ -149,7 +146,7 @@ export function ProfileSwitcher() {
                     setOpen(false);
                   }}
                 >
-                  <PlusIcon className="size-4" />
+                  <PlusIcon className="size-3.5" />
                   Add New Profile
                 </CommandItem>
               </CommandGroup>
@@ -158,13 +155,12 @@ export function ProfileSwitcher() {
         </PopoverContent>
       </Popover>
 
-      {/* Rename Dialog */}
       <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Rename Profile</DialogTitle>
             <DialogDescription>
-              Enter a new name for the profile "{targetProfile}".
+              Enter a new name for "{targetProfile}".
             </DialogDescription>
           </DialogHeader>
           <Input
@@ -178,7 +174,7 @@ export function ProfileSwitcher() {
           />
           <DialogFooter>
             <Button
-              variant="outline"
+              variant="ghost"
               onClick={() => setRenameDialogOpen(false)}
             >
               Cancel
@@ -190,19 +186,18 @@ export function ProfileSwitcher() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Profile</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete the profile "{targetProfile}"?
-              This action cannot be undone.
+              Are you sure you want to delete "{targetProfile}"?
+              This cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button
-              variant="outline"
+              variant="ghost"
               onClick={() => setDeleteDialogOpen(false)}
             >
               Cancel
@@ -214,7 +209,6 @@ export function ProfileSwitcher() {
         </DialogContent>
       </Dialog>
 
-      {/* New Profile Dialog */}
       <NewProfileDialog
         open={newProfileDialogOpen}
         onOpenChange={setNewProfileDialogOpen}

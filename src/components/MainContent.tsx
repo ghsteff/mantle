@@ -4,14 +4,10 @@ import { KeyboardGrid } from "./keyboard";
 import { useConfigState, useProfile } from "../contexts";
 import { qwertyPreset } from "../presets";
 
-/**
- * Main content area with keyboard grid and inspector.
- */
 export function MainContent() {
   const { isLoading, error, hasProfiles } = useConfigState();
   const { createProfile, switchProfile, refreshProfiles } = useProfile();
 
-  // Auto-create default profile if none exists
   useEffect(() => {
     if (!isLoading && !hasProfiles) {
       const createDefault = async () => {
@@ -31,7 +27,10 @@ export function MainContent() {
   if (isLoading || !hasProfiles) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="text-muted-foreground">Loading configuration...</div>
+        <span
+          className="size-4 border-2 border-accent/40 border-t-accent rounded-full animate-spin"
+          aria-label="Loading configuration"
+        />
       </div>
     );
   }
@@ -39,22 +38,18 @@ export function MainContent() {
   if (error) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-status-error text-lg mb-2">Error</div>
-          <div className="text-muted-foreground">{error}</div>
+        <div className="text-center animate-fade-in">
+          <div className="text-status-error text-sm font-medium mb-1">
+            Something went wrong
+          </div>
+          <div className="text-muted-foreground text-xs max-w-sm">{error}</div>
         </div>
       </div>
     );
   }
 
   return (
-    <main
-      className="flex-1 flex overflow-hidden relative"
-      style={{
-        background:
-          "radial-gradient(ellipse at 50% 50%, rgba(255,255,255,0.02), transparent)",
-      }}
-    >
+    <main className="flex-1 flex overflow-hidden relative noise-overlay">
       <KeyboardGrid />
       <KeyInspector />
     </main>

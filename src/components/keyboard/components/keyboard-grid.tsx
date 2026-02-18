@@ -12,34 +12,26 @@ import {
   useUIState,
 } from "../../../contexts";
 import { Switch } from "../../ui";
+import { cn } from "@/lib/utils";
 
 interface KeyboardGridProps {
   layout?: KeyDef[];
 }
 
-/**
- * Renders the full keyboard grid.
- */
 export function KeyboardGrid({ layout = TKL_LAYOUT }: KeyboardGridProps) {
   const { config } = useConfigState();
   const { selectedKey, activeLayer, showActions } = useUIState();
   const { setSelectedKey, setShowActions } = useUIActions();
 
-  // Get the current layer's key mappings
   const layerKeys = useMemo(() => {
     if (!config) return {};
     const layer = config.layers.find((l) => l.name === activeLayer);
     return layer?.keys || {};
   }, [config, activeLayer]);
 
-  // Calculate dimensions
   const layoutWidth = getLayoutWidth(layout);
   const layoutHeight = getLayoutHeight(layout);
-
-  // Calculate unit size to fit the container
-  // We use a base of 48px per unit, but this can be scaled
   const unitSize = 48;
-
   const gridWidth = layoutWidth * unitSize;
   const gridHeight = layoutHeight * unitSize;
 
@@ -51,13 +43,25 @@ export function KeyboardGrid({ layout = TKL_LAYOUT }: KeyboardGridProps) {
   );
 
   return (
-    <div className="flex-1 flex items-center justify-center p-4 overflow-auto relative">
-      {/* View mode toggle */}
-      <div className="absolute top-4 right-4 flex items-center gap-2 bg-card border border-border px-3 py-1.5 z-10 transition-opacity duration-200">
-        <span className="text-xs text-muted-foreground">Keys</span>
+    <div className="flex-1 flex items-center justify-center p-6 overflow-auto relative ambient-bg">
+      {/* View mode toggle — floating pill */}
+      <div className={cn(
+        "absolute top-5 right-5 z-10",
+        "flex items-center gap-2.5 px-3.5 py-2",
+        "glass rounded-full",
+        "animate-fade-in",
+      )}>
+        <span className={cn(
+          "text-[11px] font-medium tracking-wide transition-colors duration-150",
+          !showActions ? "text-foreground" : "text-muted-foreground",
+        )}>Keys</span>
         <Switch checked={showActions} onCheckedChange={setShowActions} />
-        <span className="text-xs text-muted-foreground">Actions</span>
+        <span className={cn(
+          "text-[11px] font-medium tracking-wide transition-colors duration-150",
+          showActions ? "text-foreground" : "text-muted-foreground",
+        )}>Actions</span>
       </div>
+
       <div
         className="relative"
         style={{

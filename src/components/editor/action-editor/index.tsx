@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
+import { cn } from "@/lib/utils";
 
 interface ActionEditorProps {
   keyId: string;
@@ -55,34 +56,43 @@ export function ActionEditor({
   const isHoldActionSet = !isHoldKeyEmpty(holdKey);
 
   return (
-    <div className="space-y-5">
-      <div className="pb-3 border-b border-border">
-        <span className="text-muted-foreground text-xs">Editing</span>
-        <div className="flex items-center gap-1.5 mt-0.5">
-          <span className="text-foreground font-mono text-base font-semibold">{label}</span>
-          <span className="text-muted-foreground text-xs">({keyId})</span>
+    <div className="space-y-5 animate-slide-up-fade">
+      {/* Key identity */}
+      <div className="pb-4 border-b border-border">
+        <span className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground font-medium">
+          Editing
+        </span>
+        <div className="flex items-baseline gap-2 mt-1">
+          <span className="text-foreground font-mono text-base font-semibold tracking-tight">
+            {label}
+          </span>
+          <span className="text-muted-foreground/60 text-[11px] font-mono">{keyId}</span>
         </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
+        {/* Mode selector — segmented pill */}
         <div className="space-y-2">
-          <label className="text-xs text-muted-foreground font-medium">
+          <label className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground font-medium">
             Mode
           </label>
-          <div className="flex bg-secondary rounded-md p-0.5 border border-border">
+          <div className="flex bg-muted/50 rounded-lg p-0.5">
             {(["simple", "tap-hold", "layer"] as const).map((type) => (
               <button
                 key={type}
                 onClick={() => setActionType(type)}
-                className={`flex-1 px-2 py-1.5 rounded-sm text-xs font-medium transition-colors flex items-center justify-center gap-1 whitespace-nowrap ${
+                className={cn(
+                  "flex-1 px-2 py-1.5 rounded-md text-[11px] font-medium",
+                  "transition-all duration-150 ease-out",
+                  "flex items-center justify-center gap-1.5 whitespace-nowrap",
                   actionType === type
                     ? "bg-card text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                    : "text-muted-foreground hover:text-foreground",
+                )}
               >
-                {type === "simple" && <Pointer className="h-3 w-3 shrink-0" />}
-                {type === "tap-hold" && <Hand className="h-3 w-3 shrink-0" />}
-                {type === "layer" && <Layers className="h-3 w-3 shrink-0" />}
+                {type === "simple" && <Pointer className="size-3 shrink-0" />}
+                {type === "tap-hold" && <Hand className="size-3 shrink-0" />}
+                {type === "layer" && <Layers className="size-3 shrink-0" />}
                 {type === "tap-hold" ? "Tap-Hold" : type === "simple" ? "Simple" : "Layer"}
               </button>
             ))}
@@ -90,8 +100,8 @@ export function ActionEditor({
         </div>
 
         {actionType === "simple" && (
-          <div className="space-y-2 pt-2">
-            <label className="text-xs text-muted-foreground font-medium">
+          <div className="space-y-2 pt-1">
+            <label className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground font-medium">
               Key output
             </label>
             <TerminalKeyInput
@@ -99,19 +109,15 @@ export function ActionEditor({
               onChange={setSimpleKey}
               placeholder="Select key..."
             />
-            <div className="text-muted-foreground text-xs">
-              Use <code className="bg-accent px-1 rounded-sm">_</code> for
-              transparent (inherit from lower layer)
-            </div>
           </div>
         )}
 
         {actionType === "tap-hold" && (
           <>
-            <div className="space-y-2 pt-2">
+            <div className="space-y-2 pt-1">
               <div className="flex items-center gap-2">
-                <Pointer className="h-3.5 w-3.5 text-muted-foreground" />
-                <label className="text-xs text-muted-foreground font-medium">
+                <Pointer className="size-3 text-muted-foreground" />
+                <label className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground font-medium">
                   On tap
                 </label>
               </div>
@@ -122,14 +128,14 @@ export function ActionEditor({
               />
             </div>
 
-            <div className="space-y-2 pt-2">
+            <div className="space-y-2 pt-1">
               <div className="flex items-center gap-2">
-                <Hand className="h-3.5 w-3.5 text-muted-foreground" />
-                <label className="text-xs text-muted-foreground font-medium">
+                <Hand className="size-3 text-muted-foreground" />
+                <label className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground font-medium">
                   On hold
                 </label>
               </div>
-              <div className="flex gap-2 mb-2">
+              <div className="flex gap-1.5 mb-2">
                 {(["key", "layer"] as const).map((type) => (
                   <Button
                     key={type}
@@ -170,9 +176,12 @@ export function ActionEditor({
                           : `(layer-toggle ${newLayer})`
                       );
                     }}
-                    className="w-full px-3 py-2 bg-secondary border border-border font-mono text-sm
-                               text-foreground
-                               focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                    className={cn(
+                      "w-full px-3 py-1.5 rounded-md font-mono text-[11px]",
+                      "bg-muted/50 border border-border text-foreground",
+                      "focus:border-accent/50 focus:ring-1 focus:ring-accent/20 outline-none",
+                      "transition-colors duration-150",
+                    )}
                   >
                     {layers.map((layer) => (
                       <option key={layer} value={layer}>
@@ -180,15 +189,13 @@ export function ActionEditor({
                       </option>
                     ))}
                   </select>
-                  <div className="flex gap-2">
+                  <div className="flex gap-1.5">
                     <Button
                       onClick={() => {
                         setHoldLayerMode("momentary");
                         setHoldKey(`(layer-while-held ${holdLayer})`);
                       }}
-                      variant={
-                        holdLayerMode === "momentary" ? "default" : "outline"
-                      }
+                      variant={holdLayerMode === "momentary" ? "default" : "outline"}
                       size="xs"
                     >
                       Momentary
@@ -198,15 +205,13 @@ export function ActionEditor({
                         setHoldLayerMode("toggle");
                         setHoldKey(`(layer-toggle ${holdLayer})`);
                       }}
-                      variant={
-                        holdLayerMode === "toggle" ? "default" : "outline"
-                      }
+                      variant={holdLayerMode === "toggle" ? "default" : "outline"}
                       size="xs"
                     >
                       Toggle
                     </Button>
                   </div>
-                  <div className="text-muted-foreground text-xs">
+                  <div className="text-muted-foreground/60 text-[11px]">
                     {holdLayerMode === "momentary"
                       ? "Layer active while held"
                       : "Layer toggles on/off"}
@@ -222,9 +227,10 @@ export function ActionEditor({
             </div>
 
             {isHoldActionSet && (
-              <div className="space-y-2 pt-2">
-                <label className="text-xs text-muted-foreground font-medium">
-                  Hold timeout: {timeout}ms
+              <div className="space-y-2 pt-1">
+                <label className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground font-medium">
+                  Hold timeout{" "}
+                  <span className="text-foreground/60 font-mono normal-case">{timeout}ms</span>
                 </label>
                 <Slider
                   min={0}
@@ -233,7 +239,7 @@ export function ActionEditor({
                   value={[timeout]}
                   onValueChange={(values) => setTimeout(values[0])}
                 />
-                <div className="text-muted-foreground text-xs">
+                <div className="text-muted-foreground/60 text-[11px]">
                   Time to distinguish between tap and hold
                 </div>
               </div>
@@ -243,10 +249,10 @@ export function ActionEditor({
 
         {actionType === "layer" && (
           <>
-            <div className="space-y-2 pt-2">
+            <div className="space-y-2 pt-1">
               <div className="flex items-center gap-2">
-                <Layers className="h-3.5 w-3.5 text-muted-foreground" />
-                <label className="text-xs text-muted-foreground font-medium">
+                <Layers className="size-3 text-muted-foreground" />
+                <label className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground font-medium">
                   Target layer
                 </label>
               </div>
@@ -264,11 +270,11 @@ export function ActionEditor({
               </Select>
             </div>
 
-            <div className="space-y-2 pt-2">
-              <label className="text-xs text-muted-foreground font-medium">
+            <div className="space-y-2 pt-1">
+              <label className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground font-medium">
                 Activation mode
               </label>
-              <div className="flex gap-2">
+              <div className="flex gap-1.5">
                 {(["momentary", "toggle", "one-shot"] as const).map((mode) => (
                   <Button
                     key={mode}
@@ -280,12 +286,10 @@ export function ActionEditor({
                   </Button>
                 ))}
               </div>
-              <div className="text-muted-foreground text-xs">
+              <div className="text-muted-foreground/60 text-[11px]">
                 {layerMode === "momentary" && "Layer active while key is held"}
-                {layerMode === "toggle" &&
-                  "Toggle layer on/off with each press"}
-                {layerMode === "one-shot" &&
-                  "Layer active for next keypress only"}
+                {layerMode === "toggle" && "Toggle layer on/off with each press"}
+                {layerMode === "one-shot" && "Layer active for next keypress only"}
               </div>
             </div>
           </>

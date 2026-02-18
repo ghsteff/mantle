@@ -49,7 +49,7 @@ export const ProfileListItem = memo(function ProfileListItem({
         <button
           type="button"
           onClick={handleRename}
-          className="p-1 hover:bg-accent rounded"
+          className="p-1 hover:bg-muted rounded"
           title="Rename profile"
         >
           <PencilIcon className="size-3" />

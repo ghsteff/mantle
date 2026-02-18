@@ -3,6 +3,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "../../../ui";
 import { formatAction } from "../../utils/format-action";
 import { type KeyDef, getKeyLabel } from "../../utils/layout";
 import { parseActionDetails } from "./utils/parse-action-details";
+import { cn } from "@/lib/utils";
 
 interface KeyProps {
   keyId: string;
@@ -14,9 +15,6 @@ interface KeyProps {
   showAction?: boolean;
 }
 
-/**
- * Renders a single key on the keyboard grid.
- */
 export const Key = memo(function Key({
   keyId,
   keyDef,
@@ -31,7 +29,6 @@ export const Key = memo(function Key({
     onSelect(keyId);
   }, [keyId, onSelect]);
 
-  // Determine what to display based on showAction prop
   let displayLabel: string;
   let displaySubLabel: string | undefined;
 
@@ -44,18 +41,14 @@ export const Key = memo(function Key({
     displaySubLabel = subLabel;
   }
 
-  // Check if the action is different from the default (modified)
   const isModified = action !== keyDef.id && action !== "_";
   const isTransparent = action === "_";
 
   const width = keyDef.width * unitSize;
   const height = (keyDef.height || 1) * unitSize;
-
-  // Position using CSS transform for precise placement
   const left = keyDef.col * unitSize;
   const top = keyDef.row * unitSize;
 
-  // Calculate max characters based on key width (roughly 6 chars per unit width)
   const maxChars = Math.floor(keyDef.width * 6);
   const truncatedLabel =
     displayLabel.length > maxChars
@@ -66,7 +59,6 @@ export const Key = memo(function Key({
       ? displaySubLabel.slice(0, maxChars - 1) + "…"
       : displaySubLabel;
 
-  // Show tooltip if content is truncated or if key has a modified action
   const needsTooltip =
     displayLabel.length > maxChars ||
     (displaySubLabel && displaySubLabel.length > maxChars) ||
@@ -76,19 +68,16 @@ export const Key = memo(function Key({
     <button
       type="button"
       onClick={handleClick}
-      className={`
-        absolute font-mono text-xs select-none
-        flex flex-col items-center justify-center overflow-hidden
-        rounded-md border transition-all duration-150
-        ${
-          isSelected
-            ? "bg-key-bg border-white/20 text-foreground ring-1 ring-white/10 scale-[1.03]"
-            : "bg-key-bg border-key-border text-foreground hover:bg-key-bg-hover"
-        }
-        ${isModified && !isSelected ? "border-primary/50" : ""}
-        ${isTransparent ? "opacity-50" : ""}
-        shadow-key active:shadow-key-pressed active:translate-y-[1px]
-      `}
+      className={cn(
+        "absolute font-mono select-none",
+        "flex flex-col items-center justify-center overflow-hidden",
+        "rounded-key border transition-all duration-150 ease-out",
+        "bg-key-bg border-key-border shadow-key",
+        "hover:bg-key-bg-hover hover:border-key-border-hover hover:shadow-key-hover hover:scale-[1.02]",
+        "active:scale-[0.97] active:shadow-key-pressed active:duration-75",
+        isSelected && "bg-key-bg-selected border-key-border-selected shadow-key-selected animate-glow-breathe scale-[1.02]",
+        isTransparent && "opacity-35",
+      )}
       style={{
         width: `${width - 4}px`,
         height: `${height - 4}px`,
@@ -96,23 +85,28 @@ export const Key = memo(function Key({
         top: `${top + 2}px`,
       }}
     >
-      {/* Main label */}
       <span
-        className={`leading-none truncate max-w-full px-1 ${keyDef.width >= 1.5 ? "text-[10px]" : "text-xs"}`}
+        className={cn(
+          "leading-none truncate max-w-full px-1.5",
+          keyDef.width >= 1.5 ? "text-[10px]" : "text-[11px]",
+          isSelected ? "text-foreground" : "text-foreground/90",
+          isTransparent && "text-foreground/40",
+        )}
       >
         {truncatedLabel}
       </span>
 
-      {/* Sub-label (shifted character or action secondary info) */}
       {truncatedSubLabel && (
-        <span className="text-[9px] text-muted-foreground leading-none mt-0.5 truncate max-w-full px-1">
+        <span className={cn(
+          "text-[9px] leading-none mt-0.5 truncate max-w-full px-1.5",
+          isSelected ? "text-foreground/60" : "text-muted-foreground/70",
+        )}>
           {truncatedSubLabel}
         </span>
       )}
 
-      {/* Modified indicator */}
       {isModified && (
-        <div className="absolute bottom-1 right-1 w-1 h-1 rounded-full bg-primary" />
+        <div className="absolute bottom-1 right-1 size-1 rounded-full bg-white" />
       )}
     </button>
   );
@@ -126,22 +120,22 @@ export const Key = memo(function Key({
   return (
     <Tooltip delayDuration={300}>
       <TooltipTrigger asChild>{keyButton}</TooltipTrigger>
-      <TooltipContent side="top" className="max-w-xs">
-        <div className="space-y-0 text-xs">
+      <TooltipContent side="top" className="max-w-xs animate-scale-in">
+        <div className="space-y-0.5 text-xs">
           <div className="font-semibold font-mono">{actionDetails.type}</div>
           {actionDetails.tap && (
-            <div>
-              <span className="text-muted-foreground text-[10px] uppercase tracking-widest font-mono">
-                Tap:
-              </span>{" "}
+            <div className="flex items-center gap-1.5">
+              <span className="text-background/50 text-[10px] uppercase tracking-widest font-mono">
+                Tap
+              </span>
               <span className="font-mono">{actionDetails.tap}</span>
             </div>
           )}
           {actionDetails.hold && (
-            <div>
-              <span className="text-muted-foreground text-[10px] uppercase tracking-widest font-mono">
-                Hold:
-              </span>{" "}
+            <div className="flex items-center gap-1.5">
+              <span className="text-background/50 text-[10px] uppercase tracking-widest font-mono">
+                Hold
+              </span>
               <span className="font-mono">{actionDetails.hold}</span>
             </div>
           )}

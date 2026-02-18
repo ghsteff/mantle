@@ -13,18 +13,12 @@ import {
 import { Input } from "../ui/input";
 import { DownloadIcon, UploadIcon } from "lucide-react";
 
-/**
- * Keyboard config type for import.
- */
 interface KeyboardConfig {
   sourceKeys: string[];
   layers: { name: string; keys: Record<string, string> }[];
   aliases?: Record<string, string>;
 }
 
-/**
- * Icon buttons for importing/exporting .kbd files.
- */
 export function ImportExportButton() {
   const { exportKbd, importKbd, createProfile, switchProfile } = useProfile();
 
@@ -73,43 +67,42 @@ export function ImportExportButton() {
 
   return (
     <>
-      <div className="flex items-center">
+      <div className="flex items-center gap-0.5">
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
               variant="ghost"
-              size="icon"
-              className="size-8 text-muted-foreground hover:text-foreground"
+              size="icon-sm"
+              className="text-muted-foreground hover:text-foreground"
               onClick={handleImport}
             >
-              <UploadIcon className="size-4" />
+              <UploadIcon className="size-3.5" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Import .kbd File</TooltipContent>
+          <TooltipContent>Import .kbd</TooltipContent>
         </Tooltip>
 
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
               variant="ghost"
-              size="icon"
-              className="size-8 text-muted-foreground hover:text-foreground"
+              size="icon-sm"
+              className="text-muted-foreground hover:text-foreground"
               onClick={handleExport}
             >
-              <DownloadIcon className="size-4" />
+              <DownloadIcon className="size-3.5" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Export .kbd File</TooltipContent>
+          <TooltipContent>Export .kbd</TooltipContent>
         </Tooltip>
       </div>
 
-      {/* Import Profile Dialog */}
       <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Import .kbd File</DialogTitle>
+            <DialogTitle>Import Configuration</DialogTitle>
             <DialogDescription>
-              Enter a name for the imported profile. The configuration has{" "}
+              Name this profile. The imported config has{" "}
               {importedConfig?.layers.length || 0} layer(s) and{" "}
               {importedConfig?.sourceKeys.length || 0} keys.
             </DialogDescription>
@@ -125,7 +118,7 @@ export function ImportExportButton() {
           />
           <DialogFooter>
             <Button
-              variant="outline"
+              variant="ghost"
               onClick={() => {
                 setImportDialogOpen(false);
                 setImportedConfig(null);

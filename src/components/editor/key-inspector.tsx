@@ -2,23 +2,19 @@ import { useMemo } from "react";
 import { Keyboard } from "lucide-react";
 import { useConfigActions, useConfigState, useUIState } from "../../contexts";
 import { ActionEditor } from "./action-editor";
+import { cn } from "@/lib/utils";
 
-/**
- * Panel for inspecting and editing the selected key.
- */
 export function KeyInspector() {
   const { config } = useConfigState();
   const { updateKey } = useConfigActions();
   const { selectedKey, activeLayer } = useUIState();
 
-  // Get the current action for the selected key
   const currentAction = useMemo(() => {
     if (!config || !selectedKey) return null;
     const layer = config.layers.find((l) => l.name === activeLayer);
     return layer?.keys[selectedKey] ?? selectedKey;
   }, [config, selectedKey, activeLayer]);
 
-  // Get layer names for the layer selector
   const layerNames = useMemo(() => {
     return config?.layers.map((l) => l.name) || [];
   }, [config]);
@@ -31,11 +27,17 @@ export function KeyInspector() {
 
   if (!selectedKey) {
     return (
-      <div className="w-72 bg-card border-l border-border p-4 flex flex-col z-10 transition-all duration-200">
+      <div className={cn(
+        "w-72 border-l border-border p-6",
+        "flex flex-col z-10",
+        "bg-card/60 backdrop-blur-sm",
+      )}>
         <div className="flex-1 flex items-center justify-center">
-          <div className="flex flex-col items-center text-muted-foreground">
-            <Keyboard className="size-8 text-muted-foreground/40 mb-3 mx-auto" strokeWidth={1} />
-            <p className="text-sm text-muted-foreground">Click a key to configure</p>
+          <div className="flex flex-col items-center gap-3 animate-fade-in">
+            <div className="size-12 rounded-xl bg-muted/50 flex items-center justify-center">
+              <Keyboard className="size-5 text-muted-foreground/50" strokeWidth={1.5} />
+            </div>
+            <p className="text-[12px] text-muted-foreground/70">Select a key to configure</p>
           </div>
         </div>
       </div>
@@ -43,7 +45,11 @@ export function KeyInspector() {
   }
 
   return (
-    <div className="w-72 bg-card border-l border-border p-4 overflow-y-auto z-10 transition-all duration-200">
+    <div className={cn(
+      "w-72 border-l border-border p-5 overflow-y-auto z-10",
+      "bg-card/60 backdrop-blur-sm",
+      "animate-slide-in-right",
+    )}>
       <ActionEditor
         keyId={selectedKey}
         currentAction={currentAction ?? selectedKey}

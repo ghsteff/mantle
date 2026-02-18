@@ -101,8 +101,8 @@ export function TerminalKeyInput({
         <PopoverTrigger asChild>
           <div
             className={cn(
-              "flex min-h-[38px] w-full flex-wrap items-center gap-1.5 rounded-sm border border-border bg-secondary px-3 py-1.5 text-sm hover:bg-accent cursor-text",
-              open && "ring-1 ring-primary"
+              "flex min-h-[32px] w-full flex-wrap items-center gap-1.5 rounded-md border border-border bg-secondary px-3 py-1.5 text-xs hover:bg-muted cursor-text",
+              open && "ring-1 ring-accent/30 border-accent/50"
             )}
             onClick={() => setOpen(true)}
           >
@@ -112,7 +112,7 @@ export function TerminalKeyInput({
               selectedOptions.map((option) => (
                 <div
                   key={option.value}
-                  className="bg-accent text-foreground flex items-center gap-1 rounded-sm px-2 py-0.5 text-xs font-medium font-mono"
+                  className="bg-accent/15 text-accent flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium font-mono"
                 >
                   <code className="text-xs">{option.value}</code>
                   <X
@@ -174,11 +174,6 @@ export function TerminalKeyInput({
           </Command>
         </PopoverContent>
       </Popover>
-      {keys.length === 0 && !open && (
-        <div className="text-muted-foreground text-xs mt-1">
-          Click to select keys, use + for combos (e.g., lctl+lsft)
-        </div>
-      )}
     </div>
   );
 }

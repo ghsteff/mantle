@@ -103,7 +103,7 @@ export function KeyCombobox({
                         setOpen(false);
                         setSearch("");
                       }}
-                      className={value === key.value ? "bg-accent" : ""}
+                      className={value === key.value ? "bg-accent/10" : ""}
                     >
                       <code className="w-12 text-xs bg-secondary px-1.5 py-0.5 rounded font-mono text-center">
                         {key.value}

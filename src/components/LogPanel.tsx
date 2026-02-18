@@ -23,7 +23,7 @@ import {
 
 const LOG_PANEL_HEIGHT_KEY = "kanata-log-panel-height";
 
-function formatTimestamp(timestamp: number): string {
+function formatTimestamp(timestamp: number) {
   return new Date(timestamp).toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
@@ -32,9 +32,6 @@ function formatTimestamp(timestamp: number): string {
   });
 }
 
-/**
- * Log panel to display Kanata process logs.
- */
 export function LogPanel() {
   const { logs, issue } = useKanataState();
   const {
@@ -46,14 +43,12 @@ export function LogPanel() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const shouldAutoScrollRef = useRef(true);
 
-  // Limit visible logs for performance
   const visibleLogs = useMemo(
     () => (logs.length > MAX_VISIBLE_LOGS ? logs.slice(-MAX_VISIBLE_LOGS) : logs),
     [logs]
   );
   const hiddenLogCount = logs.length - visibleLogs.length;
 
-  // Check if there's an Input Monitoring permission error in logs (for UI button)
   const hasPermissionError = useMemo(
     () =>
       issue === "permission-denied" ||
@@ -65,35 +60,27 @@ export function LogPanel() {
     [issue, logs]
   );
 
-  // Clear the permission denied flag when modal is closed
   const handleModalClose = useCallback(
     (open: boolean) => {
-      if (!open) {
-        clearIssue();
-      }
+      if (!open) clearIssue();
     },
     [clearIssue]
   );
 
   const handleExclusiveAccessModalClose = useCallback(
     (nextOpen: boolean) => {
-      if (!nextOpen) {
-        clearIssue();
-      }
+      if (!nextOpen) clearIssue();
     },
     [clearIssue]
   );
 
   const handleAdminSetupModalClose = useCallback(
     (nextOpen: boolean) => {
-      if (!nextOpen) {
-        clearIssue();
-      }
+      if (!nextOpen) clearIssue();
     },
     [clearIssue]
   );
 
-  // Auto-scroll to bottom when new logs arrive
   useEffect(() => {
     if (shouldAutoScrollRef.current && scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop =
@@ -101,12 +88,10 @@ export function LogPanel() {
     }
   }, [logs.length]);
 
-  // Track scroll position to determine if we should auto-scroll
   const handleScroll = useCallback(() => {
     if (!scrollContainerRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } =
       scrollContainerRef.current;
-    // Auto-scroll if user is near the bottom (within 50px)
     shouldAutoScrollRef.current = scrollHeight - scrollTop - clientHeight < 50;
   }, []);
 
@@ -119,24 +104,27 @@ export function LogPanel() {
           maxHeight={MAX_LOG_PANEL_HEIGHT}
           storageKey={LOG_PANEL_HEIGHT_KEY}
           resizeHandlePosition="top"
-          className="bg-card border-t border-border"
+          className="bg-card/60 backdrop-blur-sm border-t border-border"
         >
-          <div className="flex items-center justify-between px-3 py-1 border-b border-border">
-            <span className="text-xs text-muted-foreground">
-              Logs
-              {hiddenLogCount > 0 &&
-                ` (showing last ${MAX_VISIBLE_LOGS} of ${logs.length})`}
+          <div className="flex items-center justify-between px-4 py-1.5 border-b border-border-subtle">
+            <span className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground font-medium">
+              Console
+              {hiddenLogCount > 0 && (
+                <span className="ml-1.5 normal-case tracking-normal text-muted-foreground/50">
+                  (last {MAX_VISIBLE_LOGS} of {logs.length})
+                </span>
+              )}
             </span>
             <div className="flex items-center gap-2">
               {hasPermissionError && (
-                <Button onClick={() => void openInputMonitoringSettings()} variant="outline">
-                  Open Input Monitoring Settings
+                <Button onClick={() => void openInputMonitoringSettings()} variant="outline" size="xs">
+                  Open Input Monitoring
                 </Button>
               )}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button onClick={clearLogs} variant="ghost" size="icon-xs">
-                    <Trash2 className="size-3.5" />
+                    <Trash2 className="size-3" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>Clear logs</TooltipContent>
@@ -146,25 +134,24 @@ export function LogPanel() {
           <div
             ref={scrollContainerRef}
             onScroll={handleScroll}
-            className="flex-1 overflow-auto p-2 font-mono text-[11px] leading-relaxed"
+            className="flex-1 overflow-auto px-4 py-2 font-mono text-[11px] leading-relaxed"
           >
             {hiddenLogCount > 0 && (
-              <div className="text-muted-foreground text-center py-1">
-                ... {hiddenLogCount} older log{hiddenLogCount !== 1 ? "s" : ""}{" "}
-                hidden ...
+              <div className="text-muted-foreground/40 text-center py-1 text-[10px]">
+                … {hiddenLogCount} older log{hiddenLogCount !== 1 ? "s" : ""} hidden
               </div>
             )}
             {visibleLogs.map((log, i) => (
               <div
                 key={`${log.timestamp}-${i}`}
                 className={cn(
-                  "flex px-1",
+                  "flex px-0.5 py-px",
                   log.type === "stderr"
-                    ? "text-status-error"
-                    : "text-muted-foreground"
+                    ? "text-status-error/80"
+                    : "text-muted-foreground/60",
                 )}
               >
-                <span className="text-muted-foreground select-none mr-3 tabular-nums shrink-0">
+                <span className="text-muted-foreground/30 select-none mr-3 tabular-nums shrink-0">
                   {formatTimestamp(log.timestamp)}
                 </span>
                 {log.message}
