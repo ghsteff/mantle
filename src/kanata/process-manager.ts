@@ -769,7 +769,11 @@ export class KanataProcessManager extends EventEmitter {
   }
 
   private emitLog(type: "stdout" | "stderr", message: string): void {
-    this.emit("log", { type, message, timestamp: Date.now() });
+    this.emit("log", {
+      type,
+      message: message.replace(ANSI_REGEX, ""),
+      timestamp: Date.now(),
+    });
   }
 
   async cleanup(): Promise<void> {
