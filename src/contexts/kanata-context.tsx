@@ -10,13 +10,27 @@ import {
 import type { KanataStatus, KanataLogEntry } from "../types";
 import { MAX_LOGS } from "../constants";
 import { assertContext } from "../lib/errors";
+import { getKanataStatus } from "../platform/kanata-status";
+import {
+  openInputMonitoringSettingsInRuntime,
+  restartKanataInRuntime,
+  startKanataInRuntime,
+  stopKanataInRuntime,
+  subscribeToKanataRuntimeEvents,
+} from "../platform/kanata-runtime";
+
+type KanataIssue =
+  | "none"
+  | "permission-denied"
+  | "exclusive-access-denied"
+  | "admin-setup-required"
+  | "admin-setup-cancelled";
 
 interface KanataState {
   status: KanataStatus;
   logs: KanataLogEntry[];
   isRunning: boolean;
-  permissionDenied: boolean;
-  exclusiveAccessDenied: boolean;
+  issue: KanataIssue;
 }
 
 interface KanataActions {
@@ -24,141 +38,137 @@ interface KanataActions {
   stop: () => Promise<boolean>;
   restart: () => Promise<boolean>;
   clearLogs: () => void;
-  setAutoRestart: (enabled: boolean) => Promise<void>;
   openInputMonitoringSettings: () => Promise<void>;
-  clearPermissionDenied: () => void;
-  clearExclusiveAccessDenied: () => void;
+  clearIssue: () => void;
 }
 
 const KanataStateContext = createContext<KanataState | null>(null);
 const KanataActionsContext = createContext<KanataActions | null>(null);
 
-// Check if we're running in Electron with the preload script
-const isElectron = typeof window !== "undefined" && window.kanata !== undefined;
-
 export function KanataProvider({ children }: { children: ReactNode }) {
-  const [status, setStatus] = useState<KanataStatus>("stopped");
+  const [status, setStatus] = useState<KanataStatus>("idle");
   const [logs, setLogs] = useState<KanataLogEntry[]>([]);
-  const [permissionDenied, setPermissionDenied] = useState(false);
-  const [exclusiveAccessDenied, setExclusiveAccessDenied] = useState(false);
+  const [issue, setIssue] = useState<KanataIssue>("none");
+
+  const issueFromLogMessage = useCallback((message: string) => {
+    const normalized = message.toLowerCase();
+    if (normalized.includes("one-time admin setup required")) {
+      return "admin-setup-required" as const;
+    }
+    return null;
+  }, []);
+
+  const issueFromErrorMessage = useCallback((message: string) => {
+    const normalized = message.toLowerCase();
+    if (
+      normalized.includes("failed to install launchdaemon") ||
+      normalized.includes("failed to prepare passwordless launchdaemon")
+    ) {
+      if (
+        normalized.includes("user canceled") ||
+        normalized.includes("user cancelled") ||
+        normalized.includes("(-128)")
+      ) {
+        return "admin-setup-cancelled" as const;
+      }
+      return "admin-setup-required" as const;
+    }
+    return null;
+  }, []);
+
+  const appendLogEntry = useCallback((entry: KanataLogEntry) => {
+    setLogs((prev) => {
+      const updated = [...prev, entry];
+      if (updated.length > MAX_LOGS) {
+        return updated.slice(-MAX_LOGS);
+      }
+      return updated;
+    });
+  }, []);
 
   // Fetch initial status
   useEffect(() => {
-    if (isElectron) {
-      window.kanata.getStatus().then(setStatus);
-    }
+    getKanataStatus().then(setStatus);
   }, []);
 
   // Subscribe to events
   useEffect(() => {
-    if (!isElectron) return;
+    let isMounted = true;
+    let unsubscribe: (() => void) | null = null;
 
-    const unsubStatus = window.kanata.onStatusChange((newStatus) => {
-      setStatus(newStatus);
-    });
-
-    const unsubLog = window.kanata.onLog((entry) => {
-      setLogs((prev) => {
-        const updated = [...prev, entry];
-        // Keep only last MAX_LOGS entries
-        if (updated.length > MAX_LOGS) {
-          return updated.slice(-MAX_LOGS);
+    subscribeToKanataRuntimeEvents({
+      onStatusChange: setStatus,
+      onLog: (entry) => {
+        appendLogEntry(entry);
+        const nextIssue = issueFromLogMessage(entry.message);
+        if (nextIssue) {
+          setIssue(nextIssue);
         }
-        return updated;
-      });
-    });
-
-    const unsubCrash = window.kanata.onCrash(({ code, signal }) => {
-      setLogs((prev) => {
-        const updated: KanataLogEntry[] = [
-          ...prev,
-          {
-            type: "stderr" as const,
-            message: `Process crashed (code: ${code}, signal: ${signal})`,
-            timestamp: Date.now(),
-          },
-        ];
-        // Keep only last MAX_LOGS entries
-        if (updated.length > MAX_LOGS) {
-          return updated.slice(-MAX_LOGS);
+      },
+      onCrash: ({ code, signal }) => {
+        appendLogEntry({
+          type: "stderr",
+          message: `Process crashed (code: ${code}, signal: ${signal})`,
+          timestamp: Date.now(),
+        });
+      },
+      onError: (error) => {
+        appendLogEntry({
+          type: "stderr",
+          message: `Error: ${error}`,
+          timestamp: Date.now(),
+        });
+        const nextIssue = issueFromErrorMessage(error);
+        if (nextIssue) {
+          setIssue(nextIssue);
         }
-        return updated;
-      });
-    });
-
-    const unsubError = window.kanata.onError((error) => {
-      setLogs((prev) => {
-        const updated: KanataLogEntry[] = [
-          ...prev,
-          {
-            type: "stderr" as const,
-            message: `Error: ${error}`,
-            timestamp: Date.now(),
-          },
-        ];
-        // Keep only last MAX_LOGS entries
-        if (updated.length > MAX_LOGS) {
-          return updated.slice(-MAX_LOGS);
+      },
+      onPermissionDenied: () => {
+        setIssue("permission-denied");
+      },
+      onExclusiveAccessDenied: () => {
+        setIssue("exclusive-access-denied");
+      },
+    })
+      .then((runtimeUnsubscribe) => {
+        if (!isMounted) {
+          runtimeUnsubscribe();
+          return;
         }
-        return updated;
+        unsubscribe = runtimeUnsubscribe;
+      })
+      .catch((error) => {
+        console.warn("Failed to subscribe to kanata runtime events", error);
       });
-    });
-
-    const unsubPermissionDenied = window.kanata.onPermissionDenied(() => {
-      setPermissionDenied(true);
-    });
-    const unsubExclusiveAccessDenied = window.kanata.onExclusiveAccessDenied(() => {
-      setExclusiveAccessDenied(true);
-    });
 
     return () => {
-      unsubStatus();
-      unsubLog();
-      unsubCrash();
-      unsubError();
-      unsubPermissionDenied();
-      unsubExclusiveAccessDenied();
+      isMounted = false;
+      unsubscribe?.();
     };
-  }, []);
+  }, [appendLogEntry, issueFromErrorMessage, issueFromLogMessage]);
 
   const start = useCallback(async () => {
-    if (!isElectron) {
-      console.warn("Kanata API not available outside Electron");
-      return false;
-    }
-    return window.kanata.startKanata();
+    return startKanataInRuntime();
   }, []);
 
   const stop = useCallback(async () => {
-    if (!isElectron) return false;
-    return window.kanata.stopKanata();
+    return stopKanataInRuntime();
   }, []);
 
   const restart = useCallback(async () => {
-    if (!isElectron) return false;
-    return window.kanata.restartKanata();
+    return restartKanataInRuntime();
   }, []);
 
   const clearLogs = useCallback(() => {
     setLogs([]);
   }, []);
 
-  const setAutoRestart = useCallback(async (enabled: boolean) => {
-    if (!isElectron) return;
-    await window.kanata.setAutoRestart(enabled);
-  }, []);
-
   const openInputMonitoringSettings = useCallback(async () => {
-    if (!isElectron) return;
-    await window.kanata.openInputMonitoringSettings();
+    await openInputMonitoringSettingsInRuntime();
   }, []);
 
-  const clearPermissionDenied = useCallback(() => {
-    setPermissionDenied(false);
-  }, []);
-
-  const clearExclusiveAccessDenied = useCallback(() => {
-    setExclusiveAccessDenied(false);
+  const clearIssue = useCallback(() => {
+    setIssue("none");
   }, []);
 
   const stateValue = useMemo<KanataState>(
@@ -166,10 +176,9 @@ export function KanataProvider({ children }: { children: ReactNode }) {
       status,
       logs,
       isRunning: status === "running",
-      permissionDenied,
-      exclusiveAccessDenied,
+      issue,
     }),
-    [status, logs, permissionDenied, exclusiveAccessDenied]
+    [status, logs, issue]
   );
 
   const actionsValue = useMemo<KanataActions>(
@@ -178,21 +187,10 @@ export function KanataProvider({ children }: { children: ReactNode }) {
       stop,
       restart,
       clearLogs,
-      setAutoRestart,
       openInputMonitoringSettings,
-      clearPermissionDenied,
-      clearExclusiveAccessDenied,
+      clearIssue,
     }),
-    [
-      start,
-      stop,
-      restart,
-      clearLogs,
-      setAutoRestart,
-      openInputMonitoringSettings,
-      clearPermissionDenied,
-      clearExclusiveAccessDenied,
-    ]
+    [start, stop, restart, clearLogs, openInputMonitoringSettings, clearIssue]
   );
 
   return (

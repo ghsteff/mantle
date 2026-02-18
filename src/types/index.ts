@@ -36,7 +36,13 @@ export interface KeyboardConfig {
 /**
  * Status of the Kanata process.
  */
-export type KanataStatus = "stopped" | "starting" | "running" | "error";
+export type KanataStatus =
+  | "idle"
+  | "stopped"
+  | "starting"
+  | "running"
+  | "stopping"
+  | "error";
 
 /**
  * A log entry from the Kanata process.
@@ -101,24 +107,24 @@ export interface ImportResult {
 }
 
 // ============================================
-// Karabiner Types
+// Driver Types
 // ============================================
 
 /**
- * Status of Karabiner installation.
+ * Status of the virtual keyboard driver.
  */
-export interface KarabinerStatus {
+export interface DriverStatus {
   driverInstalled: boolean;
-  appInstalled: boolean;
-  pkgDownloaded: boolean;
+  driverActivated: boolean;
+  driverPendingApproval: boolean;
+  pkgAvailable: boolean;
   homebrewInstalled: boolean;
-  pkgPath: string | null;
 }
 
 /**
- * Result of Karabiner installation.
+ * Result of driver installation.
  */
-export interface KarabinerInstallResult {
+export interface DriverInstallResult {
   success: boolean;
   error?: string;
 }

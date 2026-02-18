@@ -19,6 +19,7 @@ export function AutoStartServer({ onboardingInProgress }: AutoStartServerProps) 
   const { start } = useKanataActions();
   const { hasProfiles, isLoading } = useConfigState();
   const hasAttemptedStartRef = useRef(false);
+  const isServerInactive = status === "idle" || status === "stopped";
 
   useEffect(() => {
     // Only auto-start once per app session
@@ -39,7 +40,7 @@ export function AutoStartServer({ onboardingInProgress }: AutoStartServerProps) 
     // 5. Onboarding is not in progress
     if (
       driverInstalled === true &&
-      status === "stopped" &&
+      isServerInactive &&
       !isLoading &&
       hasProfiles
     ) {
@@ -47,7 +48,14 @@ export function AutoStartServer({ onboardingInProgress }: AutoStartServerProps) 
       // Start immediately - no delay needed since all conditions are met
       start();
     }
-  }, [driverInstalled, status, hasProfiles, isLoading, onboardingInProgress, start]);
+  }, [
+    driverInstalled,
+    isServerInactive,
+    hasProfiles,
+    isLoading,
+    onboardingInProgress,
+    start,
+  ]);
 
   return null;
 }

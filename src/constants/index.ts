@@ -11,7 +11,3 @@ export const DEFAULT_LOG_PANEL_HEIGHT = 160;
 export const MIN_LOG_PANEL_HEIGHT = 100;
 export const MAX_LOG_PANEL_HEIGHT = 600;
 
-/**
- * Process management constants
- */
-export const MAX_RESTART_ATTEMPTS = 3;

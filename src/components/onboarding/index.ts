@@ -1,1 +1,1 @@
-export { KarabinerOnboardingModal } from "./karabiner-onboarding-modal";
+export { DriverOnboardingModal } from "./driver-onboarding-modal";

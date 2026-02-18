@@ -23,6 +23,7 @@ export function useOnboardingFlow({
   const [onboardingStarted, setOnboardingStarted] = useState(false);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
   const hasStartedAfterOnboardingRef = useRef(false);
+  const isServerInactive = status === "idle" || status === "stopped";
 
   useEffect(() => {
     if (!enabled) return;
@@ -45,7 +46,7 @@ export function useOnboardingFlow({
     if (
       onboardingCompleted &&
       driverInstalled &&
-      status === "stopped" &&
+      isServerInactive &&
       !isLoading &&
       hasProfiles &&
       !hasStartedAfterOnboardingRef.current
@@ -58,7 +59,7 @@ export function useOnboardingFlow({
   }, [
     onboardingCompleted,
     driverInstalled,
-    status,
+    isServerInactive,
     hasProfiles,
     isLoading,
     start,

@@ -11,6 +11,15 @@ import type { KeyboardConfig, ExportResult, ImportResult } from "../types";
 import { useConfigActionsInternal, useConfigState } from "./config-context";
 import { useUIActions, useUIState } from "./ui-context";
 import { toErrorMessage, assertContext } from "../lib/errors";
+import { getKanataClient } from "../platform/kanata-client";
+import {
+  createProfileInRuntime,
+  deleteProfileInRuntime,
+  getActiveProfileFromRuntime,
+  listProfilesFromRuntime,
+  renameProfileInRuntime,
+  switchProfileInRuntime,
+} from "../platform/profiles-runtime";
 
 interface ProfileContextValue {
   createProfile: (name: string, config: KeyboardConfig) => Promise<boolean>;
@@ -23,9 +32,6 @@ interface ProfileContextValue {
 }
 
 const ProfileContext = createContext<ProfileContextValue | null>(null);
-
-// Check if we're running in Electron with the preload script
-const isElectron = typeof window !== "undefined" && window.kanata !== undefined;
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const { isDirty, activeProfile } = useConfigState();
@@ -44,17 +50,10 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
   // Load profiles list
   const refreshProfiles = useCallback(async () => {
-    if (!isElectron) {
-      // Mock data for development
-      setProfiles([{ name: "default", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }]);
-      setActiveProfile("default");
-      return;
-    }
-
     try {
       const [profilesList, active] = await Promise.all([
-        window.kanata.listProfiles(),
-        window.kanata.getActiveProfile(),
+        listProfilesFromRuntime(),
+        getActiveProfileFromRuntime(),
       ]);
       setProfiles(profilesList);
       setActiveProfile(active);
@@ -85,17 +84,12 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   }, [refreshProfiles, loadConfig, activeLayer, setActiveLayer]);
 
   const createProfile = useCallback(async (name: string, profileConfig: KeyboardConfig): Promise<boolean> => {
-    if (!isElectron) {
-      console.log("Would create profile:", name, profileConfig);
-      return true;
-    }
-
     try {
-      const success = await window.kanata.createProfile(name, profileConfig);
+      const success = await createProfileInRuntime(name, profileConfig);
       if (success) {
         await refreshProfiles();
         // If this is the first profile or it became active, load it
-        const newActive = await window.kanata.getActiveProfile();
+        const newActive = await getActiveProfileFromRuntime();
         if (newActive === name) {
           setConfig(profileConfig);
           setActiveLayer(profileConfig.layers[0]?.name || "base");
@@ -109,11 +103,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   }, [refreshProfiles, setConfig, setActiveLayer, setError]);
 
   const switchProfile = useCallback(async (name: string): Promise<boolean> => {
-    if (!isElectron) {
-      console.log("Would switch to profile:", name);
-      return true;
-    }
-
     // Don't switch if there are unsaved changes
     if (isDirty) {
       const confirmed = confirm("You have unsaved changes. Discard and switch profiles?");
@@ -121,7 +110,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const newConfig = await window.kanata.switchProfile(name);
+      const newConfig = await switchProfileInRuntime(name);
       if (newConfig) {
         setConfig(newConfig);
         setActiveProfile(name);
@@ -139,13 +128,8 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   }, [isDirty, refreshProfiles, setConfig, setActiveProfile, setActiveLayer, setIsDirty, setSelectedKey, setError]);
 
   const deleteProfileAction = useCallback(async (name: string): Promise<boolean> => {
-    if (!isElectron) {
-      console.log("Would delete profile:", name);
-      return true;
-    }
-
     try {
-      const success = await window.kanata.deleteProfile(name);
+      const success = await deleteProfileInRuntime(name);
       if (success) {
         await refreshProfiles();
         // If we deleted the active profile, reload config
@@ -161,13 +145,8 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   }, [activeProfile, loadConfig, refreshProfiles, setError]);
 
   const renameProfileAction = useCallback(async (oldName: string, newName: string): Promise<boolean> => {
-    if (!isElectron) {
-      console.log("Would rename profile:", oldName, "to", newName);
-      return true;
-    }
-
     try {
-      const success = await window.kanata.renameProfile(oldName, newName);
+      const success = await renameProfileInRuntime(oldName, newName);
       if (success) {
         await refreshProfiles();
       }
@@ -179,13 +158,14 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   }, [refreshProfiles, setError]);
 
   const exportKbd = useCallback(async (): Promise<ExportResult> => {
-    if (!isElectron) {
+    const kanataClient = getKanataClient();
+    if (!kanataClient) {
       console.log("Would export .kbd file");
       return { success: false, error: "Not running in Electron" };
     }
 
     try {
-      return await window.kanata.exportKbd();
+      return await kanataClient.exportKbd();
     } catch (err) {
       return {
         success: false,
@@ -195,13 +175,14 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const importKbd = useCallback(async (): Promise<ImportResult> => {
-    if (!isElectron) {
+    const kanataClient = getKanataClient();
+    if (!kanataClient) {
       console.log("Would import .kbd file");
       return { success: false, error: "Not running in Electron" };
     }
 
     try {
-      return await window.kanata.importKbd();
+      return await kanataClient.importKbd();
     } catch (err) {
       return {
         success: false,

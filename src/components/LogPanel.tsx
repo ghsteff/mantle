@@ -1,6 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Trash2 } from "lucide-react";
-import { ExclusiveAccessModal, PermissionModal } from "./status";
+import {
+  AdminSetupModal,
+  ExclusiveAccessModal,
+  PermissionModal,
+} from "./status";
 import {
   Button,
   ResizablePanel,
@@ -32,12 +36,12 @@ function formatTimestamp(timestamp: number): string {
  * Log panel to display Kanata process logs.
  */
 export function LogPanel() {
-  const { logs, permissionDenied, exclusiveAccessDenied } = useKanataState();
+  const { logs, issue } = useKanataState();
   const {
+    start,
     clearLogs,
     openInputMonitoringSettings,
-    clearPermissionDenied,
-    clearExclusiveAccessDenied,
+    clearIssue,
   } = useKanataActions();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const shouldAutoScrollRef = useRef(true);
@@ -52,51 +56,41 @@ export function LogPanel() {
   // Check if there's an Input Monitoring permission error in logs (for UI button)
   const hasPermissionError = useMemo(
     () =>
+      issue === "permission-denied" ||
       logs.some(
         (log) =>
           log.message.includes("not permitted") ||
           log.message.includes("Input Monitoring")
       ),
-    [logs]
+    [issue, logs]
   );
-
-  // Permission modal state - triggered by the permission-denied event from main process
-  const [showPermissionModal, setShowPermissionModal] = useState(false);
-  // Exclusive access conflict modal (e.g. Karabiner running)
-  const [showExclusiveAccessModal, setShowExclusiveAccessModal] = useState(false);
-
-  // Show modal when permission denied event fires
-  useEffect(() => {
-    if (permissionDenied) {
-      setShowPermissionModal(true);
-    }
-  }, [permissionDenied]);
-
-  useEffect(() => {
-    if (exclusiveAccessDenied) {
-      setShowExclusiveAccessModal(true);
-    }
-  }, [exclusiveAccessDenied]);
 
   // Clear the permission denied flag when modal is closed
   const handleModalClose = useCallback(
     (open: boolean) => {
-      setShowPermissionModal(open);
       if (!open) {
-        clearPermissionDenied();
+        clearIssue();
       }
     },
-    [clearPermissionDenied]
+    [clearIssue]
   );
 
   const handleExclusiveAccessModalClose = useCallback(
-    (open: boolean) => {
-      setShowExclusiveAccessModal(open);
-      if (!open) {
-        clearExclusiveAccessDenied();
+    (nextOpen: boolean) => {
+      if (!nextOpen) {
+        clearIssue();
       }
     },
-    [clearExclusiveAccessDenied]
+    [clearIssue]
+  );
+
+  const handleAdminSetupModalClose = useCallback(
+    (nextOpen: boolean) => {
+      if (!nextOpen) {
+        clearIssue();
+      }
+    },
+    [clearIssue]
   );
 
   // Auto-scroll to bottom when new logs arrive
@@ -116,81 +110,88 @@ export function LogPanel() {
     shouldAutoScrollRef.current = scrollHeight - scrollTop - clientHeight < 50;
   }, []);
 
-  if (logs.length === 0) {
-    return null;
-  }
-
   return (
-    <ResizablePanel
-      defaultHeight={DEFAULT_LOG_PANEL_HEIGHT}
-      minHeight={MIN_LOG_PANEL_HEIGHT}
-      maxHeight={MAX_LOG_PANEL_HEIGHT}
-      storageKey={LOG_PANEL_HEIGHT_KEY}
-      resizeHandlePosition="top"
-      className="bg-card border-t border-border"
-    >
-      <div className="flex items-center justify-between px-3 py-1 border-b border-border">
-        <span className="text-xs text-muted-foreground">
-          Logs
-          {hiddenLogCount > 0 &&
-            ` (showing last ${MAX_VISIBLE_LOGS} of ${logs.length})`}
-        </span>
-        <div className="flex items-center gap-2">
-          {hasPermissionError && (
-            <Button
-              onClick={() => setShowPermissionModal(true)}
-              variant="outline"
-            >
-              Fix Permission Issue
-            </Button>
-          )}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button onClick={clearLogs} variant="ghost" size="icon-xs">
-                <Trash2 className="size-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Clear logs</TooltipContent>
-          </Tooltip>
-        </div>
-      </div>
-      <div
-        ref={scrollContainerRef}
-        onScroll={handleScroll}
-        className="flex-1 overflow-auto p-2 font-mono text-[11px] leading-relaxed"
-      >
-        {hiddenLogCount > 0 && (
-          <div className="text-muted-foreground text-center py-1">
-            ... {hiddenLogCount} older log{hiddenLogCount !== 1 ? "s" : ""}{" "}
-            hidden ...
-          </div>
-        )}
-        {visibleLogs.map((log, i) => (
-          <div
-            key={`${log.timestamp}-${i}`}
-            className={cn(
-              "flex px-1",
-              log.type === "stderr"
-                ? "text-status-error"
-                : "text-muted-foreground"
-            )}
-          >
-            <span className="text-muted-foreground select-none mr-3 tabular-nums shrink-0">
-              {formatTimestamp(log.timestamp)}
+    <>
+      {logs.length > 0 && (
+        <ResizablePanel
+          defaultHeight={DEFAULT_LOG_PANEL_HEIGHT}
+          minHeight={MIN_LOG_PANEL_HEIGHT}
+          maxHeight={MAX_LOG_PANEL_HEIGHT}
+          storageKey={LOG_PANEL_HEIGHT_KEY}
+          resizeHandlePosition="top"
+          className="bg-card border-t border-border"
+        >
+          <div className="flex items-center justify-between px-3 py-1 border-b border-border">
+            <span className="text-xs text-muted-foreground">
+              Logs
+              {hiddenLogCount > 0 &&
+                ` (showing last ${MAX_VISIBLE_LOGS} of ${logs.length})`}
             </span>
-            {log.message}
+            <div className="flex items-center gap-2">
+              {hasPermissionError && (
+                <Button onClick={() => void openInputMonitoringSettings()} variant="outline">
+                  Open Input Monitoring Settings
+                </Button>
+              )}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button onClick={clearLogs} variant="ghost" size="icon-xs">
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Clear logs</TooltipContent>
+              </Tooltip>
+            </div>
           </div>
-        ))}
-      </div>
+          <div
+            ref={scrollContainerRef}
+            onScroll={handleScroll}
+            className="flex-1 overflow-auto p-2 font-mono text-[11px] leading-relaxed"
+          >
+            {hiddenLogCount > 0 && (
+              <div className="text-muted-foreground text-center py-1">
+                ... {hiddenLogCount} older log{hiddenLogCount !== 1 ? "s" : ""}{" "}
+                hidden ...
+              </div>
+            )}
+            {visibleLogs.map((log, i) => (
+              <div
+                key={`${log.timestamp}-${i}`}
+                className={cn(
+                  "flex px-1",
+                  log.type === "stderr"
+                    ? "text-status-error"
+                    : "text-muted-foreground"
+                )}
+              >
+                <span className="text-muted-foreground select-none mr-3 tabular-nums shrink-0">
+                  {formatTimestamp(log.timestamp)}
+                </span>
+                {log.message}
+              </div>
+            ))}
+          </div>
+        </ResizablePanel>
+      )}
       <PermissionModal
-        open={showPermissionModal}
+        open={issue === "permission-denied"}
         onOpenChange={handleModalClose}
         onOpenSettings={openInputMonitoringSettings}
       />
       <ExclusiveAccessModal
-        open={showExclusiveAccessModal}
+        open={issue === "exclusive-access-denied"}
         onOpenChange={handleExclusiveAccessModalClose}
       />
-    </ResizablePanel>
+      <AdminSetupModal
+        open={
+          issue === "admin-setup-required" || issue === "admin-setup-cancelled"
+        }
+        cancelled={issue === "admin-setup-cancelled"}
+        onOpenChange={handleAdminSetupModalClose}
+        onRetry={() => {
+          void start();
+        }}
+      />
+    </>
   );
 }

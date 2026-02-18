@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { KarabinerOnboardingModal } from "./onboarding";
+import { useEffect, useMemo } from "react";
+import { DriverOnboardingModal } from "./onboarding";
 import {
   useConfigState,
   useKanataActions,
@@ -15,17 +15,26 @@ interface KarabinerOnboardingProps {
 }
 
 /**
- * Karabiner onboarding flow shown when driver is not installed (macOS only).
+ * Driver onboarding flow shown when virtual keyboard driver is not ready (macOS only).
+ * Triggers when the driver is not installed OR installed but not activated.
  */
 export function KarabinerOnboarding({ onOnboardingStateChange }: KarabinerOnboardingProps) {
-  const { driverInstalled } = useKarabinerState();
+  const { driverInstalled, driverActivated } = useKarabinerState();
   const { checkStatus } = useKarabinerActions();
   const { status } = useKanataState();
   const { openInputMonitoringSettings, start } = useKanataActions();
   const { hasProfiles, isLoading } = useConfigState();
   const { isMac } = usePlatform();
+
+  // Driver is "ready" only when both installed AND activated.
+  // null means still checking — don't trigger onboarding yet.
+  const driverReady = useMemo(() => {
+    if (driverInstalled === null || driverActivated === null) return null;
+    return driverInstalled && driverActivated;
+  }, [driverInstalled, driverActivated]);
+
   const { showOnboarding, handleComplete } = useOnboardingFlow({
-    driverInstalled,
+    driverInstalled: driverReady,
     status,
     isLoading,
     hasProfiles,
@@ -34,7 +43,6 @@ export function KarabinerOnboarding({ onOnboardingStateChange }: KarabinerOnboar
     enabled: isMac,
   });
 
-  // Notify parent when onboarding state changes
   useEffect(() => {
     onOnboardingStateChange(showOnboarding);
   }, [showOnboarding, onOnboardingStateChange]);
@@ -44,7 +52,7 @@ export function KarabinerOnboarding({ onOnboardingStateChange }: KarabinerOnboar
   }
 
   return (
-    <KarabinerOnboardingModal
+    <DriverOnboardingModal
       open={showOnboarding}
       onComplete={handleComplete}
       onOpenInputMonitoringSettings={openInputMonitoringSettings}

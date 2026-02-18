@@ -7,8 +7,14 @@ import { useKanataActions, useKanataState } from "../../contexts";
 export function StatusIndicator() {
   const { status, isRunning } = useKanataState();
   const { start, stop } = useKanataActions();
+  const isTransitioning = status === "starting" || status === "stopping";
+  const canToggle = !isTransitioning;
 
   const handleClick = async () => {
+    if (!canToggle) {
+      return;
+    }
+
     if (isRunning) {
       await stop();
     } else {
@@ -32,6 +38,13 @@ export function StatusIndicator() {
           textClass: "text-status-warning",
           dotClass: "bg-status-warning animate-pulse-warning",
         };
+      case "stopping":
+        return {
+          label: "Stopping...",
+          bgClass: "bg-status-warning/[0.06]",
+          textClass: "text-status-warning",
+          dotClass: "bg-status-warning animate-pulse-warning",
+        };
       case "error":
         return {
           label: "Error",
@@ -39,6 +52,7 @@ export function StatusIndicator() {
           textClass: "text-status-error",
           dotClass: "bg-status-error",
         };
+      case "idle":
       case "stopped":
       default:
         return {
@@ -56,13 +70,20 @@ export function StatusIndicator() {
     <button
       type="button"
       onClick={handleClick}
+      disabled={!canToggle}
       className={`
         flex items-center gap-2 px-3 py-1.5 rounded-full
         ${config.bgClass} ${config.textClass}
-        text-xs font-medium transition-all
-        hover:opacity-80 active:scale-95
+        text-xs font-medium transition-all disabled:cursor-not-allowed disabled:opacity-60
+        ${canToggle ? "hover:opacity-80 active:scale-95" : ""}
       `}
-      title={isRunning ? "Click to stop Kanata" : "Click to start Kanata"}
+      title={
+        isTransitioning
+          ? "Kanata transition in progress"
+          : isRunning
+            ? "Click to stop Kanata"
+            : "Click to start Kanata"
+      }
     >
       <span className={`w-1.5 h-1.5 rounded-full ${config.dotClass}`} />
       <span>{config.label}</span>

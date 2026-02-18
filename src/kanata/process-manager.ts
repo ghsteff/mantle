@@ -7,7 +7,6 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 import type { KanataStatus, KanataLogEntry } from "../types";
-import { MAX_RESTART_ATTEMPTS } from "../constants";
 
 export interface KanataProcessEvents {
   "status-change": (status: KanataStatus) => void;
@@ -83,11 +82,6 @@ function generatePlist(binaryPath: string, configPath: string): string {
 export class KanataProcessManager extends EventEmitter {
   private process: ChildProcess | null = null;
   private status: KanataStatus = "stopped";
-  private autoRestart = false;
-  private restartAttempts = 0;
-  private maxRestartAttempts = MAX_RESTART_ATTEMPTS;
-  private restartDelay = 1000;
-  private restartTimeoutId: NodeJS.Timeout | null = null;
   private intentionalStop = false;
   private pollInterval: NodeJS.Timeout | null = null;
   private logFile = "";
@@ -101,10 +95,6 @@ export class KanataProcessManager extends EventEmitter {
 
   isRunning(): boolean {
     return this.status === "running";
-  }
-
-  setAutoRestart(enabled: boolean): void {
-    this.autoRestart = enabled;
   }
 
   /**
@@ -379,7 +369,6 @@ export class KanataProcessManager extends EventEmitter {
       if (pid) {
         this.emitLog("stdout", `Kanata started (PID: ${pid})`);
         this.setStatus("running");
-        this.restartAttempts = 0;
         this.startProcessPolling(pid);
         this.startLogTailing();
 
@@ -641,12 +630,7 @@ export class KanataProcessManager extends EventEmitter {
 
     this.emitLog("stderr", "Kanata exited unexpectedly");
     this.emit("crash", null, null);
-
-    if (this.autoRestart && this.restartAttempts < this.maxRestartAttempts) {
-      this.scheduleRestart();
-    } else {
-      this.setStatus("error");
-    }
+    this.setStatus("error");
   }
 
   /**
@@ -656,7 +640,6 @@ export class KanataProcessManager extends EventEmitter {
    */
   async stop(): Promise<boolean> {
     this.intentionalStop = true;
-    this.clearRestartTimeout();
     this.stopProcessPolling();
     this.stopLogTailing();
 
@@ -778,27 +761,6 @@ export class KanataProcessManager extends EventEmitter {
     return this.restart();
   }
 
-  private scheduleRestart(): void {
-    this.restartAttempts++;
-    const delay = this.restartDelay * this.restartAttempts;
-
-    this.emitLog(
-      "stdout",
-      `Restart ${this.restartAttempts}/${this.maxRestartAttempts} in ${delay}ms...`,
-    );
-
-    this.restartTimeoutId = setTimeout(() => {
-      this.start();
-    }, delay);
-  }
-
-  private clearRestartTimeout(): void {
-    if (this.restartTimeoutId) {
-      clearTimeout(this.restartTimeoutId);
-      this.restartTimeoutId = null;
-    }
-  }
-
   private setStatus(status: KanataStatus): void {
     if (this.status !== status) {
       this.status = status;
@@ -811,8 +773,6 @@ export class KanataProcessManager extends EventEmitter {
   }
 
   async cleanup(): Promise<void> {
-    this.autoRestart = false;
-    this.clearRestartTimeout();
     await this.stop();
   }
 }

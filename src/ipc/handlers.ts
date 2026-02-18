@@ -50,13 +50,6 @@ export function registerIpcHandlers(): void {
     return processManager.getStatus();
   });
 
-  ipcMain.handle(
-    IPC_CHANNELS.SET_AUTO_RESTART,
-    (_event, enabled: boolean): void => {
-      processManager.setAutoRestart(enabled);
-    }
-  );
-
   // ============================================
   // Config Management
   // ============================================

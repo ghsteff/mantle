@@ -7,7 +7,6 @@ export const IPC_CHANNELS = {
   STOP_KANATA: "kanata:stop",
   RESTART_KANATA: "kanata:restart",
   GET_STATUS: "kanata:get-status",
-  SET_AUTO_RESTART: "kanata:set-auto-restart",
 
   // Config management
   LOAD_CONFIG: "config:load",

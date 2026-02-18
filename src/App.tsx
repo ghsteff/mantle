@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AutoStartServer } from "./components/AutoStartServer";
 import { ErrorBoundary } from "./components/error-boundary";
 import { Header } from "./components/Header";
@@ -12,12 +12,25 @@ import {
   KanataProvider,
   KarabinerProvider,
 } from "./contexts";
+import { runTauriHealthCheck } from "./platform/tauri-health";
 
 /**
  * Root application component.
  */
 export function App() {
   const [onboardingInProgress, setOnboardingInProgress] = useState(false);
+
+  useEffect(() => {
+    runTauriHealthCheck()
+      .then((message) => {
+        if (message) {
+          console.info(`[tauri] ${message}`);
+        }
+      })
+      .catch((error) => {
+        console.warn("Tauri health check failed", error);
+      });
+  }, []);
 
   return (
     <ErrorBoundary>

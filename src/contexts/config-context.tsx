@@ -8,6 +8,8 @@ import {
 } from "react";
 import type { KeyboardConfig, KeyboardLayer, ProfileInfo } from "../types";
 import { toErrorMessage, assertContext } from "../lib/errors";
+import { loadConfigFromRuntime } from "../platform/config-loader";
+import { saveConfigToRuntime } from "../platform/config-saver";
 
 // State values for components
 interface ConfigState {
@@ -47,9 +49,6 @@ interface ConfigInternalActions extends ConfigActions {
 
 const ConfigStateContext = createContext<ConfigState | null>(null);
 const ConfigActionsContext = createContext<ConfigInternalActions | null>(null);
-
-// Check if we're running in Electron with the preload script
-const isElectron = typeof window !== "undefined" && window.kanata !== undefined;
 
 // Mock config for development outside Electron
 const MOCK_CONFIG: KeyboardConfig = {
@@ -103,14 +102,9 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     setError(null);
     try {
-      let loadedConfig: KeyboardConfig | null;
-
-      if (isElectron) {
-        loadedConfig = await window.kanata.loadConfig();
-      } else {
-        // Use mock config for development outside Electron
-        loadedConfig = MOCK_CONFIG;
-      }
+      const tauriConfig = await loadConfigFromRuntime();
+      // Keep non-desktop and partial-tauri flows usable while migration is in progress.
+      const loadedConfig = tauriConfig ?? MOCK_CONFIG;
 
       if (loadedConfig) {
         setConfig(loadedConfig);
@@ -199,15 +193,8 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   const applyChanges = useCallback(async (onSuccess?: () => Promise<void>): Promise<boolean> => {
     if (!config) return false;
 
-    if (!isElectron) {
-      // In dev mode without Electron, just log
-      console.log("Config would be saved:", config);
-      setIsDirty(false);
-      return true;
-    }
-
     try {
-      const success = await window.kanata.saveConfig(config);
+      const success = await saveConfigToRuntime(config);
       if (success) {
         setIsDirty(false);
         if (onSuccess) {
