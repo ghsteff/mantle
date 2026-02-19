@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { DriverOnboardingModal } from "./onboarding";
 import {
   useConfigState,
@@ -19,22 +19,15 @@ interface KarabinerOnboardingProps {
  * Triggers when the driver is not installed OR installed but not activated.
  */
 export function KarabinerOnboarding({ onOnboardingStateChange }: KarabinerOnboardingProps) {
-  const { driverInstalled, driverActivated } = useKarabinerState();
+  const { readiness } = useKarabinerState();
   const { checkStatus } = useKarabinerActions();
   const { status } = useKanataState();
   const { openInputMonitoringSettings, start } = useKanataActions();
   const { hasProfiles, isLoading } = useConfigState();
   const { isMac } = usePlatform();
 
-  // Driver is "ready" only when both installed AND activated.
-  // null means still checking — don't trigger onboarding yet.
-  const driverReady = useMemo(() => {
-    if (driverInstalled === null || driverActivated === null) return null;
-    return driverInstalled && driverActivated;
-  }, [driverInstalled, driverActivated]);
-
   const { showOnboarding, handleComplete } = useOnboardingFlow({
-    driverInstalled: driverReady,
+    readiness,
     status,
     isLoading,
     hasProfiles,

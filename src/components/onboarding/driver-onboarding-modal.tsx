@@ -38,13 +38,9 @@ export function DriverOnboardingModal({
   onOpenInputMonitoringSettings,
 }: DriverOnboardingModalProps) {
   const {
-    driverInstalled,
-    driverActivated,
-    driverPendingApproval,
-    homebrewInstalled,
-    installStatus,
-    installOutput,
-    installError,
+    readiness,
+    status,
+    installFlow,
   } = useKarabinerState();
   const {
     startInstall,
@@ -56,6 +52,15 @@ export function DriverOnboardingModal({
 
   const [step, setStep] = useState<OnboardingStep>("install");
   const terminalRef = useRef<HTMLDivElement>(null);
+  const driverInstalled = status?.driverInstalled ?? null;
+  const driverActivated = status?.driverActivated ?? null;
+  const driverPendingApproval = status?.driverPendingApproval ?? null;
+  const homebrewInstalled = status?.homebrewInstalled ?? null;
+  const isInstalling = installFlow.status === "installing";
+  const installFailed = installFlow.status === "error";
+  const installSucceeded = installFlow.status === "success";
+  const installOutput = installFlow.output;
+  const installError = installFlow.status === "error" ? installFlow.error : null;
 
   useEffect(() => {
     if (terminalRef.current) {
@@ -74,21 +79,21 @@ export function DriverOnboardingModal({
   useEffect(() => {
     if (!open) return;
 
-    if (driverInstalled && driverActivated) {
+    if (readiness === "ready") {
       setStep("permission");
-    } else if (driverInstalled && !driverActivated) {
+    } else if (readiness === "awaiting-approval") {
       setStep("approve");
     } else {
       setStep("install");
     }
-  }, [open, driverInstalled, driverActivated]);
+  }, [open, readiness]);
 
   // After install succeeds, re-check to pick up the new state
   useEffect(() => {
-    if (installStatus === "success") {
+    if (installFlow.status === "success") {
       checkStatus();
     }
-  }, [installStatus, checkStatus]);
+  }, [installFlow.status, checkStatus]);
 
   // Poll for approval while on the approve step
   useEffect(() => {
@@ -103,14 +108,10 @@ export function DriverOnboardingModal({
 
   // Auto-advance when approval is detected
   useEffect(() => {
-    if (step === "approve" && driverActivated) {
+    if (step === "approve" && readiness === "ready") {
       setStep("permission");
     }
-  }, [step, driverActivated]);
-
-  const isInstalling = installStatus === "installing";
-  const installFailed = installStatus === "error";
-  const installSucceeded = installStatus === "success";
+  }, [step, readiness]);
 
   const handleInstall = () => {
     startInstall();

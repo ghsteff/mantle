@@ -7,6 +7,7 @@ import {
   useMemo,
   type ReactNode,
 } from "react";
+import type { DriverStatus } from "../types";
 import { assertContext } from "../lib/errors";
 import {
   activateDriverInRuntime,
@@ -17,17 +18,22 @@ import {
   subscribeToDriverRuntimeEvents,
 } from "../platform/karabiner-runtime";
 
-export type DriverInstallStatus = "idle" | "installing" | "success" | "error";
+export type DriverReadiness =
+  | "checking"
+  | "missing-driver"
+  | "awaiting-approval"
+  | "ready";
+
+export type DriverInstallFlow =
+  | { status: "idle"; output: string[]; error: null }
+  | { status: "installing"; output: string[]; error: null }
+  | { status: "success"; output: string[]; error: null }
+  | { status: "error"; output: string[]; error: string };
 
 interface DriverState {
-  driverInstalled: boolean | null;
-  driverActivated: boolean | null;
-  driverPendingApproval: boolean | null;
-  pkgAvailable: boolean | null;
-  homebrewInstalled: boolean | null;
-  installStatus: DriverInstallStatus;
-  installOutput: string[];
-  installError: string | null;
+  readiness: DriverReadiness;
+  status: DriverStatus | null;
+  installFlow: DriverInstallFlow;
 }
 
 interface DriverActions {
@@ -43,57 +49,67 @@ const DriverStateContext = createContext<DriverState | null>(null);
 const DriverActionsContext = createContext<DriverActions | null>(null);
 
 export function KarabinerProvider({ children }: { children: ReactNode }) {
-  const [driverInstalled, setDriverInstalled] = useState<boolean | null>(null);
-  const [driverActivated, setDriverActivated] = useState<boolean | null>(null);
-  const [driverPendingApproval, setDriverPendingApproval] = useState<boolean | null>(null);
-  const [pkgAvailable, setPkgAvailable] = useState<boolean | null>(null);
-  const [homebrewInstalled, setHomebrewInstalled] = useState<boolean | null>(null);
-  const [installStatus, setInstallStatus] = useState<DriverInstallStatus>("idle");
-  const [installOutput, setInstallOutput] = useState<string[]>([]);
-  const [installError, setInstallError] = useState<string | null>(null);
+  const [status, setStatus] = useState<DriverStatus | null>(null);
+  const [readiness, setReadiness] = useState<DriverReadiness>("checking");
+  const [installFlow, setInstallFlow] = useState<DriverInstallFlow>({
+    status: "idle",
+    output: [],
+    error: null,
+  });
+
+  const mapReadiness = useCallback((nextStatus: DriverStatus): DriverReadiness => {
+    if (nextStatus.driverInstalled && nextStatus.driverActivated) {
+      return "ready";
+    }
+    if (nextStatus.driverInstalled) {
+      return "awaiting-approval";
+    }
+    return "missing-driver";
+  }, []);
+
+  const appendInstallOutput = useCallback((line: string) => {
+    setInstallFlow((prev) => ({ ...prev, output: [...prev.output, line] }));
+  }, []);
 
   const checkStatus = useCallback(async () => {
     try {
-      const result = await checkDriverInRuntime();
-      setDriverInstalled(result.driverInstalled);
-      setDriverActivated(result.driverActivated);
-      setDriverPendingApproval(result.driverPendingApproval);
-      setPkgAvailable(result.pkgAvailable);
-      setHomebrewInstalled(result.homebrewInstalled);
+      const nextStatus = await checkDriverInRuntime();
+      setStatus(nextStatus);
+      setReadiness(mapReadiness(nextStatus));
     } catch (error) {
       console.error("Failed to check driver status:", error);
-      setDriverInstalled(true);
-      setDriverActivated(true);
-      setDriverPendingApproval(false);
-      setPkgAvailable(false);
-      setHomebrewInstalled(true);
+      setStatus(null);
+      setReadiness("checking");
     }
-  }, []);
+  }, [mapReadiness]);
 
   const startInstall = useCallback(async () => {
-    setInstallStatus("installing");
-    setInstallOutput([]);
-    setInstallError(null);
+    setInstallFlow({ status: "installing", output: [], error: null });
 
     try {
       const success = await installDriverInRuntime();
       if (success) {
-        setInstallOutput((prev) => [...prev, "Starting driver installation..."]);
+        appendInstallOutput("Starting driver installation...");
       } else {
-        setInstallStatus("error");
-        setInstallError("Installation failed to start");
+        setInstallFlow({
+          status: "error",
+          output: [],
+          error: "Installation failed to start",
+        });
       }
     } catch (error) {
-      setInstallStatus("error");
-      setInstallError(error instanceof Error ? error.message : "Unknown error");
+      setInstallFlow({
+        status: "error",
+        output: [],
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
     }
-  }, []);
+  }, [appendInstallOutput]);
 
   const cancelInstall = useCallback(async () => {
     try {
       await cancelDriverInstallInRuntime();
-      setInstallStatus("idle");
-      setInstallOutput([]);
+      setInstallFlow({ status: "idle", output: [], error: null });
     } catch (error) {
       console.error("Failed to cancel installation:", error);
     }
@@ -119,9 +135,7 @@ export function KarabinerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const clearInstallOutput = useCallback(() => {
-    setInstallOutput([]);
-    setInstallError(null);
-    setInstallStatus("idle");
+    setInstallFlow({ status: "idle", output: [], error: null });
   }, []);
 
   useEffect(() => {
@@ -134,16 +148,23 @@ export function KarabinerProvider({ children }: { children: ReactNode }) {
 
     subscribeToDriverRuntimeEvents({
       onInstallOutput: (line) => {
-        setInstallOutput((prev) => [...prev, line]);
+        appendInstallOutput(line);
       },
       onInstallComplete: (result) => {
         if (result.success) {
-          setInstallStatus("success");
+          setInstallFlow((prev) => ({
+            status: "success",
+            output: prev.output,
+            error: null,
+          }));
           void checkStatus();
           return;
         }
-        setInstallStatus("error");
-        setInstallError(result.error || "Installation failed");
+        setInstallFlow((prev) => ({
+          status: "error",
+          output: prev.output,
+          error: result.error || "Installation failed",
+        }));
       },
     })
       .then((runtimeUnsubscribe) => {
@@ -161,20 +182,15 @@ export function KarabinerProvider({ children }: { children: ReactNode }) {
       isMounted = false;
       unsubscribe?.();
     };
-  }, [checkStatus]);
+  }, [appendInstallOutput, checkStatus]);
 
   const stateValue = useMemo<DriverState>(
     () => ({
-      driverInstalled,
-      driverActivated,
-      driverPendingApproval,
-      pkgAvailable,
-      homebrewInstalled,
-      installStatus,
-      installOutput,
-      installError,
+      readiness,
+      status,
+      installFlow,
     }),
-    [driverInstalled, driverActivated, driverPendingApproval, pkgAvailable, homebrewInstalled, installStatus, installOutput, installError]
+    [readiness, status, installFlow]
   );
 
   const actionsValue = useMemo<DriverActions>(

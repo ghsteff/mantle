@@ -87,9 +87,13 @@ typings/
 
 # Vite
 .vite/
+dist-tauri/
 
 # npm lockfile (using pnpm)
 package-lock.json
 
 # Electron-Forge
 out/
+
+# Migration metrics snapshots
+migration-metrics/*.json

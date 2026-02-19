@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { KanataStatus } from "@/types";
+import type { DriverReadiness } from "@/contexts";
 
 interface UseOnboardingFlowOptions {
-  driverInstalled: boolean | null;
+  readiness: DriverReadiness;
   status: KanataStatus;
   isLoading: boolean;
   hasProfiles: boolean;
@@ -12,7 +13,7 @@ interface UseOnboardingFlowOptions {
 }
 
 export function useOnboardingFlow({
-  driverInstalled,
+  readiness,
   status,
   isLoading,
   hasProfiles,
@@ -27,10 +28,10 @@ export function useOnboardingFlow({
 
   useEffect(() => {
     if (!enabled) return;
-    if (driverInstalled === false && !onboardingStarted && !onboardingCompleted) {
+    if (readiness === "missing-driver" && !onboardingStarted && !onboardingCompleted) {
       setOnboardingStarted(true);
     }
-  }, [driverInstalled, onboardingStarted, onboardingCompleted, enabled]);
+  }, [readiness, onboardingStarted, onboardingCompleted, enabled]);
 
   const showOnboarding = enabled && onboardingStarted && !onboardingCompleted;
 
@@ -45,7 +46,7 @@ export function useOnboardingFlow({
     if (!enabled) return;
     if (
       onboardingCompleted &&
-      driverInstalled &&
+      readiness === "ready" &&
       isServerInactive &&
       !isLoading &&
       hasProfiles &&
@@ -58,7 +59,7 @@ export function useOnboardingFlow({
     }
   }, [
     onboardingCompleted,
-    driverInstalled,
+    readiness,
     isServerInactive,
     hasProfiles,
     isLoading,

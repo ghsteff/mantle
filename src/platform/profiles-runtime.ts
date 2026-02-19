@@ -1,130 +1,87 @@
 import type { KeyboardConfig, ProfileInfo } from "../types";
-import { getKanataClient } from "./kanata-client";
-import { isTauriRuntime } from "./runtime-environment";
+import { invokeTauriCommand, logRuntimeCommandError } from "./runtime-command-result";
 
 export async function listProfilesFromRuntime() {
-  const kanataClient = getKanataClient();
-  if (kanataClient) {
-    return kanataClient.listProfiles();
-  }
-
-  if (!isTauriRuntime()) {
+  const result = await invokeTauriCommand("profilesList");
+  if (!result.success || !result.data) {
+    logRuntimeCommandError("Failed to list profiles in tauri runtime", result);
     return [] as ProfileInfo[];
   }
 
-  try {
-    const { invoke } = await import("@tauri-apps/api/core");
-    return invoke<ProfileInfo[]>("profiles_list");
-  } catch (error) {
-    console.warn("Failed to list profiles in tauri runtime", error);
-    return [] as ProfileInfo[];
-  }
+  return result.data;
 }
 
 export async function getActiveProfileFromRuntime() {
-  const kanataClient = getKanataClient();
-  if (kanataClient) {
-    return kanataClient.getActiveProfile();
-  }
-
-  if (!isTauriRuntime()) {
+  const result = await invokeTauriCommand("profilesGetActive");
+  if (!result.success) {
+    logRuntimeCommandError("Failed to read active profile in tauri runtime", result);
     return null;
   }
 
-  try {
-    const { invoke } = await import("@tauri-apps/api/core");
-    return invoke<string | null>("profiles_get_active");
-  } catch (error) {
-    console.warn("Failed to read active profile in tauri runtime", error);
-    return null;
+  return result.data;
+}
+
+export async function hasProfilesInRuntime() {
+  const result = await invokeTauriCommand("profilesHasAny");
+  if (!result.success) {
+    logRuntimeCommandError("Failed to check profiles presence in tauri runtime", result);
+    return false;
   }
+
+  return result.data ?? false;
 }
 
 export async function createProfileInRuntime(
   name: string,
   config: KeyboardConfig,
 ) {
-  const kanataClient = getKanataClient();
-  if (kanataClient) {
-    return kanataClient.createProfile(name, config);
-  }
-
-  if (!isTauriRuntime()) {
-    return true;
-  }
-
-  try {
-    const now = new Date().toISOString();
-    const { invoke } = await import("@tauri-apps/api/core");
-    return invoke<boolean>("profiles_create", {
-      name,
-      config,
-      createdAt: now,
-      updatedAt: now,
-    });
-  } catch (error) {
-    console.warn("Failed to create profile in tauri runtime", error);
+  const now = new Date().toISOString();
+  const result = await invokeTauriCommand("profilesCreate", {
+    name,
+    config,
+    createdAt: now,
+    updatedAt: now,
+  });
+  if (!result.success) {
+    logRuntimeCommandError("Failed to create profile in tauri runtime", result);
     return false;
   }
+
+  return result.data ?? false;
 }
 
 export async function switchProfileInRuntime(name: string) {
-  const kanataClient = getKanataClient();
-  if (kanataClient) {
-    return kanataClient.switchProfile(name);
-  }
-
-  if (!isTauriRuntime()) {
+  const result = await invokeTauriCommand("profilesSwitch", { name });
+  if (!result.success) {
+    logRuntimeCommandError("Failed to switch profile in tauri runtime", result);
     return null;
   }
 
-  try {
-    const { invoke } = await import("@tauri-apps/api/core");
-    return invoke<KeyboardConfig | null>("profiles_switch", { name });
-  } catch (error) {
-    console.warn("Failed to switch profile in tauri runtime", error);
-    return null;
-  }
+  return result.data;
 }
 
 export async function deleteProfileInRuntime(name: string) {
-  const kanataClient = getKanataClient();
-  if (kanataClient) {
-    return kanataClient.deleteProfile(name);
-  }
-
-  if (!isTauriRuntime()) {
-    return true;
-  }
-
-  try {
-    const { invoke } = await import("@tauri-apps/api/core");
-    return invoke<boolean>("profiles_delete", { name });
-  } catch (error) {
-    console.warn("Failed to delete profile in tauri runtime", error);
+  const result = await invokeTauriCommand("profilesDelete", {
+    name,
+  });
+  if (!result.success) {
+    logRuntimeCommandError("Failed to delete profile in tauri runtime", result);
     return false;
   }
+
+  return result.data ?? false;
 }
 
 export async function renameProfileInRuntime(oldName: string, newName: string) {
-  const kanataClient = getKanataClient();
-  if (kanataClient) {
-    return kanataClient.renameProfile(oldName, newName);
-  }
-
-  if (!isTauriRuntime()) {
-    return true;
-  }
-
-  try {
-    const { invoke } = await import("@tauri-apps/api/core");
-    return invoke<boolean>("profiles_rename", {
-      oldName,
-      newName,
-      updatedAt: new Date().toISOString(),
-    });
-  } catch (error) {
-    console.warn("Failed to rename profile in tauri runtime", error);
+  const result = await invokeTauriCommand("profilesRename", {
+    oldName,
+    newName,
+    updatedAt: new Date().toISOString(),
+  });
+  if (!result.success) {
+    logRuntimeCommandError("Failed to rename profile in tauri runtime", result);
     return false;
   }
+
+  return result.data ?? false;
 }

@@ -1,22 +1,11 @@
-import type { KeyboardConfig } from "../types";
-import { getKanataClient } from "./kanata-client";
-import { isTauriRuntime } from "./runtime-environment";
+import { invokeTauriCommand, logRuntimeCommandError } from "./runtime-command-result";
 
 export async function loadConfigFromRuntime() {
-  const kanataClient = getKanataClient();
-  if (kanataClient) {
-    return kanataClient.loadConfig();
-  }
-
-  if (!isTauriRuntime()) {
+  const result = await invokeTauriCommand("configLoad");
+  if (!result.success) {
+    logRuntimeCommandError("Failed to load config from tauri", result);
     return null;
   }
 
-  try {
-    const { invoke } = await import("@tauri-apps/api/core");
-    return invoke<KeyboardConfig | null>("config_load");
-  } catch (error) {
-    console.warn("Failed to load config from tauri", error);
-    return null;
-  }
+  return result.data;
 }

@@ -1,10 +1,18 @@
+mod events;
+mod state;
+
+use events::{
+    emit_driver_install_complete, emit_driver_install_output, emit_kanata_error, emit_kanata_log,
+    set_kanata_status, KanataCrashEvent, KANATA_EVENT_CRASH, KANATA_EVENT_EXCLUSIVE_ACCESS_DENIED,
+    KANATA_EVENT_PERMISSION_DENIED,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::io::{BufRead, BufReader};
 #[cfg(not(target_os = "macos"))]
 use std::io::Read;
 #[cfg(not(target_os = "macos"))]
-use std::process::{Child, Stdio};
+use std::process::Stdio;
 #[cfg(target_os = "macos")]
 use std::process::Stdio;
 use std::{
@@ -13,23 +21,13 @@ use std::{
     process::Command,
     sync::{Arc, Mutex},
     thread,
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::Duration,
+};
+use state::{
+    AppState, KanataProcessState, KarabinerInstallState, KANATA_STATUS_ERROR, KANATA_STATUS_IDLE,
+    KANATA_STATUS_RUNNING, KANATA_STATUS_STARTING, KANATA_STATUS_STOPPING,
 };
 use tauri::{Emitter, Manager, State};
-
-const KANATA_EVENT_LOG: &str = "kanata-log";
-const KANATA_EVENT_STATUS_CHANGE: &str = "kanata-status-change";
-const KANATA_EVENT_CRASH: &str = "kanata-crash";
-const KANATA_EVENT_ERROR: &str = "kanata-error";
-const KANATA_EVENT_PERMISSION_DENIED: &str = "kanata-permission-denied";
-const KANATA_EVENT_EXCLUSIVE_ACCESS_DENIED: &str = "kanata-exclusive-access-denied";
-const KARABINER_EVENT_INSTALL_OUTPUT: &str = "karabiner-install-output";
-const KARABINER_EVENT_INSTALL_COMPLETE: &str = "karabiner-install-complete";
-const KANATA_STATUS_IDLE: &str = "idle";
-const KANATA_STATUS_STARTING: &str = "starting";
-const KANATA_STATUS_RUNNING: &str = "running";
-const KANATA_STATUS_STOPPING: &str = "stopping";
-const KANATA_STATUS_ERROR: &str = "error";
 const DAEMON_LABEL: &str = "com.mantle.kanata";
 const DAEMON_PLIST_PATH: &str = "/Library/LaunchDaemons/com.mantle.kanata.plist";
 const VHID_DAEMON_LABEL: &str = "com.mantle.vhid-daemon";
@@ -66,74 +64,6 @@ struct ProfileInfo {
     updated_at: String,
 }
 
-#[derive(Clone)]
-struct AppState {
-    kanata: Arc<Mutex<KanataProcessState>>,
-    karabiner: Arc<Mutex<KarabinerInstallState>>,
-}
-
-impl Default for AppState {
-    fn default() -> Self {
-        Self {
-            kanata: Arc::new(Mutex::new(KanataProcessState::default())),
-            karabiner: Arc::new(Mutex::new(KarabinerInstallState::default())),
-        }
-    }
-}
-
-struct KanataProcessState {
-    status: String,
-    intentional_stop: bool,
-    #[cfg(not(target_os = "macos"))]
-    child: Option<Child>,
-    #[cfg(target_os = "macos")]
-    daemon_monitor_running: bool,
-}
-
-struct KarabinerInstallState {
-    installing: bool,
-    cancel_requested: bool,
-    current_pid: Option<u32>,
-}
-
-impl Default for KarabinerInstallState {
-    fn default() -> Self {
-        Self {
-            installing: false,
-            cancel_requested: false,
-            current_pid: None,
-        }
-    }
-}
-
-impl Default for KanataProcessState {
-    fn default() -> Self {
-        Self {
-            status: KANATA_STATUS_IDLE.to_string(),
-            intentional_stop: false,
-            #[cfg(not(target_os = "macos"))]
-            child: None,
-            #[cfg(target_os = "macos")]
-            daemon_monitor_running: false,
-        }
-    }
-}
-
-#[derive(Serialize, Clone)]
-#[serde(rename_all = "camelCase")]
-struct KanataLogEvent {
-    r#type: String,
-    message: String,
-    timestamp: u64,
-}
-
-#[derive(Serialize, Clone)]
-#[serde(rename_all = "camelCase")]
-struct KanataCrashEvent {
-    code: Option<i32>,
-    signal: Option<String>,
-}
-
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 struct DriverStatusPayload {
@@ -142,13 +72,6 @@ struct DriverStatusPayload {
     driver_pending_approval: bool,
     pkg_available: bool,
     homebrew_installed: bool,
-}
-
-#[derive(Serialize, Clone)]
-#[serde(rename_all = "camelCase")]
-struct DriverInstallCompletePayload {
-    success: bool,
-    error: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -166,6 +89,14 @@ struct ImportKbdFileResult {
     file_path: Option<String>,
     content: Option<String>,
     error: Option<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ConfigPathsPayload {
+    json: String,
+    kbd: String,
+    dir: String,
 }
 
 fn tauri_config_dir(app: &tauri::AppHandle) -> Option<PathBuf> {
@@ -193,7 +124,22 @@ fn write_profiles_data(path: &PathBuf, data: &ProfilesData) -> bool {
         return false;
     };
 
-    fs::write(path, content).is_ok()
+    write_file_atomic(path, content.as_bytes())
+}
+
+fn write_file_atomic(path: &PathBuf, bytes: &[u8]) -> bool {
+    let temp_path = path.with_extension(format!(
+        "{}.tmp",
+        path.extension()
+            .and_then(|ext| ext.to_str())
+            .unwrap_or("file")
+    ));
+
+    if fs::write(&temp_path, bytes).is_err() {
+        return false;
+    }
+
+    fs::rename(&temp_path, path).is_ok()
 }
 
 fn read_active_profile_name(path: &PathBuf) -> Option<String> {
@@ -215,49 +161,10 @@ fn default_export_kbd_name(config_dir: &PathBuf) -> String {
 }
 
 fn current_timestamp_ms() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
         .map(|duration| duration.as_millis() as u64)
         .unwrap_or(0)
-}
-
-fn emit_kanata_log(app: &tauri::AppHandle, log_type: &str, message: impl Into<String>) {
-    let _ = app.emit(
-        KANATA_EVENT_LOG,
-        KanataLogEvent {
-            r#type: log_type.to_string(),
-            message: message.into(),
-            timestamp: current_timestamp_ms(),
-        },
-    );
-}
-
-fn emit_kanata_error(app: &tauri::AppHandle, message: impl Into<String>) {
-    let message = message.into();
-    let _ = app.emit(KANATA_EVENT_ERROR, message.clone());
-    emit_kanata_log(app, "stderr", message);
-}
-
-fn set_kanata_status(
-    app: &tauri::AppHandle,
-    kanata_state: &Arc<Mutex<KanataProcessState>>,
-    status: &str,
-) {
-    let mut should_emit = false;
-    {
-        let Ok(mut state) = kanata_state.lock() else {
-            return;
-        };
-
-        if state.status != status {
-            state.status = status.to_string();
-            should_emit = true;
-        }
-    }
-
-    if should_emit {
-        let _ = app.emit(KANATA_EVENT_STATUS_CHANGE, status.to_string());
-    }
 }
 
 #[cfg(target_os = "macos")]
@@ -1339,23 +1246,6 @@ fn set_karabiner_install_state(
 }
 
 #[cfg(target_os = "macos")]
-fn emit_driver_install_output(app: &tauri::AppHandle, message: impl Into<String>) {
-    let _ = app.emit(KARABINER_EVENT_INSTALL_OUTPUT, message.into());
-}
-
-#[cfg(target_os = "macos")]
-fn emit_driver_install_complete(
-    app: &tauri::AppHandle,
-    success: bool,
-    error: Option<String>,
-) {
-    let _ = app.emit(
-        KARABINER_EVENT_INSTALL_COMPLETE,
-        DriverInstallCompletePayload { success, error },
-    );
-}
-
-#[cfg(target_os = "macos")]
 fn homebrew_path() -> Option<&'static str> {
     if PathBuf::from(HOMEBREW_ARM64_PATH).exists() {
         return Some(HOMEBREW_ARM64_PATH);
@@ -1820,6 +1710,43 @@ fn driver_activate_cmd() -> bool {
 
 #[cfg(target_os = "macos")]
 #[tauri::command]
+fn driver_open_pkg() -> bool {
+    let Some(pkg_path) = karabiner_pkg_path() else {
+        return false;
+    };
+
+    Command::new("open")
+        .arg(pkg_path)
+        .status()
+        .map(|status| status.success())
+        .unwrap_or(false)
+}
+
+#[cfg(not(target_os = "macos"))]
+#[tauri::command]
+fn driver_open_pkg() -> bool {
+    false
+}
+
+#[cfg(target_os = "macos")]
+#[tauri::command]
+fn driver_launch_app() -> bool {
+    Command::new("open")
+        .arg("-a")
+        .arg("Karabiner-Elements")
+        .status()
+        .map(|status| status.success())
+        .unwrap_or(false)
+}
+
+#[cfg(not(target_os = "macos"))]
+#[tauri::command]
+fn driver_launch_app() -> bool {
+    false
+}
+
+#[cfg(target_os = "macos")]
+#[tauri::command]
 fn open_extension_settings() {
     let _ = Command::new("open")
         .arg("x-apple.systempreferences:com.apple.LoginItems-Settings.extension")
@@ -1912,6 +1839,93 @@ fn config_load(app: tauri::AppHandle) -> Option<serde_json::Value> {
 }
 
 #[tauri::command]
+fn config_get_paths(app: tauri::AppHandle) -> Option<ConfigPathsPayload> {
+    let config_dir = tauri_config_dir(&app)?;
+    let profiles_path = config_dir.join("profiles.json");
+    let active_profile_name = read_active_profile_name(&profiles_path);
+    let json_path = active_profile_name
+        .map(|name| config_dir.join(format!("config-{name}.json")))
+        .unwrap_or_else(|| config_dir.join("config.json"));
+
+    Some(ConfigPathsPayload {
+        json: json_path.display().to_string(),
+        kbd: config_dir.join("kanata.kbd").display().to_string(),
+        dir: config_dir.display().to_string(),
+    })
+}
+
+#[tauri::command]
+fn config_backup(app: tauri::AppHandle) -> Option<String> {
+    let config_dir = tauri_config_dir(&app)?;
+    let profiles_path = config_dir.join("profiles.json");
+    let active_profile_name = read_active_profile_name(&profiles_path);
+    let source_path = active_profile_name
+        .as_ref()
+        .map(|name| config_dir.join(format!("config-{name}.json")))
+        .unwrap_or_else(|| config_dir.join("config.json"));
+    if !source_path.exists() {
+        return None;
+    }
+
+    let profile_name = active_profile_name.unwrap_or_else(|| "legacy".to_string());
+    let backup_name = format!("backup-{profile_name}-{}.json", current_timestamp_ms());
+    let backup_path = config_dir.join(backup_name);
+    if fs::copy(source_path, &backup_path).is_err() {
+        return None;
+    }
+
+    Some(backup_path.display().to_string())
+}
+
+#[tauri::command]
+fn config_list_backups(app: tauri::AppHandle) -> Vec<String> {
+    let Some(config_dir) = tauri_config_dir(&app) else {
+        return Vec::new();
+    };
+
+    let mut backups = fs::read_dir(config_dir)
+        .ok()
+        .into_iter()
+        .flat_map(|entries| entries.flatten())
+        .filter_map(|entry| {
+            let file_name = entry.file_name().to_string_lossy().to_string();
+            if file_name.starts_with("backup-") && file_name.ends_with(".json") {
+                return Some(entry.path().display().to_string());
+            }
+            None
+        })
+        .collect::<Vec<String>>();
+
+    backups.sort_by(|a, b| b.cmp(a));
+    backups
+}
+
+#[tauri::command]
+fn config_restore_backup(app: tauri::AppHandle, backup_path: String) -> bool {
+    let backup = PathBuf::from(backup_path);
+    if !backup.exists() {
+        return false;
+    }
+
+    let Ok(content) = fs::read_to_string(&backup) else {
+        return false;
+    };
+    let Ok(config) = serde_json::from_str::<Value>(&content) else {
+        return false;
+    };
+    if !config
+        .get("sourceKeys")
+        .and_then(Value::as_array)
+        .is_some()
+        || !config.get("layers").and_then(Value::as_array).is_some()
+    {
+        return false;
+    }
+
+    config_save(app, config)
+}
+
+#[tauri::command]
 fn config_save(app: tauri::AppHandle, config: serde_json::Value) -> bool {
     let Some(config_dir) = tauri_config_dir(&app) else {
         return false;
@@ -1920,14 +1934,11 @@ fn config_save(app: tauri::AppHandle, config: serde_json::Value) -> bool {
     let profiles_path = config_dir.join("profiles.json");
     if let Some(active_profile_name) = read_active_profile_name(&profiles_path) {
         let profile_config_path = config_dir.join(format!("config-{active_profile_name}.json"));
-        let saved = fs::write(
-            profile_config_path,
-            match serde_json::to_string_pretty(&config) {
-                Ok(content) => content,
-                Err(_) => return false,
-            },
-        )
-        .is_ok();
+        let config_content = match serde_json::to_string_pretty(&config) {
+            Ok(content) => content,
+            Err(_) => return false,
+        };
+        let saved = write_file_atomic(&profile_config_path, config_content.as_bytes());
 
         if !saved {
             return false;
@@ -1937,14 +1948,11 @@ fn config_save(app: tauri::AppHandle, config: serde_json::Value) -> bool {
     }
 
     let legacy_config_path = config_dir.join("config.json");
-    let saved = fs::write(
-        legacy_config_path,
-        match serde_json::to_string_pretty(&config) {
-            Ok(content) => content,
-            Err(_) => return false,
-        },
-    )
-    .is_ok();
+    let config_content = match serde_json::to_string_pretty(&config) {
+        Ok(content) => content,
+        Err(_) => return false,
+    };
+    let saved = write_file_atomic(&legacy_config_path, config_content.as_bytes());
 
     if !saved {
         return false;
@@ -2061,6 +2069,19 @@ fn profiles_get_active(app: tauri::AppHandle) -> Option<String> {
 }
 
 #[tauri::command]
+fn profiles_has_any(app: tauri::AppHandle) -> bool {
+    let Some(config_dir) = tauri_config_dir(&app) else {
+        return false;
+    };
+    let profiles_path = config_dir.join("profiles.json");
+    let Some(data) = read_profiles_data(&profiles_path) else {
+        return false;
+    };
+
+    !data.profiles.is_empty()
+}
+
+#[tauri::command]
 fn profiles_create(
     app: tauri::AppHandle,
     name: String,
@@ -2105,7 +2126,7 @@ fn profiles_create(
         return false;
     };
 
-    if !fs::write(config_path, config_content).is_ok() {
+    if !write_file_atomic(&config_path, config_content.as_bytes()) {
         return false;
     }
 
@@ -2267,14 +2288,21 @@ pub fn run() {
             driver_install,
             driver_cancel_install,
             driver_activate_cmd,
+            driver_open_pkg,
+            driver_launch_app,
             open_extension_settings,
             open_input_monitoring_settings,
             config_load,
             config_save,
+            config_get_paths,
+            config_backup,
+            config_list_backups,
+            config_restore_backup,
             config_export_kbd,
             config_import_kbd,
             profiles_list,
             profiles_get_active,
+            profiles_has_any,
             profiles_create,
             profiles_switch,
             profiles_delete,

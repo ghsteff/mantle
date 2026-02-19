@@ -14,7 +14,7 @@ interface AutoStartServerProps {
  * Auto-start the Kanata server on app boot if conditions are met.
  */
 export function AutoStartServer({ onboardingInProgress }: AutoStartServerProps) {
-  const { driverInstalled } = useKarabinerState();
+  const { readiness } = useKarabinerState();
   const { status } = useKanataState();
   const { start } = useKanataActions();
   const { hasProfiles, isLoading } = useConfigState();
@@ -39,7 +39,7 @@ export function AutoStartServer({ onboardingInProgress }: AutoStartServerProps) 
     // 4. We haven't tried starting yet
     // 5. Onboarding is not in progress
     if (
-      driverInstalled === true &&
+      readiness === "ready" &&
       isServerInactive &&
       !isLoading &&
       hasProfiles
@@ -49,7 +49,7 @@ export function AutoStartServer({ onboardingInProgress }: AutoStartServerProps) 
       start();
     }
   }, [
-    driverInstalled,
+    readiness,
     isServerInactive,
     hasProfiles,
     isLoading,

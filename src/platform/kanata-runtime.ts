@@ -3,10 +3,12 @@ import type {
   KanataLogEntry,
   KanataStatus,
 } from "../types";
-import { getKanataClient } from "./kanata-client";
-import { KANATA_RUNTIME_EVENTS } from "./kanata-runtime-events";
 import { isKanataStatus } from "./kanata-status";
-import { isTauriRuntime } from "./runtime-environment";
+import {
+  invokeTauriCommand,
+  listenToTauriEvent,
+  logRuntimeCommandError,
+} from "./runtime-command-result";
 
 interface KanataRuntimeEventHandlers {
   onStatusChange: (status: KanataStatus) => void;
@@ -45,150 +47,80 @@ function isCrashInfo(value: unknown): value is CrashInfo {
 }
 
 export async function startKanataInRuntime() {
-  const kanataClient = getKanataClient();
-  if (kanataClient) {
-    return kanataClient.startKanata();
-  }
-
-  if (!isTauriRuntime()) {
+  const result = await invokeTauriCommand("kanataStart");
+  if (!result.success) {
+    logRuntimeCommandError("Failed to start kanata in tauri runtime", result);
     return false;
   }
 
-  try {
-    const { invoke } = await import("@tauri-apps/api/core");
-    return invoke<boolean>("kanata_start");
-  } catch (error) {
-    console.warn("Failed to start kanata in tauri runtime", error);
-    return false;
-  }
+  return result.data ?? false;
 }
 
 export async function stopKanataInRuntime() {
-  const kanataClient = getKanataClient();
-  if (kanataClient) {
-    return kanataClient.stopKanata();
-  }
-
-  if (!isTauriRuntime()) {
+  const result = await invokeTauriCommand("kanataStop");
+  if (!result.success) {
+    logRuntimeCommandError("Failed to stop kanata in tauri runtime", result);
     return false;
   }
 
-  try {
-    const { invoke } = await import("@tauri-apps/api/core");
-    return invoke<boolean>("kanata_stop");
-  } catch (error) {
-    console.warn("Failed to stop kanata in tauri runtime", error);
-    return false;
-  }
+  return result.data ?? false;
 }
 
 export async function restartKanataInRuntime() {
-  const kanataClient = getKanataClient();
-  if (kanataClient) {
-    return kanataClient.restartKanata();
-  }
-
-  if (!isTauriRuntime()) {
+  const result = await invokeTauriCommand("kanataRestart");
+  if (!result.success) {
+    logRuntimeCommandError("Failed to restart kanata in tauri runtime", result);
     return false;
   }
 
-  try {
-    const { invoke } = await import("@tauri-apps/api/core");
-    return invoke<boolean>("kanata_restart");
-  } catch (error) {
-    console.warn("Failed to restart kanata in tauri runtime", error);
-    return false;
-  }
+  return result.data ?? false;
 }
 
 export async function openInputMonitoringSettingsInRuntime() {
-  const kanataClient = getKanataClient();
-  if (kanataClient) {
-    await kanataClient.openInputMonitoringSettings();
-    return;
-  }
-
-  if (!isTauriRuntime()) {
-    return;
-  }
-
-  try {
-    const { invoke } = await import("@tauri-apps/api/core");
-    await invoke("open_input_monitoring_settings");
-  } catch (error) {
-    console.warn("Failed to open input monitoring settings in tauri runtime", error);
+  const result = await invokeTauriCommand("openInputMonitoringSettings");
+  if (!result.success) {
+    logRuntimeCommandError(
+      "Failed to open input monitoring settings in tauri runtime",
+      result,
+    );
   }
 }
 
 export async function subscribeToKanataRuntimeEvents(
   handlers: KanataRuntimeEventHandlers,
 ) {
-  const kanataClient = getKanataClient();
-  if (kanataClient) {
-    const unsubs = [
-      kanataClient.onStatusChange(handlers.onStatusChange),
-      kanataClient.onLog(handlers.onLog),
-      kanataClient.onCrash(handlers.onCrash),
-      kanataClient.onError(handlers.onError),
-      kanataClient.onPermissionDenied(handlers.onPermissionDenied),
-      kanataClient.onExclusiveAccessDenied(handlers.onExclusiveAccessDenied),
-    ];
-
-    return () => {
-      for (const unsub of unsubs) {
-        unsub();
-      }
-    };
-  }
-
-  if (!isTauriRuntime()) {
-    return () => undefined;
-  }
-
-  const { listen } = await import("@tauri-apps/api/event");
-
-  const unlistenStatus = await listen<unknown>(
-    KANATA_RUNTIME_EVENTS.statusChange,
-    (event) => {
-      if (isKanataStatus(event.payload)) {
-        handlers.onStatusChange(event.payload);
-      }
-    },
-  );
-
-  const unlistenLog = await listen<unknown>(KANATA_RUNTIME_EVENTS.log, (event) => {
-    if (isKanataLogEntry(event.payload)) {
-      handlers.onLog(event.payload);
+  const unlistenStatus = await listenToTauriEvent("kanataStatusChange", (payload) => {
+    if (isKanataStatus(payload)) {
+      handlers.onStatusChange(payload);
     }
   });
 
-  const unlistenCrash = await listen<unknown>(
-    KANATA_RUNTIME_EVENTS.crash,
-    (event) => {
-      if (isCrashInfo(event.payload)) {
-        handlers.onCrash(event.payload);
-      }
-    },
-  );
-
-  const unlistenError = await listen<string>(KANATA_RUNTIME_EVENTS.error, (event) => {
-    if (typeof event.payload === "string") {
-      handlers.onError(event.payload);
+  const unlistenLog = await listenToTauriEvent("kanataLog", (payload) => {
+    if (isKanataLogEntry(payload)) {
+      handlers.onLog(payload);
     }
   });
 
-  const unlistenPermissionDenied = await listen(
-    KANATA_RUNTIME_EVENTS.permissionDenied,
-    () => {
-      handlers.onPermissionDenied();
-    },
+  const unlistenCrash = await listenToTauriEvent("kanataCrash", (payload) => {
+    if (isCrashInfo(payload)) {
+      handlers.onCrash(payload);
+    }
+  });
+
+  const unlistenError = await listenToTauriEvent("kanataError", (payload) => {
+    if (typeof payload === "string") {
+      handlers.onError(payload);
+    }
+  });
+
+  const unlistenPermissionDenied = await listenToTauriEvent(
+    "kanataPermissionDenied",
+    () => handlers.onPermissionDenied(),
   );
 
-  const unlistenExclusiveAccessDenied = await listen(
-    KANATA_RUNTIME_EVENTS.exclusiveAccessDenied,
-    () => {
-      handlers.onExclusiveAccessDenied();
-    },
+  const unlistenExclusiveAccessDenied = await listenToTauriEvent(
+    "kanataExclusiveAccessDenied",
+    () => handlers.onExclusiveAccessDenied(),
   );
 
   return () => {

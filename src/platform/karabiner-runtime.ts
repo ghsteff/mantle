@@ -1,20 +1,13 @@
-import type { DriverInstallResult, DriverStatus } from "../types";
-import { KARABINER_RUNTIME_EVENTS } from "./karabiner-runtime-events";
-import { isTauriRuntime } from "./runtime-environment";
+import type { DriverInstallResult } from "../types";
+import {
+  invokeTauriCommand,
+  listenToTauriEvent,
+  logRuntimeCommandError,
+} from "./runtime-command-result";
 
 interface DriverRuntimeEventHandlers {
   onInstallOutput: (line: string) => void;
   onInstallComplete: (result: DriverInstallResult) => void;
-}
-
-function fallbackDriverStatus(): DriverStatus {
-  return {
-    driverInstalled: true,
-    driverActivated: true,
-    driverPendingApproval: false,
-    pkgAvailable: false,
-    homebrewInstalled: true,
-  };
 }
 
 function isDriverInstallResult(
@@ -35,96 +28,90 @@ function isDriverInstallResult(
 }
 
 export async function checkDriverInRuntime() {
-  if (!isTauriRuntime()) {
-    return fallbackDriverStatus();
+  const result = await invokeTauriCommand("driverCheck");
+  if (!result.success || !result.data) {
+    logRuntimeCommandError("Failed to check driver status in tauri runtime", result);
+    return {
+      driverInstalled: false,
+      driverActivated: false,
+      driverPendingApproval: false,
+      pkgAvailable: false,
+      homebrewInstalled: false,
+    };
   }
 
-  try {
-    const { invoke } = await import("@tauri-apps/api/core");
-    return invoke<DriverStatus>("driver_check");
-  } catch (error) {
-    console.warn("Failed to check driver status in tauri runtime", error);
-    return fallbackDriverStatus();
-  }
+  return result.data;
 }
 
 export async function installDriverInRuntime() {
-  if (!isTauriRuntime()) {
+  const result = await invokeTauriCommand("driverInstall");
+  if (!result.success) {
+    logRuntimeCommandError("Failed to start driver install in tauri runtime", result);
     return false;
   }
 
-  try {
-    const { invoke } = await import("@tauri-apps/api/core");
-    return invoke<boolean>("driver_install");
-  } catch (error) {
-    console.warn("Failed to start driver install in tauri runtime", error);
-    return false;
-  }
+  return result.data ?? false;
 }
 
 export async function cancelDriverInstallInRuntime() {
-  if (!isTauriRuntime()) {
-    return;
-  }
-
-  try {
-    const { invoke } = await import("@tauri-apps/api/core");
-    await invoke("driver_cancel_install");
-  } catch (error) {
-    console.warn("Failed to cancel driver install in tauri runtime", error);
+  const result = await invokeTauriCommand("driverCancelInstall");
+  if (!result.success) {
+    logRuntimeCommandError("Failed to cancel driver install in tauri runtime", result);
   }
 }
 
 export async function activateDriverInRuntime() {
-  if (!isTauriRuntime()) {
-    return true;
-  }
-
-  try {
-    const { invoke } = await import("@tauri-apps/api/core");
-    return invoke<boolean>("driver_activate_cmd");
-  } catch (error) {
-    console.warn("Failed to activate driver in tauri runtime", error);
+  const result = await invokeTauriCommand("driverActivate");
+  if (!result.success) {
+    logRuntimeCommandError("Failed to activate driver in tauri runtime", result);
     return false;
   }
+
+  return result.data ?? false;
 }
 
 export async function openExtensionSettingsInRuntime() {
-  if (!isTauriRuntime()) {
-    return;
+  const result = await invokeTauriCommand("openExtensionSettings");
+  if (!result.success) {
+    logRuntimeCommandError("Failed to open extension settings in tauri runtime", result);
+  }
+}
+
+export async function openKarabinerPkgInRuntime() {
+  const result = await invokeTauriCommand("driverOpenPkg");
+  if (!result.success) {
+    logRuntimeCommandError("Failed to open Karabiner package in tauri runtime", result);
+    return false;
   }
 
-  try {
-    const { invoke } = await import("@tauri-apps/api/core");
-    await invoke("open_extension_settings");
-  } catch (error) {
-    console.warn("Failed to open extension settings in tauri runtime", error);
+  return result.data ?? false;
+}
+
+export async function launchKarabinerAppInRuntime() {
+  const result = await invokeTauriCommand("driverLaunchApp");
+  if (!result.success) {
+    logRuntimeCommandError("Failed to launch Karabiner app in tauri runtime", result);
+    return false;
   }
+
+  return result.data ?? false;
 }
 
 export async function subscribeToDriverRuntimeEvents(
   handlers: DriverRuntimeEventHandlers,
 ) {
-  if (!isTauriRuntime()) {
-    return () => undefined;
-  }
-
-  const { listen } = await import("@tauri-apps/api/event");
-  const unlistenOutput = await listen<unknown>(
-    KARABINER_RUNTIME_EVENTS.installOutput,
-    (event) => {
-      if (typeof event.payload === "string") {
-        handlers.onInstallOutput(event.payload);
-      }
-    },
-  );
-  const unlistenComplete = await listen<unknown>(
-    KARABINER_RUNTIME_EVENTS.installComplete,
-    (event) => {
-      if (isDriverInstallResult(event.payload)) {
+  const unlistenOutput = await listenToTauriEvent("karabinerInstallOutput", (payload) => {
+    if (typeof payload === "string") {
+      handlers.onInstallOutput(payload);
+    }
+  });
+  const unlistenComplete = await listenToTauriEvent(
+    "karabinerInstallComplete",
+    (payload) => {
+      if (isDriverInstallResult(payload)) {
         handlers.onInstallComplete({
-          success: event.payload.success,
-          error: event.payload.error ?? undefined,
+          success: payload.success,
+          error: payload.error ?? undefined,
         });
       }
     },

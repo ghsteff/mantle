@@ -3,14 +3,11 @@
   "productName": "Mantle",
   "version": "1.0.0",
   "description": "A keyboard remapper for MacOS",
-  "main": ".vite/build/main.js",
   "scripts": {
-    "start": "electron-forge start",
+    "start": "tauri dev",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
-    "package": "electron-forge package",
-    "make": "electron-forge make",
-    "publish": "electron-forge publish",
+    "migration:metrics:size": "node scripts/migration/collect-build-metrics.mjs",
     "lint": "eslint --ext .ts,.tsx ."
   },
   "keywords": [],

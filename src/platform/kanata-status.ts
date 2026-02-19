@@ -1,6 +1,5 @@
 import type { KanataStatus } from "../types";
-import { getKanataClient } from "./kanata-client";
-import { isTauriRuntime } from "./runtime-environment";
+import { invokeTauriCommand, logRuntimeCommandError } from "./runtime-command-result";
 
 export function isKanataStatus(value: unknown): value is KanataStatus {
   return (
@@ -14,26 +13,16 @@ export function isKanataStatus(value: unknown): value is KanataStatus {
 }
 
 export async function getKanataStatus() {
-  const kanataClient = getKanataClient();
-  if (kanataClient) {
-    return kanataClient.getStatus();
-  }
-
-  if (!isTauriRuntime()) {
-    return "stopped";
-  }
-
-  try {
-    const { invoke } = await import("@tauri-apps/api/core");
-    const status = await invoke<unknown>("kanata_get_status");
-    if (isKanataStatus(status)) {
-      return status;
-    }
-
-    console.warn("Unexpected kanata status from tauri command", status);
-    return "error";
-  } catch (error) {
-    console.warn("Failed to get kanata status from tauri", error);
+  const result = await invokeTauriCommand("kanataGetStatus");
+  if (!result.success) {
+    logRuntimeCommandError("Failed to get kanata status from tauri", result);
     return "error";
   }
+
+  if (isKanataStatus(result.data)) {
+    return result.data;
+  }
+
+  console.warn("Unexpected kanata status from tauri command", result.data);
+  return "error";
 }

@@ -115,10 +115,10 @@ pnpm start
 ### Build for Production
 
 ```bash
-pnpm run make
+pnpm run tauri:build
 ```
 
-Outputs are in the `out/make` folder.
+Outputs are in `src-tauri/target/release/bundle/`.
 
 ### Project Structure
 
@@ -126,8 +126,6 @@ Outputs are in the `out/make` folder.
 mantle/
 ├── bin/                    # Kanata binaries for each platform
 ├── src/
-│   ├── main.ts            # Electron main process
-│   ├── preload.ts         # IPC bridge
 │   ├── renderer.tsx       # React entry point
 │   ├── App.tsx            # Main React component
 │   ├── components/
@@ -135,15 +133,14 @@ mantle/
 │   │   ├── editor/        # Key configuration editor
 │   │   └── status/        # Status indicator
 │   ├── contexts/          # React contexts for state
-│   ├── kanata/            # Kanata config generation & process management
-│   └── ipc/               # IPC handlers
-├── forge.config.ts        # Electron Forge config
+│   ├── kanata/            # Kanata parsing helpers
+├── src-tauri/             # Rust backend + Tauri config
 └── vite.*.config.ts       # Vite configs
 ```
 
 ## Tech Stack
 
-- **Electron** — Cross-platform desktop app
+- **Tauri** — Desktop runtime + Rust backend
 - **React** — UI framework
 - **Vite** — Build tool
 - **Tailwind CSS** — Styling

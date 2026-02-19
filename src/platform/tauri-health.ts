@@ -1,10 +1,10 @@
-import { isTauriRuntime } from "./runtime-environment";
+import { invokeTauriCommand } from "./runtime-command-result";
 
 export async function runTauriHealthCheck() {
-  if (!isTauriRuntime()) {
+  const result = await invokeTauriCommand("healthCheck");
+  if (!result.success) {
     return null;
   }
 
-  const { invoke } = await import("@tauri-apps/api/core");
-  return invoke<string>("health_check");
+  return result.data;
 }

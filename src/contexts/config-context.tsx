@@ -14,6 +14,7 @@ import { saveConfigToRuntime } from "../platform/config-saver";
 // State values for components
 interface ConfigState {
   config: KeyboardConfig | null;
+  loadState: "loading" | "ready" | "error";
   isLoading: boolean;
   error: string | null;
   isDirty: boolean;
@@ -50,46 +51,10 @@ interface ConfigInternalActions extends ConfigActions {
 const ConfigStateContext = createContext<ConfigState | null>(null);
 const ConfigActionsContext = createContext<ConfigInternalActions | null>(null);
 
-// Mock config for development outside Electron
-const MOCK_CONFIG: KeyboardConfig = {
-  sourceKeys: [
-    "esc", "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12",
-    "grv", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "min", "eql", "bspc",
-    "tab", "q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "lbrc", "rbrc", "bsls",
-    "caps", "a", "s", "d", "f", "g", "h", "j", "k", "l", "scln", "quot", "ret",
-    "lsft", "z", "x", "c", "v", "b", "n", "m", "comm", "dot", "slsh", "rsft",
-    "lctl", "lmet", "lalt", "spc", "ralt", "rmet", "rctl",
-  ],
-  layers: [
-    {
-      name: "base",
-      keys: Object.fromEntries(
-        ["esc", "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12",
-         "grv", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "min", "eql", "bspc",
-         "tab", "q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "lbrc", "rbrc", "bsls",
-         "caps", "a", "s", "d", "f", "g", "h", "j", "k", "l", "scln", "quot", "ret",
-         "lsft", "z", "x", "c", "v", "b", "n", "m", "comm", "dot", "slsh", "rsft",
-         "lctl", "lmet", "lalt", "spc", "ralt", "rmet", "rctl"].map((k) => [k, k])
-      ),
-    },
-    {
-      name: "nav",
-      keys: Object.fromEntries(
-        ["esc", "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12",
-         "grv", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "min", "eql", "bspc",
-         "tab", "q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "lbrc", "rbrc", "bsls",
-         "caps", "a", "s", "d", "f", "g", "h", "j", "k", "l", "scln", "quot", "ret",
-         "lsft", "z", "x", "c", "v", "b", "n", "m", "comm", "dot", "slsh", "rsft",
-         "lctl", "lmet", "lalt", "spc", "ralt", "rmet", "rctl"].map((k) => [k, "_"])
-      ),
-    },
-  ],
-};
-
 export function ConfigProvider({ children }: { children: ReactNode }) {
   const [config, setConfig] = useState<KeyboardConfig | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loadState, setLoadState] = useState<ConfigState["loadState"]>("loading");
+  const [error, setErrorState] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
 
   // Profile state (managed by ProfileContext but stored here for easy access)
@@ -97,24 +62,38 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   const [activeProfile, setActiveProfile] = useState<string | null>(null);
   const hasProfiles = profiles.length > 0;
 
-  // Load config from Electron or use mock
-  const loadConfig = useCallback(async (): Promise<KeyboardConfig | null> => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const tauriConfig = await loadConfigFromRuntime();
-      // Keep non-desktop and partial-tauri flows usable while migration is in progress.
-      const loadedConfig = tauriConfig ?? MOCK_CONFIG;
-
-      if (loadedConfig) {
-        setConfig(loadedConfig);
+  const setIsLoading = useCallback((loading: boolean) => {
+    setLoadState((prev) => {
+      if (loading) {
+        return "loading";
       }
+      return prev === "error" ? prev : "ready";
+    });
+  }, []);
+
+  const setError = useCallback((nextError: string | null) => {
+    setErrorState(nextError);
+    setLoadState(nextError ? "error" : "ready");
+  }, []);
+
+  const loadConfig = useCallback(async (): Promise<KeyboardConfig | null> => {
+    setLoadState("loading");
+    setErrorState(null);
+    try {
+      const loadedConfig = await loadConfigFromRuntime();
+      if (!loadedConfig) {
+        setLoadState("error");
+        setErrorState("Failed to load config");
+        return null;
+      }
+
+      setConfig(loadedConfig);
+      setLoadState("ready");
       return loadedConfig;
     } catch (err) {
-      setError(toErrorMessage(err, "Failed to load config"));
+      setLoadState("error");
+      setErrorState(toErrorMessage(err, "Failed to load config"));
       return null;
-    } finally {
-      setIsLoading(false);
     }
   }, []);
 
@@ -217,14 +196,15 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   const stateValue = useMemo<ConfigState>(
     () => ({
       config,
-      isLoading,
+      loadState,
+      isLoading: loadState === "loading",
       error,
       isDirty,
       profiles,
       activeProfile,
       hasProfiles,
     }),
-    [config, isLoading, error, isDirty, profiles, activeProfile, hasProfiles]
+    [config, loadState, error, isDirty, profiles, activeProfile, hasProfiles]
   );
 
   const actionsValue = useMemo<ConfigInternalActions>(
