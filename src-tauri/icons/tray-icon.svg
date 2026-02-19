@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44">
+  <!-- Tall peak (right) -->
+  <polygon points="27,6 39,36 15,36" fill="black"/>
+  <!-- Shorter peak (left) -->
+  <polygon points="15,16 25,36 5,36" fill="black"/>
+</svg>

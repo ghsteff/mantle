@@ -8,9 +8,13 @@ use events::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::io::{BufRead, BufReader};
+use state::{
+    AppState, KanataProcessState, KarabinerInstallState, KANATA_STATUS_ERROR, KANATA_STATUS_IDLE,
+    KANATA_STATUS_RUNNING, KANATA_STATUS_STARTING, KANATA_STATUS_STOPPING,
+};
 #[cfg(not(target_os = "macos"))]
 use std::io::Read;
+use std::io::{BufRead, BufReader};
 #[cfg(not(target_os = "macos"))]
 use std::process::Stdio;
 #[cfg(target_os = "macos")]
@@ -23,10 +27,8 @@ use std::{
     thread,
     time::Duration,
 };
-use state::{
-    AppState, KanataProcessState, KarabinerInstallState, KANATA_STATUS_ERROR, KANATA_STATUS_IDLE,
-    KANATA_STATUS_RUNNING, KANATA_STATUS_STARTING, KANATA_STATUS_STOPPING,
-};
+use tauri::menu::{Menu, MenuItem};
+use tauri::tray::TrayIconBuilder;
 use tauri::{Emitter, Manager, State};
 const DAEMON_LABEL: &str = "com.mantle.kanata";
 const DAEMON_PLIST_PATH: &str = "/Library/LaunchDaemons/com.mantle.kanata.plist";
@@ -746,10 +748,8 @@ fn daemon_setup_needs_repair(app: &tauri::AppHandle, kbd_path: &PathBuf) -> Resu
     // can fail even when setup is valid. Treat unreadable files as "assume valid" to avoid
     // repeated password prompts; we still self-heal if passwordless launchctl later fails.
     match fs::read_to_string(DAEMON_PLIST_PATH) {
-        Ok(actual_plist) => Ok(
-            !actual_plist.contains(&expected_plist_binary)
-                || !actual_plist.contains(&expected_plist_kbd),
-        ),
+        Ok(actual_plist) => Ok(!actual_plist.contains(&expected_plist_binary)
+            || !actual_plist.contains(&expected_plist_kbd)),
         Err(_) => Ok(false),
     }
 }
@@ -838,11 +838,24 @@ fn ensure_passwordless_launchdaemon(
 fn kickstart_launchdaemon_passwordless() -> Result<(), String> {
     let _ = run_command(
         "sudo",
-        &["-n", "/usr/bin/truncate", "-s", "0", DAEMON_STDOUT_LOG, DAEMON_STDERR_LOG],
+        &[
+            "-n",
+            "/usr/bin/truncate",
+            "-s",
+            "0",
+            DAEMON_STDOUT_LOG,
+            DAEMON_STDERR_LOG,
+        ],
     );
     run_command(
         "sudo",
-        &["-n", "/bin/launchctl", "kickstart", "-k", &format!("system/{DAEMON_LABEL}")],
+        &[
+            "-n",
+            "/bin/launchctl",
+            "kickstart",
+            "-k",
+            &format!("system/{DAEMON_LABEL}"),
+        ],
     )
     .map(|_| ())
 }
@@ -850,7 +863,11 @@ fn kickstart_launchdaemon_passwordless() -> Result<(), String> {
 #[cfg(target_os = "macos")]
 fn kickstart_vhid_daemon_passwordless() -> Result<(), String> {
     let daemon_target = format!("system/{VHID_DAEMON_LABEL}");
-    run_command("sudo", &["-n", "/bin/launchctl", "kickstart", &daemon_target]).map(|_| ())
+    run_command(
+        "sudo",
+        &["-n", "/bin/launchctl", "kickstart", &daemon_target],
+    )
+    .map(|_| ())
 }
 
 #[cfg(target_os = "macos")]
@@ -1325,12 +1342,13 @@ struct SystemExtensionStatus {
 
 #[cfg(target_os = "macos")]
 fn check_system_extension_status() -> SystemExtensionStatus {
-    let output = Command::new("systemextensionsctl")
-        .arg("list")
-        .output();
+    let output = Command::new("systemextensionsctl").arg("list").output();
 
     let Ok(result) = output else {
-        return SystemExtensionStatus { activated: false, pending_approval: false };
+        return SystemExtensionStatus {
+            activated: false,
+            pending_approval: false,
+        };
     };
 
     let stdout = String::from_utf8_lossy(&result.stdout);
@@ -1436,7 +1454,10 @@ fn install_pkg_elevated(pkg_path: &str) -> Result<(), String> {
 fn activate_driver() -> Result<(), String> {
     let manager = PathBuf::from(VHID_MANAGER_PATH);
     if !manager.exists() {
-        return Err("VirtualHIDDevice Manager not found. Driver may not be installed correctly.".to_string());
+        return Err(
+            "VirtualHIDDevice Manager not found. Driver may not be installed correctly."
+                .to_string(),
+        );
     }
 
     let result = Command::new(VHID_MANAGER_PATH)
@@ -1453,7 +1474,10 @@ fn activate_driver() -> Result<(), String> {
 }
 
 #[cfg(target_os = "macos")]
-fn run_driver_install_flow(app: tauri::AppHandle, karabiner_state: Arc<Mutex<KarabinerInstallState>>) {
+fn run_driver_install_flow(
+    app: tauri::AppHandle,
+    karabiner_state: Arc<Mutex<KarabinerInstallState>>,
+) {
     if is_cancelled(&karabiner_state) {
         emit_driver_install_complete(&app, false, Some("Installation cancelled".to_string()));
         set_karabiner_install_state(&karabiner_state, false, false, None);
@@ -1465,7 +1489,10 @@ fn run_driver_install_flow(app: tauri::AppHandle, karabiner_state: Arc<Mutex<Kar
         emit_driver_install_output(&app, "Driver already installed. Activating...");
         match activate_driver() {
             Ok(()) => {
-                emit_driver_install_output(&app, "Driver activation requested. Approve in System Settings if prompted.");
+                emit_driver_install_output(
+                    &app,
+                    "Driver activation requested. Approve in System Settings if prompted.",
+                );
                 emit_driver_install_complete(&app, true, None);
             }
             Err(e) => {
@@ -1483,11 +1510,7 @@ fn run_driver_install_flow(app: tauri::AppHandle, karabiner_state: Arc<Mutex<Kar
             &app,
             "Homebrew not found. Install Homebrew (https://brew.sh), then retry.",
         );
-        emit_driver_install_complete(
-            &app,
-            false,
-            Some("Homebrew is not installed".to_string()),
-        );
+        emit_driver_install_complete(&app, false, Some("Homebrew is not installed".to_string()));
         set_karabiner_install_state(&karabiner_state, false, false, None);
         return;
     };
@@ -1543,7 +1566,10 @@ fn run_driver_install_flow(app: tauri::AppHandle, karabiner_state: Arc<Mutex<Kar
             emit_driver_install_complete(
                 &app,
                 false,
-                Some(format!("Download failed with exit code {}", s.code().unwrap_or(-1))),
+                Some(format!(
+                    "Download failed with exit code {}",
+                    s.code().unwrap_or(-1)
+                )),
             );
             set_karabiner_install_state(&karabiner_state, false, false, None);
             return;
@@ -1608,7 +1634,10 @@ fn run_driver_install_flow(app: tauri::AppHandle, karabiner_state: Arc<Mutex<Kar
 
     // Mark install as done before activation so the frontend can transition to the approve step.
     // activate_driver() may block while macOS shows the "allow extension" dialog.
-    emit_driver_install_output(&app, "Driver installed. Requesting system extension activation...");
+    emit_driver_install_output(
+        &app,
+        "Driver installed. Requesting system extension activation...",
+    );
     emit_driver_install_complete(&app, true, None);
     set_karabiner_install_state(&karabiner_state, false, false, None);
 
@@ -1913,10 +1942,7 @@ fn config_restore_backup(app: tauri::AppHandle, backup_path: String) -> bool {
     let Ok(config) = serde_json::from_str::<Value>(&content) else {
         return false;
     };
-    if !config
-        .get("sourceKeys")
-        .and_then(Value::as_array)
-        .is_some()
+    if !config.get("sourceKeys").and_then(Value::as_array).is_some()
         || !config.get("layers").and_then(Value::as_array).is_some()
     {
         return false;
@@ -2274,6 +2300,39 @@ fn profiles_rename(
     }
 }
 
+fn open_main_window(app_handle: &tauri::AppHandle) {
+    let Some(window) = app_handle.get_webview_window("main") else {
+        return;
+    };
+
+    let _ = window.show();
+    let _ = window.unminimize();
+    let _ = window.set_focus();
+}
+
+fn build_tray(app: &tauri::App) -> tauri::Result<()> {
+    let open_item = MenuItem::with_id(app, "open_mantle", "Open Mantle", true, None::<&str>)?;
+    let quit_item = MenuItem::with_id(app, "quit_mantle", "Quit Mantle", true, None::<&str>)?;
+    let tray_menu = Menu::with_items(app, &[&open_item, &quit_item])?;
+
+    let tray_icon = tauri::image::Image::from_bytes(include_bytes!("../icons/tray-icon@2x.png"))?;
+
+    TrayIconBuilder::with_id("mantle-tray")
+        .icon(tray_icon)
+        .icon_as_template(true)
+        .menu(&tray_menu)
+        .on_menu_event(|app: &tauri::AppHandle, event: tauri::menu::MenuEvent| {
+            match event.id().as_ref() {
+                "open_mantle" => open_main_window(app),
+                "quit_mantle" => app.exit(0),
+                _ => {}
+            }
+        })
+        .build(app)?;
+
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let app = tauri::Builder::default()
@@ -2309,6 +2368,13 @@ pub fn run() {
             profiles_rename
         ])
         .setup(|app| {
+            build_tray(app)?;
+
+            #[cfg(target_os = "macos")]
+            app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+
+            open_main_window(app.handle());
+
             if cfg!(debug_assertions) {
                 app.handle().plugin(
                     tauri_plugin_log::Builder::default()
@@ -2321,10 +2387,23 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
 
-    app.run(|app_handle, event| {
-        if let tauri::RunEvent::Exit = event {
+    app.run(|app_handle, event| match event {
+        tauri::RunEvent::WindowEvent { label, event, .. } => {
+            if label != "main" {
+                return;
+            }
+
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                if let Some(window) = app_handle.get_webview_window("main") {
+                    let _ = window.hide();
+                }
+            }
+        }
+        tauri::RunEvent::Exit => {
             let state = app_handle.state::<AppState>();
             let _ = stop_kanata_process(app_handle, &state.kanata);
         }
+        _ => {}
     });
 }
