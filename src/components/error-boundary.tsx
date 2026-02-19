@@ -57,7 +57,7 @@ export class ErrorBoundary extends Component<
               </p>
             )}
           </div>
-          <Button onClick={this.handleReload} className="rounded-none">
+          <Button onClick={this.handleReload}>
             Reload
           </Button>
         </div>

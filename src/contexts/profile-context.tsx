@@ -11,7 +11,6 @@ import type { KeyboardConfig, ExportResult, ImportResult } from "../types";
 import { useConfigActionsInternal, useConfigState } from "./config-context";
 import { useUIActions, useUIState } from "./ui-context";
 import { toErrorMessage, assertContext } from "../lib/errors";
-import { getKanataClient } from "../platform/kanata-client";
 import {
   createProfileInRuntime,
   deleteProfileInRuntime,
@@ -20,6 +19,7 @@ import {
   renameProfileInRuntime,
   switchProfileInRuntime,
 } from "../platform/profiles-runtime";
+import { exportKbdFromRuntime, importKbdFromRuntime } from "../platform/kbd-runtime";
 
 interface ProfileContextValue {
   createProfile: (name: string, config: KeyboardConfig) => Promise<boolean>;
@@ -158,14 +158,8 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   }, [refreshProfiles, setError]);
 
   const exportKbd = useCallback(async (): Promise<ExportResult> => {
-    const kanataClient = getKanataClient();
-    if (!kanataClient) {
-      console.log("Would export .kbd file");
-      return { success: false, error: "Not running in Electron" };
-    }
-
     try {
-      return await kanataClient.exportKbd();
+      return await exportKbdFromRuntime();
     } catch (err) {
       return {
         success: false,
@@ -175,14 +169,8 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const importKbd = useCallback(async (): Promise<ImportResult> => {
-    const kanataClient = getKanataClient();
-    if (!kanataClient) {
-      console.log("Would import .kbd file");
-      return { success: false, error: "Not running in Electron" };
-    }
-
     try {
-      return await kanataClient.importKbd();
+      return await importKbdFromRuntime();
     } catch (err) {
       return {
         success: false,

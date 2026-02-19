@@ -151,6 +151,23 @@ struct DriverInstallCompletePayload {
     error: Option<String>,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ExportKbdResult {
+    success: bool,
+    path: Option<String>,
+    error: Option<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ImportKbdFileResult {
+    success: bool,
+    file_path: Option<String>,
+    content: Option<String>,
+    error: Option<String>,
+}
+
 fn tauri_config_dir(app: &tauri::AppHandle) -> Option<PathBuf> {
     let app_data_dir = app.path().app_data_dir().ok()?;
     let config_dir = app_data_dir.join("kanata");
@@ -186,6 +203,15 @@ fn read_active_profile_name(path: &PathBuf) -> Option<String> {
     }
 
     Some(profiles_data.active_profile)
+}
+
+fn default_export_kbd_name(config_dir: &PathBuf) -> String {
+    let profiles_path = config_dir.join("profiles.json");
+    let active_profile_name = read_active_profile_name(&profiles_path);
+
+    active_profile_name
+        .map(|name| format!("{name}.kbd"))
+        .unwrap_or_else(|| "kanata.kbd".to_string())
 }
 
 fn current_timestamp_ms() -> u64 {
@@ -1928,6 +1954,86 @@ fn config_save(app: tauri::AppHandle, config: serde_json::Value) -> bool {
 }
 
 #[tauri::command]
+fn config_export_kbd(app: tauri::AppHandle) -> ExportKbdResult {
+    let Some(config_dir) = tauri_config_dir(&app) else {
+        return ExportKbdResult {
+            success: false,
+            path: None,
+            error: Some("Failed to resolve app config directory".to_string()),
+        };
+    };
+
+    let kbd_path = config_dir.join("kanata.kbd");
+    if !kbd_path.exists() {
+        return ExportKbdResult {
+            success: false,
+            path: None,
+            error: Some("Failed to export file".to_string()),
+        };
+    }
+
+    let picked_path = rfd::FileDialog::new()
+        .set_title("Export .kbd Configuration")
+        .set_file_name(&default_export_kbd_name(&config_dir))
+        .add_filter("Kanata Config", &["kbd"])
+        .save_file();
+
+    let Some(target_path) = picked_path else {
+        return ExportKbdResult {
+            success: false,
+            path: None,
+            error: Some("Export cancelled".to_string()),
+        };
+    };
+
+    if fs::copy(&kbd_path, &target_path).is_ok() {
+        return ExportKbdResult {
+            success: true,
+            path: Some(target_path.display().to_string()),
+            error: None,
+        };
+    }
+
+    ExportKbdResult {
+        success: false,
+        path: None,
+        error: Some("Failed to export file".to_string()),
+    }
+}
+
+#[tauri::command]
+fn config_import_kbd() -> ImportKbdFileResult {
+    let picked_path = rfd::FileDialog::new()
+        .set_title("Import .kbd Configuration")
+        .add_filter("Kanata Config", &["kbd"])
+        .pick_file();
+
+    let Some(file_path) = picked_path else {
+        return ImportKbdFileResult {
+            success: false,
+            file_path: None,
+            content: None,
+            error: Some("Import cancelled".to_string()),
+        };
+    };
+
+    match fs::read_to_string(&file_path) {
+        Ok(content) => ImportKbdFileResult {
+            success: true,
+            file_path: Some(file_path.display().to_string()),
+            content: Some(content),
+            error: None,
+        },
+        Err(_) => ImportKbdFileResult {
+            success: false,
+            file_path: None,
+            content: None,
+            error: Some("Failed to read import file".to_string()),
+        },
+    }
+}
+
+#[tauri::command]
 fn profiles_list(app: tauri::AppHandle) -> Vec<ProfileInfo> {
     let Some(config_dir) = tauri_config_dir(&app) else {
         return Vec::new();
@@ -2165,6 +2271,8 @@ pub fn run() {
             open_input_monitoring_settings,
             config_load,
             config_save,
+            config_export_kbd,
+            config_import_kbd,
             profiles_list,
             profiles_get_active,
             profiles_create,

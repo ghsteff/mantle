@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import { getKeyLabel } from "../../keyboard/utils/layout";
 import { TerminalKeyInput } from "./components/terminal-key-input";
 import { useActionEditor } from "./hooks/use-action-editor";
 import { Pointer, Hand, Layers } from "lucide-react";
@@ -51,25 +50,10 @@ export function ActionEditor({
     setLayerMode,
   } = useActionEditor({ keyId, currentAction, onSave, layers });
 
-  const { label } = getKeyLabel(keyId);
-
   const isHoldActionSet = !isHoldKeyEmpty(holdKey);
 
   return (
     <div className="space-y-5 animate-slide-up-fade">
-      {/* Key identity */}
-      <div className="pb-4 border-b border-border">
-        <span className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground font-medium">
-          Editing
-        </span>
-        <div className="flex items-baseline gap-2 mt-1">
-          <span className="text-foreground font-mono text-base font-semibold tracking-tight">
-            {label}
-          </span>
-          <span className="text-muted-foreground/60 text-[11px] font-mono">{keyId}</span>
-        </div>
-      </div>
-
       <div className="space-y-4">
         {/* Mode selector — segmented pill */}
         <div className="space-y-2">
@@ -165,10 +149,9 @@ export function ActionEditor({
 
               {holdKey.startsWith("(layer-") ? (
                 <div className="space-y-2">
-                  <select
+                  <Select
                     value={holdLayer}
-                    onChange={(e) => {
-                      const newLayer = e.target.value;
+                    onValueChange={(newLayer) => {
                       setHoldLayer(newLayer);
                       setHoldKey(
                         holdLayerMode === "momentary"
@@ -176,19 +159,18 @@ export function ActionEditor({
                           : `(layer-toggle ${newLayer})`
                       );
                     }}
-                    className={cn(
-                      "w-full px-3 py-1.5 rounded-md font-mono text-[11px]",
-                      "bg-muted/50 border border-border text-foreground",
-                      "focus:border-accent/50 focus:ring-1 focus:ring-accent/20 outline-none",
-                      "transition-colors duration-150",
-                    )}
                   >
-                    {layers.map((layer) => (
-                      <option key={layer} value={layer}>
-                        {layer}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full border-border font-mono text-[11px] focus-visible:border-border focus-visible:ring-0 focus-visible:ring-transparent">
+                      <SelectValue placeholder="Select layer..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {layers.map((layer) => (
+                        <SelectItem key={layer} value={layer}>
+                          {layer}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <div className="flex gap-1.5">
                     <Button
                       onClick={() => {

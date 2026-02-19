@@ -68,6 +68,7 @@ export const Key = memo(function Key({
     <button
       type="button"
       onClick={handleClick}
+      data-key-editor-target="true"
       className={cn(
         "absolute font-mono select-none",
         "flex flex-col items-center justify-center overflow-hidden",

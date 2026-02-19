@@ -11,3 +11,15 @@ export {
   MultiSelectComboboxChips,
 } from "./multi-select-combobox";
 export { ResizablePanel } from "./resizable-panel";
+export {
+  Drawer,
+  DrawerTrigger,
+  DrawerPortal,
+  DrawerClose,
+  DrawerOverlay,
+  DrawerContent,
+  DrawerHeader,
+  DrawerFooter,
+  DrawerTitle,
+  DrawerDescription,
+} from "./drawer";

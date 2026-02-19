@@ -1,12 +1,20 @@
 import { useEffect } from "react";
 import { KeyInspector } from "./editor";
 import { KeyboardGrid } from "./keyboard";
-import { useConfigState, useProfile } from "../contexts";
+import {
+  useConfigState,
+  useProfile,
+  useUIActions,
+  useUIState,
+} from "../contexts";
 import { qwertyPreset } from "../presets";
+import { cn } from "@/lib/utils";
 
 export function MainContent() {
   const { isLoading, error, hasProfiles } = useConfigState();
   const { createProfile, switchProfile, refreshProfiles } = useProfile();
+  const { setSelectedKey } = useUIActions();
+  const { selectedKey } = useUIState();
 
   useEffect(() => {
     if (!isLoading && !hasProfiles) {
@@ -49,9 +57,24 @@ export function MainContent() {
   }
 
   return (
-    <main className="flex-1 flex overflow-hidden relative noise-overlay">
-      <KeyboardGrid />
+    <>
+      <main
+        onPointerDownCapture={(event) => {
+          if (!selectedKey) return;
+          const target = event.target;
+          if (!(target instanceof HTMLElement)) return;
+          if (target.closest("[data-key-editor-target='true']")) return;
+          if (target.closest("[data-slot='drawer-content']")) return;
+          setSelectedKey(null);
+        }}
+        className={cn(
+          "relative flex flex-1 overflow-hidden noise-overlay transition-[padding] duration-300",
+          selectedKey && "pr-80"
+        )}
+      >
+        <KeyboardGrid />
+      </main>
       <KeyInspector />
-    </main>
+    </>
   );
 }
