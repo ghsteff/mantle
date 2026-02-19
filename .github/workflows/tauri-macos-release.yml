@@ -1,0 +1,51 @@
+name: tauri-macos-release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "tauri-v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release-tauri:
+    runs-on: macos-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+      APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build, sign, notarize, and draft release
+        uses: tauri-apps/tauri-action@v0
+        with:
+          tagName: "tauri-v__VERSION__"
+          releaseName: "Mantle Tauri v__VERSION__"
+          releaseBody: "Automated signed/notarized macOS Tauri release."
+          releaseDraft: true
+          prerelease: true
