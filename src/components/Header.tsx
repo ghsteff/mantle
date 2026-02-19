@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { LayerTabs } from "./editor";
 import { ProfileSwitcher, ImportExportButton } from "./profiles";
 import { StatusIndicator } from "./status";
 import { Button } from "./ui";
 import { useConfigActions, useConfigState, useProfile } from "../contexts";
 import { cn } from "@/lib/utils";
+import mantleLogo from "../../images/icon.png";
 
 export function Header() {
   const { isDirty, hasProfiles } = useConfigState();
@@ -21,24 +23,46 @@ export function Header() {
     }
   };
 
+  const handleHeaderMouseDown = (event: MouseEvent<HTMLElement>) => {
+    if (event.button !== 0) return;
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    if (
+      target.closest(
+        "button, a, input, select, textarea, [role='button'], [role='switch'], [role='tab'], [data-no-window-drag='true']",
+      )
+    ) {
+      return;
+    }
+
+    void getCurrentWindow().startDragging();
+  };
+
   return (
-    <header className="h-12 glass border-b border-border flex items-center justify-between drag-region pl-20 pr-4 z-20">
-      <div className="flex items-center gap-3 no-drag-region">
-        <h1 className="text-[13px] font-semibold tracking-[-0.01em] text-foreground/90">
-          Mantle
-        </h1>
+    <header
+      className="relative h-11 bg-background/30 backdrop-blur-xl border-b border-white/5 flex items-center justify-between pl-20 pr-4 z-20"
+      onMouseDown={handleHeaderMouseDown}
+    >
+      <div className="relative z-10 flex items-center gap-3">
+        <img
+          src={mantleLogo}
+          alt="Mantle"
+          className="size-4 rounded-sm opacity-85"
+        />
 
         {hasProfiles && (
           <>
-            <div className="h-3.5 w-px bg-border" />
+            <div className="h-3.5 w-px bg-border/50" />
             <ProfileSwitcher />
-            <div className="h-3.5 w-px bg-border" />
+            <div className="h-3.5 w-px bg-border/50" />
             <LayerTabs />
           </>
         )}
       </div>
 
-      <div className="flex items-center gap-2 no-drag-region">
+      <div className="relative z-10 flex-1 h-full" />
+
+      <div className="relative z-10 flex items-center gap-2">
         <div className={cn(
           "flex items-center gap-2 transition-all duration-200 ease-out",
           isDirty

@@ -13,10 +13,16 @@
     "windows": [
       {
         "title": "Mantle",
-        "width": 1400,
+        "width": 1280,
         "height": 700,
         "resizable": true,
-        "fullscreen": false
+        "fullscreen": false,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "trafficLightPosition": {
+          "x": 16,
+          "y": 14
+        }
       }
     ],
     "security": {
