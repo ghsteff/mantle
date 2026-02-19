@@ -6,7 +6,6 @@ import { StatusIndicator } from "./status";
 import { Button } from "./ui";
 import { useConfigActions, useConfigState, useProfile } from "../contexts";
 import { cn } from "@/lib/utils";
-import mantleLogo from "../../images/icon.png";
 
 export function Header() {
   const { isDirty, hasProfiles } = useConfigState();
@@ -44,15 +43,8 @@ export function Header() {
       onMouseDown={handleHeaderMouseDown}
     >
       <div className="relative z-10 flex items-center gap-3">
-        <img
-          src={mantleLogo}
-          alt="Mantle"
-          className="size-4 rounded-sm opacity-85"
-        />
-
         {hasProfiles && (
           <>
-            <div className="h-3.5 w-px bg-border/50" />
             <ProfileSwitcher />
             <div className="h-3.5 w-px bg-border/50" />
             <LayerTabs />
