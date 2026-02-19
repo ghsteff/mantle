@@ -11,7 +11,18 @@ permissions:
 
 jobs:
   release-tauri:
-    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        include:
+          - runner: macos-14
+            target: aarch64-apple-darwin
+            arch_label: apple-silicon
+          - runner: macos-13
+            target: x86_64-apple-darwin
+            arch_label: intel
+    runs-on: ${{ matrix.runner }}
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
@@ -37,6 +48,8 @@ jobs:
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
 
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
@@ -46,6 +59,7 @@ jobs:
         with:
           tagName: "tauri-v__VERSION__"
           releaseName: "Mantle Tauri v__VERSION__"
-          releaseBody: "Automated signed/notarized macOS Tauri release."
+          releaseBody: "Automated signed/notarized macOS Tauri release (Apple Silicon + Intel)."
           releaseDraft: true
           prerelease: true
+          args: "--target ${{ matrix.target }}"
