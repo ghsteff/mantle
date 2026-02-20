@@ -165,16 +165,23 @@ export function LogPanel() {
           direction="bottom"
           className="h-[320px] border-t border-border bg-card/95"
         >
-          <DrawerHeader className="border-b border-border-subtle px-4 py-2">
+          <DrawerHeader className="border-b border-border-subtle px-4 py-2" data-vaul-no-drag>
             <div className="flex items-center justify-between gap-3">
-              <DrawerTitle className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                Console
-                {hiddenLogCount > 0 && (
-                  <span className="ml-1.5 normal-case tracking-normal text-muted-foreground/50">
-                    (last {MAX_VISIBLE_LOGS} of {logs.length})
-                  </span>
-                )}
-              </DrawerTitle>
+              <button
+                type="button"
+                onClick={() => setIsConsoleOpen(false)}
+                className="flex items-center gap-2 transition-colors hover:text-foreground"
+              >
+                <ChevronUp className="size-3 rotate-180 text-muted-foreground/70" />
+                <DrawerTitle className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                  Console
+                  {hiddenLogCount > 0 && (
+                    <span className="ml-1.5 normal-case tracking-normal text-muted-foreground/50">
+                      (last {MAX_VISIBLE_LOGS} of {logs.length})
+                    </span>
+                  )}
+                </DrawerTitle>
+              </button>
               <div className="flex items-center gap-2">
                 {hasPermissionError && (
                   <Button
@@ -204,6 +211,7 @@ export function LogPanel() {
           <div
             ref={scrollContainerRef}
             onScroll={handleScroll}
+            data-vaul-no-drag
             className="flex-1 overflow-auto px-4 py-2 font-mono text-[11px] leading-relaxed"
           >
             {logs.length === 0 && (
