@@ -53,9 +53,13 @@ export function useOnboardingFlow({
       !hasStartedAfterOnboardingRef.current
     ) {
       hasStartedAfterOnboardingRef.current = true;
-      setTimeout(() => {
+      const timeoutId = window.setTimeout(() => {
         start();
       }, 500);
+
+      return () => {
+        window.clearTimeout(timeoutId);
+      };
     }
   }, [
     onboardingCompleted,

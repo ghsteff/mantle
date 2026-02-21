@@ -5,6 +5,7 @@ import {
   useEffect,
   useCallback,
   useMemo,
+  useRef,
   type ReactNode,
 } from "react";
 import type { DriverStatus } from "../types";
@@ -56,6 +57,7 @@ export function KarabinerProvider({ children }: { children: ReactNode }) {
     output: [],
     error: null,
   });
+  const checkStatusTimeoutRef = useRef<number | null>(null);
 
   const mapReadiness = useCallback((nextStatus: DriverStatus): DriverReadiness => {
     if (nextStatus.driverInstalled && nextStatus.driverActivated) {
@@ -119,7 +121,10 @@ export function KarabinerProvider({ children }: { children: ReactNode }) {
     try {
       const success = await activateDriverInRuntime();
       if (success) {
-        setTimeout(() => {
+        if (checkStatusTimeoutRef.current !== null) {
+          window.clearTimeout(checkStatusTimeoutRef.current);
+        }
+        checkStatusTimeoutRef.current = window.setTimeout(() => {
           checkStatus();
         }, 2000);
       }
@@ -141,6 +146,14 @@ export function KarabinerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     checkStatus();
   }, [checkStatus]);
+
+  useEffect(() => {
+    return () => {
+      if (checkStatusTimeoutRef.current !== null) {
+        window.clearTimeout(checkStatusTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;

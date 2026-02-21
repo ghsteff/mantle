@@ -52,6 +52,7 @@ export function DriverOnboardingModal({
 
   const [step, setStep] = useState<OnboardingStep>("install");
   const terminalRef = useRef<HTMLDivElement>(null);
+  const checkStatusTimeoutRef = useRef<number | null>(null);
   const driverInstalled = status?.driverInstalled ?? null;
   const driverActivated = status?.driverActivated ?? null;
   const driverPendingApproval = status?.driverPendingApproval ?? null;
@@ -67,6 +68,14 @@ export function DriverOnboardingModal({
       terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
     }
   }, [installOutput]);
+
+  useEffect(() => {
+    return () => {
+      if (checkStatusTimeoutRef.current !== null) {
+        window.clearTimeout(checkStatusTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Determine the correct starting step based on current state
   useEffect(() => {
@@ -127,7 +136,12 @@ export function DriverOnboardingModal({
 
   const handleRetryActivation = async () => {
     await activateDriver();
-    setTimeout(() => checkStatus(), 2000);
+    if (checkStatusTimeoutRef.current !== null) {
+      window.clearTimeout(checkStatusTimeoutRef.current);
+    }
+    checkStatusTimeoutRef.current = window.setTimeout(() => {
+      checkStatus();
+    }, 2000);
   };
 
   const handleNext = () => {
