@@ -605,6 +605,16 @@ fn run_admin_shell(command: &str) -> Result<String, String> {
 }
 
 #[cfg(target_os = "macos")]
+fn run_admin_command(program: &str, args: &[&str]) -> Result<String, String> {
+    // osascript "do shell script" only accepts a string command; build it from
+    // individually-escaped argv parts to avoid shell injection via interpolation.
+    let mut parts = Vec::with_capacity(args.len() + 1);
+    parts.push(shell_single_quote(program));
+    parts.extend(args.iter().map(|arg| shell_single_quote(arg)));
+    run_admin_shell(&parts.join(" "))
+}
+
+#[cfg(target_os = "macos")]
 fn run_command(program: &str, args: &[&str]) -> Result<String, String> {
     let output = Command::new(program)
         .args(args)
@@ -826,32 +836,35 @@ fn install_passwordless_launchdaemon(
     fs::write(&temp_sudoers_path, sudoers_content)
         .map_err(|error| format!("Failed to write temporary sudoers file: {error}"))?;
 
-    let escaped_log_dir = shell_single_quote(DAEMON_LOG_DIR);
-    let escaped_temp_plist = shell_single_quote(&temp_plist_path.display().to_string());
-    let escaped_temp_vhid_plist = shell_single_quote(&temp_vhid_plist_path.display().to_string());
-    let escaped_daemon_plist = shell_single_quote(DAEMON_PLIST_PATH);
-    let escaped_vhid_daemon_plist = shell_single_quote(VHID_DAEMON_PLIST_PATH);
-    let escaped_temp_sudoers = shell_single_quote(&temp_sudoers_path.display().to_string());
-    let escaped_sudoers = shell_single_quote(SUDOERS_PATH);
+    let temp_plist = temp_plist_path.to_string_lossy().to_string();
+    let temp_vhid_plist = temp_vhid_plist_path.to_string_lossy().to_string();
+    let temp_sudoers = temp_sudoers_path.to_string_lossy().to_string();
 
-    let command = format!(
-        "mkdir -p {escaped_log_dir} && \
-cp {escaped_temp_plist} {escaped_daemon_plist} && \
-chown root:wheel {escaped_daemon_plist} && \
-chmod 644 {escaped_daemon_plist} && \
-cp {escaped_temp_vhid_plist} {escaped_vhid_daemon_plist} && \
-chown root:wheel {escaped_vhid_daemon_plist} && \
-chmod 644 {escaped_vhid_daemon_plist} && \
-cp {escaped_temp_sudoers} {escaped_sudoers} && \
-chown root:wheel {escaped_sudoers} && \
-chmod 440 {escaped_sudoers} && \
-(launchctl bootout system/{VHID_DAEMON_LABEL} >/dev/null 2>&1 || true) && \
-launchctl bootstrap system/ {escaped_vhid_daemon_plist} && \
-(launchctl bootout system/{DAEMON_LABEL} >/dev/null 2>&1 || true) && \
-launchctl bootstrap system/ {escaped_daemon_plist}"
-    );
+    // Install plist + sudoers files (requires admin privileges).
+    run_admin_command("/bin/mkdir", &["-p", DAEMON_LOG_DIR]).map(|_| ())?;
 
-    let result = run_admin_shell(&command).map(|_| ());
+    run_admin_command("/bin/cp", &[&temp_plist, DAEMON_PLIST_PATH]).map(|_| ())?;
+    run_admin_command("/usr/sbin/chown", &["root:wheel", DAEMON_PLIST_PATH]).map(|_| ())?;
+    run_admin_command("/bin/chmod", &["644", DAEMON_PLIST_PATH]).map(|_| ())?;
+
+    run_admin_command("/bin/cp", &[&temp_vhid_plist, VHID_DAEMON_PLIST_PATH]).map(|_| ())?;
+    run_admin_command("/usr/sbin/chown", &["root:wheel", VHID_DAEMON_PLIST_PATH]).map(|_| ())?;
+    run_admin_command("/bin/chmod", &["644", VHID_DAEMON_PLIST_PATH]).map(|_| ())?;
+
+    run_admin_command("/bin/cp", &[&temp_sudoers, SUDOERS_PATH]).map(|_| ())?;
+    run_admin_command("/usr/sbin/chown", &["root:wheel", SUDOERS_PATH]).map(|_| ())?;
+    run_admin_command("/bin/chmod", &["440", SUDOERS_PATH]).map(|_| ())?;
+
+    // Restart daemons. `bootout` fails if not loaded; ignore and continue.
+    let vhid_target = format!("system/{VHID_DAEMON_LABEL}");
+    let daemon_target = format!("system/{DAEMON_LABEL}");
+    let _ = run_admin_command("/bin/launchctl", &["bootout", &vhid_target]);
+    run_admin_command("/bin/launchctl", &["bootstrap", "system/", VHID_DAEMON_PLIST_PATH])
+        .map(|_| ())?;
+    let _ = run_admin_command("/bin/launchctl", &["bootout", &daemon_target]);
+    run_admin_command("/bin/launchctl", &["bootstrap", "system/", DAEMON_PLIST_PATH]).map(|_| ())?;
+
+    let result = Ok(());
     let _ = fs::remove_file(temp_plist_path);
     let _ = fs::remove_file(temp_vhid_plist_path);
     let _ = fs::remove_file(temp_sudoers_path);
