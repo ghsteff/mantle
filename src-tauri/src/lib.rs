@@ -1483,24 +1483,14 @@ fn extract_driverkit_pkg(source_pkg: &str) -> Result<String, String> {
 
 #[cfg(target_os = "macos")]
 fn install_pkg_elevated(pkg_path: &str) -> Result<(), String> {
-    let script = format!(
-        "do shell script \"installer -pkg {} -target /\" with administrator privileges",
-        shell_single_quote(pkg_path)
-    );
-    let result = Command::new("osascript")
-        .arg("-e")
-        .arg(&script)
-        .output()
-        .map_err(|e| format!("Failed to run osascript: {e}"))?;
-
-    if result.status.success() {
-        Ok(())
-    } else {
-        let stderr = String::from_utf8_lossy(&result.stderr);
-        if stderr.contains("User canceled") || stderr.contains("(-128)") {
-            Err("User cancelled the installation".to_string())
-        } else {
-            Err(format!("Installer failed: {stderr}"))
+    match run_admin_command("/usr/sbin/installer", &["-pkg", pkg_path, "-target", "/"]) {
+        Ok(_) => Ok(()),
+        Err(error) => {
+            if error.contains("User canceled") || error.contains("(-128)") {
+                Err("User cancelled the installation".to_string())
+            } else {
+                Err(format!("Installer failed: {error}"))
+            }
         }
     }
 }
