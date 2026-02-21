@@ -183,21 +183,42 @@ function parseTokens(content: string): string[] {
   const tokens: string[] = [];
   let current = "";
   let depth = 0;
+  let inQuotes = false;
+  let isEscaped = false;
 
   for (let i = 0; i < content.length; i++) {
     const char = content[i];
 
-    if (char === "(") {
+    if (isEscaped) {
+      current += char;
+      isEscaped = false;
+      continue;
+    }
+
+    if (char === "\\") {
+      // Preserve escapes (primarily for quoted strings).
+      current += char;
+      isEscaped = true;
+      continue;
+    }
+
+    if (char === "\"") {
+      inQuotes = !inQuotes;
+      current += char;
+      continue;
+    }
+
+    if (!inQuotes && char === "(") {
       depth++;
       current += char;
-    } else if (char === ")") {
+    } else if (!inQuotes && char === ")") {
       depth--;
       current += char;
       if (depth === 0 && current.trim()) {
         tokens.push(current.trim());
         current = "";
       }
-    } else if (/\s/.test(char) && depth === 0) {
+    } else if (!inQuotes && /\s/.test(char) && depth === 0) {
       if (current.trim()) {
         tokens.push(current.trim());
         current = "";
