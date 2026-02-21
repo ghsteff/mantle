@@ -20,6 +20,7 @@ import {
   DialogTrigger,
 } from "../ui/dialog";
 import { PlusIcon } from "lucide-react";
+import { getProfileNameError } from "@/lib/profile-name";
 
 interface NewProfileDialogProps {
   onComplete: (profileName: string, preset: Preset) => Promise<void>;
@@ -46,13 +47,14 @@ export function NewProfileDialog({
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
   const [profileName, setProfileName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const profileNameError = getProfileNameError(profileName);
 
   const selectedPreset = selectedPresetId
     ? ALL_PRESETS.find((p) => p.metadata.id === selectedPresetId) || null
     : null;
 
   const handleCreate = async () => {
-    if (profileName.trim()) {
+    if (!profileNameError) {
       setIsCreating(true);
       try {
         // Use selected preset or default to QWERTY
@@ -113,11 +115,14 @@ export function NewProfileDialog({
               placeholder="e.g., work, gaming, ergonomic"
               autoFocus
               onKeyDown={(e) => {
-                if (e.key === "Enter" && profileName.trim() && !isCreating) {
+                if (e.key === "Enter" && !profileNameError && !isCreating) {
                   handleCreate();
                 }
               }}
             />
+            {profileNameError && (
+              <p className="text-xs text-status-error">{profileNameError}</p>
+            )}
           </div>
 
           {/* Optional Template Selection */}
@@ -164,7 +169,7 @@ export function NewProfileDialog({
           </Button>
           <Button
             onClick={handleCreate}
-            disabled={!profileName.trim() || isCreating}
+            disabled={Boolean(profileNameError) || isCreating}
             className="min-w-24"
           >
             {isCreating ? "Creating..." : "Create Profile"}

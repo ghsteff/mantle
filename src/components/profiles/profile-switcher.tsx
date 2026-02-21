@@ -31,6 +31,7 @@ import {
   ChevronsUpDown,
   PlusIcon,
 } from "lucide-react";
+import { getProfileNameError } from "@/lib/profile-name";
 
 export function ProfileSwitcher() {
   const { profiles, activeProfile } = useConfigState();
@@ -42,6 +43,7 @@ export function ProfileSwitcher() {
   const [targetProfile, setTargetProfile] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
   const [open, setOpen] = useState(false);
+  const newNameError = getProfileNameError(newName);
 
   const handleRenameClick = useCallback((name: string) => {
     setTargetProfile(name);
@@ -55,13 +57,13 @@ export function ProfileSwitcher() {
   }, []);
 
   const handleRename = useCallback(async () => {
-    if (targetProfile && newName.trim() && newName !== targetProfile) {
-      await renameProfile(targetProfile, newName.trim());
+    if (targetProfile && !newNameError && newName.trim() !== targetProfile) {
+      await renameProfile(targetProfile, newName);
     }
     setRenameDialogOpen(false);
     setTargetProfile(null);
     setNewName("");
-  }, [newName, renameProfile, targetProfile]);
+  }, [newName, newNameError, renameProfile, targetProfile]);
 
   const handleDelete = useCallback(async () => {
     if (targetProfile) {
@@ -172,6 +174,9 @@ export function ProfileSwitcher() {
             }}
             autoFocus
           />
+          {newNameError && (
+            <p className="text-xs text-status-error">{newNameError}</p>
+          )}
           <DialogFooter>
             <Button
               variant="ghost"
@@ -179,7 +184,10 @@ export function ProfileSwitcher() {
             >
               Cancel
             </Button>
-            <Button onClick={handleRename} disabled={!newName.trim()}>
+            <Button
+              onClick={handleRename}
+              disabled={Boolean(newNameError) || newName.trim() === targetProfile}
+            >
               Rename
             </Button>
           </DialogFooter>
