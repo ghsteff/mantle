@@ -55,6 +55,34 @@ Note on naming: `src-tauri/` is the standard folder name used by Tauri (v1 and v
   - Files: `src/components/ui/*`
   - Fix: prefer `@radix-ui/react-*` packages, remove `radix-ui` dependency if unused afterwards.
 
+## Remaining Backlog
+
+These are follow-ups from the original scan that weren’t captured in the initial checklist.
+
+- [ ] Rust: replace root/admin shell-string execution with structured `Command` steps
+  - Files: `src-tauri/src/lib.rs` (`install_passwordless_launchdaemon`, `run_admin_shell` usage)
+  - Goal: reduce injection risk, improve error reporting, ensure partial failures clean up.
+
+- [ ] Rust: reduce blocking I/O on command handlers (avoid UI stalls)
+  - Files: `src-tauri/src/lib.rs`
+  - Goal: move heavy work off the main thread; avoid `thread::sleep` in command handlers.
+
+- [ ] Kanata parser: parse all `(defalias ...)` blocks and merge deterministically
+  - Files: `src/kanata/parser.ts`
+  - Goal: don’t drop aliases on import when multiple blocks exist.
+
+- [ ] Kanata parser: quote-aware tokenization
+  - Files: `src/kanata/parser.ts`
+  - Goal: handle quoted strings containing spaces without corrupting tokens.
+
+- [ ] UI: remove `confirm()`/`alert()` usage in favor of app dialogs
+  - Files: `src/contexts/profile-context.tsx`, `src/components/editor/layer-tabs.tsx`, `src/components/profiles/import-export-button.tsx`
+  - Goal: consistent UI/UX and testable flows.
+
+- [ ] State modeling: reduce redundant/derived flags (“boolean soup”)
+  - Files: `src/contexts/config-context.tsx`, `src/contexts/karabiner-context.tsx`
+  - Goal: discriminated unions over multiple booleans/derived fields where practical.
+
 ## Working Agreement
 
 - Each checkbox lands as its own commit.
