@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { KeyInspector } from "./editor";
 import { KeyboardGrid } from "./keyboard";
 import {
@@ -15,18 +15,27 @@ export function MainContent() {
   const { createProfile, switchProfile, refreshProfiles } = useProfile();
   const { setSelectedKey } = useUIActions();
   const { selectedKey } = useUIState();
+  const defaultProfileBootstrapStateRef = useRef<"idle" | "in_progress" | "done">("idle");
 
   useEffect(() => {
+    if (defaultProfileBootstrapStateRef.current !== "idle") {
+      return;
+    }
     if (!isLoading && !hasProfiles) {
+      defaultProfileBootstrapStateRef.current = "in_progress";
       const createDefault = async () => {
         const success = await createProfile(
           "default",
           structuredClone(qwertyPreset.config)
         );
-        if (success) {
-          await switchProfile("default");
-          await refreshProfiles();
+        if (!success) {
+          defaultProfileBootstrapStateRef.current = "idle";
+          return;
         }
+
+        await switchProfile("default");
+        await refreshProfiles();
+        defaultProfileBootstrapStateRef.current = "done";
       };
       createDefault();
     }
