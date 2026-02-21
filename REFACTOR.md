@@ -63,7 +63,7 @@ These are follow-ups from the original scan that weren’t captured in the initi
   - Files: `src-tauri/src/lib.rs` (`install_passwordless_launchdaemon`, `run_admin_shell` usage)
   - Goal: reduce injection risk, improve error reporting, ensure partial failures clean up.
 
-- [ ] Rust: reduce blocking I/O on command handlers (avoid UI stalls)
+- [x] Rust: reduce blocking I/O on command handlers (avoid UI stalls)
   - Files: `src-tauri/src/lib.rs`
   - Goal: move heavy work off the main thread; avoid `thread::sleep` in command handlers.
 
