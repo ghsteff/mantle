@@ -59,7 +59,7 @@ Note on naming: `src-tauri/` is the standard folder name used by Tauri (v1 and v
 
 These are follow-ups from the original scan that weren’t captured in the initial checklist.
 
-- [ ] Rust: replace root/admin shell-string execution with structured `Command` steps
+- [x] Rust: replace root/admin shell-string execution with structured `Command` steps
   - Files: `src-tauri/src/lib.rs` (`install_passwordless_launchdaemon`, `run_admin_shell` usage)
   - Goal: reduce injection risk, improve error reporting, ensure partial failures clean up.
 
