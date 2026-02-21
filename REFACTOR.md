@@ -67,11 +67,11 @@ These are follow-ups from the original scan that weren’t captured in the initi
   - Files: `src-tauri/src/lib.rs`
   - Goal: move heavy work off the main thread; avoid `thread::sleep` in command handlers.
 
-- [ ] Kanata parser: parse all `(defalias ...)` blocks and merge deterministically
+- [x] Kanata parser: parse all `(defalias ...)` blocks and merge deterministically
   - Files: `src/kanata/parser.ts`
   - Goal: don’t drop aliases on import when multiple blocks exist.
 
-- [ ] Kanata parser: quote-aware tokenization
+- [x] Kanata parser: quote-aware tokenization
   - Files: `src/kanata/parser.ts`
   - Goal: handle quoted strings containing spaces without corrupting tokens.
 
