@@ -13,7 +13,7 @@ This project is now **macOS-only**. Any code paths, packaging config, binaries, 
 ### 1) Sanitize profile names to prevent path traversal
 
 - **Priority:** P0
-- **Files:** `src/kanata/config-manager.ts`, any renderer code that creates/renames profiles
+- **Files:** `src-tauri/src/lib.rs`, any renderer code that creates/renames profiles
 - **Problem:** Profile names are used in file paths (`config-${profileName}.json`) without strict validation. Names containing separators or traversal sequences can escape the intended config directory.
 - **Why this matters:** A crafted profile name can cause unintended file read/write/rename/delete under user permissions.
 - **What to change:**
@@ -29,7 +29,7 @@ This project is now **macOS-only**. Any code paths, packaging config, binaries, 
 ### 2) Restrict backup restore paths
 
 - **Priority:** P0
-- **Files:** `src/kanata/config-manager.ts`, `src/ipc/handlers.ts`
+- **Files:** `src-tauri/src/lib.rs`, `src/platform/config-maintenance-runtime.ts`
 - **Problem:** `restoreBackup(backupPath)` trusts arbitrary paths from IPC.
 - **Why this matters:** Renderer can request reading unrelated local files and overwrite active profile if parsed shape appears valid.
 - **What to change:**
@@ -47,12 +47,11 @@ This project is now **macOS-only**. Any code paths, packaging config, binaries, 
 ### 3) Remove Windows/Linux packaging + binary references
 
 - **Priority:** P1
-- **Files:** `forge.config.ts`, `bin/` assets, docs (`README.md` if needed)
+- **Files:** `bin/` assets, docs (`README.md` if needed), `src-tauri/tauri.conf.json`
 - **Problem:** Build config and repository still include Windows/Linux makers and binaries.
 - **Why this matters:** Creates false support expectations and maintenance burden.
 - **What to change:**
-  - In `forge.config.ts`, remove non-macOS makers (`MakerSquirrel`, `MakerDeb`, `MakerRpm`) and keep mac packaging only.
-  - Remove non-mac binaries from `extraResource`; keep only macOS binaries needed at runtime.
+  - Remove non-mac binaries from `bin/`; keep only macOS binaries needed at runtime.
   - Remove stale non-mac binaries from `bin/` if repository policy allows deleting tracked artifacts.
   - Update README/docs to state macOS-only support explicitly.
 - **Acceptance criteria:**
@@ -74,16 +73,16 @@ This project is now **macOS-only**. Any code paths, packaging config, binaries, 
   - Startup code path is straightforward and mac-specific.
   - No calls to Unix-vs-Windows branching for Kanata runtime remain unless strictly needed for guardrails.
 
-### 5) Fix `window-all-closed` behavior for predictable app quit behavior
+### 5) Make close/hide behavior explicit
 
 - **Priority:** P1
-- **Files:** `src/main.ts`
-- **Problem:** Code currently no-ops on `window-all-closed` for all platforms.
+- **Files:** `src-tauri/src/lib.rs`
+- **Problem:** Close behavior is implemented in the Tauri run loop; product intent should be explicit (hide-on-close vs quit-on-close).
 - **Why this matters:** Even in macOS-only app, this diverges from expected lifecycle and can leave background process running unexpectedly.
 - **What to change:**
   - Implement intended lifecycle explicitly.
   - If desired behavior is "mac style keep-alive", keep it but update comments to match.
-  - If desired behavior is "quit when all windows close", call `app.quit()` accordingly.
+  - If desired behavior is "quit on close", implement quit semantics accordingly.
   - Make comments and behavior consistent.
 - **Acceptance criteria:**
   - Closing the last window behaves exactly as product intent specifies.
@@ -96,8 +95,8 @@ This project is now **macOS-only**. Any code paths, packaging config, binaries, 
 ### 6) Prevent event listener leaks when recreating windows
 
 - **Priority:** P2
-- **Files:** `src/ipc/handlers.ts`, `src/main.ts`
-- **Problem:** `setupProcessEventForwarding(mainWindow)` attaches listeners each time a new window is created; old listeners are not cleaned up.
+- **Files:** `src/platform/*`, `src/contexts/*`
+- **Problem:** Event subscriptions can accumulate if providers mount/unmount repeatedly without cleanup.
 - **Why this matters:** Duplicate events, memory growth, and eventual `EventEmitter` warnings.
 - **What to change:**
   - Register one forwarding layer globally, or

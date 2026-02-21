@@ -14,13 +14,13 @@ Build complex keyboard layouts with an intuitive GUI instead of writing Lisp con
 - 🔍 **Key Autocomplete** — Searchable dropdown with all Kanata key codes organized by category
 - ⚡ **Live Reload** — Changes apply immediately when Kanata is running
 - 💾 **Auto-Save** — Configuration persists automatically
-- 🖥️ **Cross-Platform** — Works on macOS, Windows, and Linux
+- 🍎 **macOS** — Currently supported platform
 
 ## Installation
 
 ### Download
 
-Download the latest release for your platform from the [Releases](https://github.com/YOUR_USERNAME/mantle/releases) page.
+Download the latest release from the Releases page.
 
 ### macOS Setup
 
@@ -40,19 +40,6 @@ Mantle requires elevated permissions on macOS to intercept keyboard input:
     - Or when you see a "not permitted" error, click the **Open Input Monitoring Settings** button in the app; this will open the settings pane and reveal the `kanata` binary in Finder so you can easily drag and drop it into the list.
 
 3. **Important**: Quit Karabiner-Elements before using Mantle — they can't both control the keyboard simultaneously.
-
-### Windows Setup
-
-No additional setup required. Run the app as Administrator for keyboard interception to work.
-
-### Linux Setup
-
-Add your user to the `input` group or run with elevated permissions:
-
-```bash
-sudo usermod -aG input $USER
-# Log out and back in for changes to take effect
-```
 
 ## Usage
 
@@ -83,8 +70,6 @@ Layers let you have multiple keyboard layouts you can switch between:
 Mantle stores configuration in:
 
 - **macOS**: `~/Library/Application Support/mantle/kanata/`
-- **Windows**: `%APPDATA%\mantle\kanata\`
-- **Linux**: `~/.config/mantle/kanata/`
 
 Files:
 
