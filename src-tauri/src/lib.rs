@@ -1847,12 +1847,22 @@ fn kanata_get_status(state: State<AppState>) -> String {
 
 #[tauri::command]
 fn kanata_start(app: tauri::AppHandle, state: State<AppState>) -> bool {
-    start_kanata_process(&app, &state.kanata)
+    let app_handle = app.clone();
+    let kanata_state = state.kanata.clone();
+    thread::spawn(move || {
+        start_kanata_process(&app_handle, &kanata_state);
+    });
+    true
 }
 
 #[tauri::command]
 fn kanata_stop(app: tauri::AppHandle, state: State<AppState>) -> bool {
-    stop_kanata_process(&app, &state.kanata)
+    let app_handle = app.clone();
+    let kanata_state = state.kanata.clone();
+    thread::spawn(move || {
+        stop_kanata_process(&app_handle, &kanata_state);
+    });
+    true
 }
 
 #[tauri::command]
