@@ -7,6 +7,20 @@ import {
 } from "../../contexts";
 import { PlusIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+type DeleteLayerDialogState =
+  | { kind: "closed" }
+  | { kind: "open"; layerName: string };
 
 export function LayerTabs() {
   const { config } = useConfigState();
@@ -17,6 +31,8 @@ export function LayerTabs() {
   const [newLayerName, setNewLayerName] = useState("");
   const [editingLayer, setEditingLayer] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
+  const [deleteLayerDialog, setDeleteLayerDialog] =
+    useState<DeleteLayerDialogState>({ kind: "closed" });
 
   const layers = config?.layers || [];
 
@@ -44,20 +60,34 @@ export function LayerTabs() {
     setEditingLayer(null);
   }, [activeLayer, editName, editingLayer, renameLayer, setActiveLayer]);
 
-  const handleDelete = useCallback(
+  const handleDeleteRequest = useCallback(
     (layerName: string) => {
-      if (layers.length > 1 && confirm(`Delete layer "${layerName}"?`)) {
-        removeLayer(layerName, activeLayer);
-        if (activeLayer === layerName && layers.length > 1) {
-          const remaining = layers.filter((l) => l.name !== layerName);
-          if (remaining.length > 0) {
-            setActiveLayer(remaining[0].name);
-          }
-        }
-      }
+      // Extra guard: UI should already hide delete with 1 layer.
+      if (layers.length <= 1) return;
+      setDeleteLayerDialog({ kind: "open", layerName });
     },
-    [activeLayer, layers, removeLayer, setActiveLayer]
+    [layers.length]
   );
+
+  const closeDeleteLayerDialog = () => {
+    setDeleteLayerDialog({ kind: "closed" });
+  };
+
+  const confirmDeleteLayer = useCallback(() => {
+    if (deleteLayerDialog.kind !== "open") return;
+
+    const { layerName } = deleteLayerDialog;
+    removeLayer(layerName, activeLayer);
+
+    if (activeLayer === layerName && layers.length > 1) {
+      const remaining = layers.filter((l) => l.name !== layerName);
+      if (remaining.length > 0) {
+        setActiveLayer(remaining[0].name);
+      }
+    }
+
+    closeDeleteLayerDialog();
+  }, [activeLayer, deleteLayerDialog, layers, removeLayer, setActiveLayer]);
 
   return (
     <div className="flex items-center">
@@ -103,7 +133,7 @@ export function LayerTabs() {
               editingLayer !== layer.name && (
                 <button
                   type="button"
-                  onClick={() => handleDelete(layer.name)}
+                  onClick={() => handleDeleteRequest(layer.name)}
                   className={cn(
                     "absolute -top-1 -right-1 size-3.5 rounded-full",
                     "bg-destructive/80 text-white text-[9px]",
@@ -119,6 +149,30 @@ export function LayerTabs() {
           </div>
         ))}
       </div>
+
+      <AlertDialog
+        open={deleteLayerDialog.kind === "open"}
+        onOpenChange={(open) => {
+          if (!open) closeDeleteLayerDialog();
+        }}
+      >
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete layer?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteLayerDialog.kind === "open"
+                ? `This will permanently delete "${deleteLayerDialog.layerName}".`
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={confirmDeleteLayer}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {isAdding ? (
         <div className="flex items-center gap-1 ml-2 animate-fade-in">
