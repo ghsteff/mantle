@@ -116,6 +116,44 @@ fn read_json(path: &PathBuf) -> Option<serde_json::Value> {
     serde_json::from_str(&content).ok()
 }
 
+fn is_valid_profile_name(name: &str) -> bool {
+    let name = name.trim();
+    if name.is_empty() || name.len() > 64 {
+        return false;
+    }
+
+    // Allowlist to keep names safe for use in file paths.
+    // Note: this is security-oriented validation; UI can still present friendlier rules.
+    name.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+}
+
+fn is_allowed_backup_path(app: &tauri::AppHandle, backup: &PathBuf) -> bool {
+    let Some(config_dir) = tauri_config_dir(app) else {
+        return false;
+    };
+    let Ok(config_dir) = fs::canonicalize(config_dir) else {
+        return false;
+    };
+    let Ok(backup) = fs::canonicalize(backup) else {
+        return false;
+    };
+    if !backup.starts_with(&config_dir) {
+        return false;
+    }
+
+    let Some(file_name) = backup.file_name().and_then(|name| name.to_str()) else {
+        return false;
+    };
+    file_name.starts_with("backup-") && file_name.ends_with(".json")
+}
+
+fn first_valid_profile_name(profiles: &[ProfileInfo]) -> Option<String> {
+    profiles
+        .iter()
+        .find(|profile| is_valid_profile_name(&profile.name))
+        .map(|profile| profile.name.clone())
+}
+
 fn read_profiles_data(path: &PathBuf) -> Option<ProfilesData> {
     let content = fs::read_to_string(path).ok()?;
     serde_json::from_str(&content).ok()
@@ -147,6 +185,10 @@ fn write_file_atomic(path: &PathBuf, bytes: &[u8]) -> bool {
 fn read_active_profile_name(path: &PathBuf) -> Option<String> {
     let profiles_data = read_profiles_data(path)?;
     if profiles_data.active_profile.is_empty() {
+        return None;
+    }
+
+    if !is_valid_profile_name(&profiles_data.active_profile) {
         return None;
     }
 
@@ -1919,6 +1961,14 @@ fn config_list_backups(app: tauri::AppHandle) -> Vec<String> {
         .filter_map(|entry| {
             let file_name = entry.file_name().to_string_lossy().to_string();
             if file_name.starts_with("backup-") && file_name.ends_with(".json") {
+                if !entry
+                    .file_type()
+                    .ok()
+                    .map(|kind| kind.is_file())
+                    .unwrap_or(false)
+                {
+                    return None;
+                }
                 return Some(entry.path().display().to_string());
             }
             None
@@ -1933,6 +1983,9 @@ fn config_list_backups(app: tauri::AppHandle) -> Vec<String> {
 fn config_restore_backup(app: tauri::AppHandle, backup_path: String) -> bool {
     let backup = PathBuf::from(backup_path);
     if !backup.exists() {
+        return false;
+    }
+    if !is_allowed_backup_path(&app, &backup) {
         return false;
     }
 
@@ -2115,6 +2168,9 @@ fn profiles_create(
     created_at: String,
     updated_at: String,
 ) -> bool {
+    if !is_valid_profile_name(&name) {
+        return false;
+    }
     let Some(config_dir) = tauri_config_dir(&app) else {
         return false;
     };
@@ -2165,6 +2221,9 @@ fn profiles_create(
 
 #[tauri::command]
 fn profiles_switch(app: tauri::AppHandle, name: String) -> Option<serde_json::Value> {
+    if !is_valid_profile_name(&name) {
+        return None;
+    }
     let config_dir = tauri_config_dir(&app)?;
     let profiles_path = config_dir.join("profiles.json");
     let mut profiles_data = read_profiles_data(&profiles_path)?;
@@ -2194,6 +2253,9 @@ fn profiles_switch(app: tauri::AppHandle, name: String) -> Option<serde_json::Va
 
 #[tauri::command]
 fn profiles_delete(app: tauri::AppHandle, name: String) -> bool {
+    if !is_valid_profile_name(&name) {
+        return false;
+    }
     let Some(config_dir) = tauri_config_dir(&app) else {
         return false;
     };
@@ -2219,10 +2281,10 @@ fn profiles_delete(app: tauri::AppHandle, name: String) -> bool {
     let deleting_active = profiles_data.active_profile == name;
     profiles_data.profiles.remove(profile_index);
     if deleting_active {
-        let Some(next_profile) = profiles_data.profiles.first() else {
+        let Some(next_profile_name) = first_valid_profile_name(&profiles_data.profiles) else {
             return false;
         };
-        profiles_data.active_profile = next_profile.name.clone();
+        profiles_data.active_profile = next_profile_name;
     }
 
     if !write_profiles_data(&profiles_path, &profiles_data) {
@@ -2237,8 +2299,10 @@ fn profiles_delete(app: tauri::AppHandle, name: String) -> bool {
     }
 
     if deleting_active {
-        let next_config_path =
-            config_dir.join(format!("config-{}.json", profiles_data.active_profile));
+        if !is_valid_profile_name(&profiles_data.active_profile) {
+            return false;
+        }
+        let next_config_path = config_dir.join(format!("config-{}.json", profiles_data.active_profile));
         let Some(next_config) = read_json(&next_config_path) else {
             return false;
         };
@@ -2255,6 +2319,9 @@ fn profiles_rename(
     new_name: String,
     updated_at: String,
 ) -> bool {
+    if !is_valid_profile_name(&old_name) || !is_valid_profile_name(&new_name) {
+        return false;
+    }
     let Some(config_dir) = tauri_config_dir(&app) else {
         return false;
     };
