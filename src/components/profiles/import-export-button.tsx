@@ -3,6 +3,15 @@ import { useProfile } from "../../contexts";
 import { Button } from "../ui";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../ui/alert-dialog";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -19,6 +28,10 @@ interface KeyboardConfig {
   aliases?: Record<string, string>;
 }
 
+type ErrorDialogState =
+  | { kind: "closed" }
+  | { kind: "open"; title: string; description: string };
+
 export function ImportExportButton() {
   const { exportKbd, importKbd, createProfile, switchProfile } = useProfile();
 
@@ -27,6 +40,17 @@ export function ImportExportButton() {
     null
   );
   const [suggestedImportName, setSuggestedImportName] = useState("");
+  const [errorDialog, setErrorDialog] = useState<ErrorDialogState>({
+    kind: "closed",
+  });
+
+  const openErrorDialog = (title: string, description: string) => {
+    setErrorDialog({ kind: "open", title, description });
+  };
+
+  const closeErrorDialog = () => {
+    setErrorDialog({ kind: "closed" });
+  };
 
   const handleExport = async () => {
     const result = await exportKbd();
@@ -35,7 +59,7 @@ export function ImportExportButton() {
       result.error &&
       result.error !== "Export cancelled"
     ) {
-      alert(`Export failed: ${result.error}`);
+      openErrorDialog("Export failed", result.error);
     }
   };
 
@@ -46,7 +70,7 @@ export function ImportExportButton() {
       setSuggestedImportName(result.suggestedName || "imported");
       setImportDialogOpen(true);
     } else if (result.error && result.error !== "Import cancelled") {
-      alert(`Import failed: ${result.error}`);
+      openErrorDialog("Import failed", result.error);
     }
   };
 
@@ -96,6 +120,27 @@ export function ImportExportButton() {
           <TooltipContent>Export .kbd</TooltipContent>
         </Tooltip>
       </div>
+
+      <AlertDialog
+        open={errorDialog.kind === "open"}
+        onOpenChange={(open) => {
+          if (!open) closeErrorDialog();
+        }}
+      >
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {errorDialog.kind === "open" ? errorDialog.title : ""}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {errorDialog.kind === "open" ? errorDialog.description : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={closeErrorDialog}>OK</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
         <DialogContent>
