@@ -1857,12 +1857,16 @@ fn kanata_stop(app: tauri::AppHandle, state: State<AppState>) -> bool {
 
 #[tauri::command]
 fn kanata_restart(app: tauri::AppHandle, state: State<AppState>) -> bool {
-    if !stop_kanata_process(&app, &state.kanata) {
-        return false;
-    }
-
-    thread::sleep(Duration::from_millis(300));
-    start_kanata_process(&app, &state.kanata)
+    // Run restart in the background to avoid blocking the UI thread on waits/sleeps.
+    // The frontend already listens to status/log events for actual progress.
+    let app_handle = app.clone();
+    let kanata_state = state.kanata.clone();
+    thread::spawn(move || {
+        if stop_kanata_process(&app_handle, &kanata_state) {
+            start_kanata_process(&app_handle, &kanata_state);
+        }
+    });
+    true
 }
 
 #[tauri::command]
