@@ -75,7 +75,7 @@ These are follow-ups from the original scan that weren’t captured in the initi
   - Files: `src/kanata/parser.ts`
   - Goal: handle quoted strings containing spaces without corrupting tokens.
 
-- [ ] UI: remove `confirm()`/`alert()` usage in favor of app dialogs
+- [x] UI: remove `confirm()`/`alert()` usage in favor of app dialogs
   - Files: `src/contexts/profile-context.tsx`, `src/components/editor/layer-tabs.tsx`, `src/components/profiles/import-export-button.tsx`
   - Goal: consistent UI/UX and testable flows.
 
