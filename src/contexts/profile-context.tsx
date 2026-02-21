@@ -5,6 +5,7 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useState,
   type ReactNode,
 } from "react";
 import type { KeyboardConfig, ExportResult, ImportResult } from "../types";
@@ -12,6 +13,16 @@ import { useConfigActionsInternal, useConfigState } from "./config-context";
 import { useUIActions, useUIState } from "./ui-context";
 import { toErrorMessage, assertContext } from "../lib/errors";
 import { getProfileNameError } from "../lib/profile-name";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   createProfileInRuntime,
   deleteProfileInRuntime,
@@ -34,6 +45,8 @@ interface ProfileContextValue {
 
 const ProfileContext = createContext<ProfileContextValue | null>(null);
 
+type DiscardChangesDialogState = { kind: "closed" } | { kind: "open" };
+
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const { isDirty, activeProfile } = useConfigState();
   const {
@@ -48,6 +61,27 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const { activeLayer } = useUIState();
   const { setActiveLayer, setSelectedKey } = useUIActions();
   const hasInitialized = useRef(false);
+  const discardChangesResolverRef = useRef<((confirmed: boolean) => void) | null>(
+    null
+  );
+  const [discardChangesDialog, setDiscardChangesDialog] =
+    useState<DiscardChangesDialogState>({ kind: "closed" });
+
+  const resolveDiscardChangesDialog = (confirmed: boolean) => {
+    discardChangesResolverRef.current?.(confirmed);
+    discardChangesResolverRef.current = null;
+    setDiscardChangesDialog({ kind: "closed" });
+  };
+
+  const confirmDiscardUnsavedChanges = useCallback(async () => {
+    // Prevent re-entrancy; switching profiles while already confirming is a bug.
+    if (discardChangesResolverRef.current) return false;
+
+    setDiscardChangesDialog({ kind: "open" });
+    return await new Promise<boolean>((resolve) => {
+      discardChangesResolverRef.current = resolve;
+    });
+  }, []);
 
   // Load profiles list
   const refreshProfiles = useCallback(async () => {
@@ -84,6 +118,14 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     initialize();
   }, [refreshProfiles, loadConfig, activeLayer, setActiveLayer]);
 
+  useEffect(() => {
+    return () => {
+      // If we ever unmount with a pending confirmation, fail closed.
+      discardChangesResolverRef.current?.(false);
+      discardChangesResolverRef.current = null;
+    };
+  }, []);
+
   const createProfile = useCallback(async (name: string, profileConfig: KeyboardConfig): Promise<boolean> => {
     const nameError = getProfileNameError(name);
     if (nameError) {
@@ -117,7 +159,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     }
     // Don't switch if there are unsaved changes
     if (isDirty) {
-      const confirmed = confirm("You have unsaved changes. Discard and switch profiles?");
+      const confirmed = await confirmDiscardUnsavedChanges();
       if (!confirmed) return false;
     }
 
@@ -138,7 +180,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       setError(toErrorMessage(err, "Failed to switch profile"));
       return false;
     }
-  }, [isDirty, refreshProfiles, setConfig, setActiveProfile, setActiveLayer, setIsDirty, setSelectedKey, setError]);
+  }, [confirmDiscardUnsavedChanges, isDirty, refreshProfiles, setConfig, setActiveProfile, setActiveLayer, setIsDirty, setSelectedKey, setError]);
 
   const deleteProfileAction = useCallback(async (name: string): Promise<boolean> => {
     const nameError = getProfileNameError(name);
@@ -227,7 +269,36 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   ]);
 
   return (
-    <ProfileContext.Provider value={value}>{children}</ProfileContext.Provider>
+    <ProfileContext.Provider value={value}>
+      {children}
+
+      <AlertDialog
+        open={discardChangesDialog.kind === "open"}
+        onOpenChange={(open) => {
+          if (!open) resolveDiscardChangesDialog(false);
+        }}
+      >
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved changes. Switching profiles will discard them.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => resolveDiscardChangesDialog(false)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => resolveDiscardChangesDialog(true)}
+            >
+              Discard and switch
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </ProfileContext.Provider>
   );
 }
 
