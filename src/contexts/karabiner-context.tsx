@@ -51,7 +51,6 @@ const DriverActionsContext = createContext<DriverActions | null>(null);
 
 export function KarabinerProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<DriverStatus | null>(null);
-  const [readiness, setReadiness] = useState<DriverReadiness>("checking");
   const [installFlow, setInstallFlow] = useState<DriverInstallFlow>({
     status: "idle",
     output: [],
@@ -77,13 +76,16 @@ export function KarabinerProvider({ children }: { children: ReactNode }) {
     try {
       const nextStatus = await checkDriverInRuntime();
       setStatus(nextStatus);
-      setReadiness(mapReadiness(nextStatus));
     } catch (error) {
       console.error("Failed to check driver status:", error);
       setStatus(null);
-      setReadiness("checking");
     }
   }, [mapReadiness]);
+
+  const readiness = useMemo<DriverReadiness>(() => {
+    if (!status) return "checking";
+    return mapReadiness(status);
+  }, [mapReadiness, status]);
 
   const startInstall = useCallback(async () => {
     setInstallFlow({ status: "installing", output: [], error: null });
