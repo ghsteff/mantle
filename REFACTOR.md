@@ -41,17 +41,17 @@ Note on naming: `src-tauri/` is the standard folder name used by Tauri (v1 and v
 
 ### P3: Tooling / deps cleanup (higher churn, do after P0/P1)
 
-- [ ] Decide on Electron/Electron-Forge dependency removal
+- [x] Decide on Electron/Electron-Forge dependency removal
   - Files: `package.json`
   - Options:
     - Remove if fully migrated to Tauri
     - Keep temporarily if migration is in-progress (but document why)
 
-- [ ] Fix TS module config for Vite + modern TS
+- [x] Fix TS module config for Vite + modern TS
   - Files: `tsconfig.json`
   - Likely change: `module: "ESNext"` and modern `moduleResolution` as needed.
 
-- [ ] Standardize Radix imports (avoid mixing `radix-ui` barrel with `@radix-ui/react-*`)
+- [x] Standardize Radix imports (avoid mixing `radix-ui` barrel with `@radix-ui/react-*`)
   - Files: `src/components/ui/*`
   - Fix: prefer `@radix-ui/react-*` packages, remove `radix-ui` dependency if unused afterwards.
 
