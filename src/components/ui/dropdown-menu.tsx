@@ -1,5 +1,5 @@
 import * as React from "react";
-import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
+import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 
 import { cn } from "@/lib/utils";
 import { IconCheck, IconChevronRight } from "@tabler/icons-react";
