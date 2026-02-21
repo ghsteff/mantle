@@ -79,7 +79,7 @@ These are follow-ups from the original scan that weren’t captured in the initi
   - Files: `src/contexts/profile-context.tsx`, `src/components/editor/layer-tabs.tsx`, `src/components/profiles/import-export-button.tsx`
   - Goal: consistent UI/UX and testable flows.
 
-- [ ] State modeling: reduce redundant/derived flags (“boolean soup”)
+- [x] State modeling: reduce redundant/derived flags (“boolean soup”)
   - Files: `src/contexts/config-context.tsx`, `src/contexts/karabiner-context.tsx`
   - Goal: discriminated unions over multiple booleans/derived fields where practical.
 
