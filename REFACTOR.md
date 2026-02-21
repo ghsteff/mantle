@@ -8,34 +8,34 @@ Note on naming: `src-tauri/` is the standard folder name used by Tauri (v1 and v
 
 ### P0: Security + Data Safety
 
-- [ ] Restrict backup restore paths (prevent arbitrary file reads)
+- [x] Restrict backup restore paths (prevent arbitrary file reads)
   - Files: `src-tauri/src/lib.rs`, `src/platform/config-maintenance-runtime.ts`, `src/platform/tauri-contract.ts`
   - Current issue: `config_restore_backup` accepts any `backup_path` and reads it.
   - Fix: validate the path is within the app config directory and matches a known backup file.
   - Acceptance: restore works for results from `config_list_backups`, fails for `/tmp/foo.json`, `../x.json`, symlinks out of dir.
 
-- [ ] Sanitize profile names (prevent path traversal via `config-{name}.json`)
+- [x] Sanitize profile names (prevent path traversal via `config-{name}.json`)
   - Files: `src-tauri/src/lib.rs`, `src/platform/profiles-runtime.ts`, any UI that creates/renames profiles
   - Fix: strict allowlist validator for profile names; enforce in *all* profile commands (create/switch/delete/rename) and any path construction.
   - Acceptance: reject `../foo`, `a/b`, `a\\b`, empty/whitespace-only; allow `default`, `work`, `gaming-1`.
 
 ### P1: Reliability (timers, async cleanup, one-shot bootstrap)
 
-- [ ] Clear scheduled timeouts / intervals on unmount
+- [x] Clear scheduled timeouts / intervals on unmount
   - Files: `src/hooks/use-onboarding-flow.ts`, `src/components/onboarding/driver-onboarding-modal.tsx`, `src/contexts/karabiner-context.tsx`
   - Fix: store timer IDs in refs and clear them in effect cleanup; guard against setState after unmount.
 
-- [ ] Prevent duplicate default profile creation attempts
+- [x] Prevent duplicate default profile creation attempts
   - Files: `src/components/MainContent.tsx`
   - Fix: `useRef` one-shot guard around default profile bootstrap.
 
 ### P2: Docs + repo truth alignment
 
-- [ ] Update `AGENTS.md` to describe the Tauri architecture (not Electron)
+- [x] Update `AGENTS.md` to describe the Tauri architecture (not Electron)
   - Files: `AGENTS.md`
   - Fix: update runtime description, folder layout, IPC/event flow, and dev/build commands.
 
-- [ ] Update README to match product scope (macOS-only vs cross-platform)
+- [x] Update README to match product scope (macOS-only vs cross-platform)
   - Files: `README.md`, `bugs.md`
   - Fix: make scope consistent and remove stale references to non-existent Electron Forge config if applicable.
 
