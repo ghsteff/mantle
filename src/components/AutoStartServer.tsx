@@ -17,9 +17,11 @@ export function AutoStartServer({ onboardingInProgress }: AutoStartServerProps) 
   const { readiness } = useKarabinerState();
   const { status } = useKanataState();
   const { start } = useKanataActions();
-  const { hasProfiles, isLoading } = useConfigState();
+  const { loadState, profiles } = useConfigState();
   const hasAttemptedStartRef = useRef(false);
   const isServerInactive = status === "idle" || status === "stopped";
+  const hasProfiles = profiles.length > 0;
+  const isLoading = loadState === "loading";
 
   useEffect(() => {
     // Only auto-start once per app session

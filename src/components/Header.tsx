@@ -8,10 +8,11 @@ import { useConfigActions, useConfigState, useProfile } from "../contexts";
 import { cn } from "@/lib/utils";
 
 export function Header() {
-  const { isDirty, hasProfiles } = useConfigState();
+  const { isDirty, profiles } = useConfigState();
   const { applyChanges, discardChanges } = useConfigActions();
   const { refreshProfiles } = useProfile();
   const [isApplying, setIsApplying] = useState(false);
+  const hasProfiles = profiles.length > 0;
 
   const handleApply = async () => {
     setIsApplying(true);

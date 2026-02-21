@@ -15,13 +15,11 @@ import { saveConfigToRuntime } from "../platform/config-saver";
 interface ConfigState {
   config: KeyboardConfig | null;
   loadState: "loading" | "ready" | "error";
-  isLoading: boolean;
   error: string | null;
   isDirty: boolean;
   // Profile state (read-only, managed by ProfileContext)
   profiles: ProfileInfo[];
   activeProfile: string | null;
-  hasProfiles: boolean;
 }
 
 // Public actions for components
@@ -60,7 +58,6 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   // Profile state (managed by ProfileContext but stored here for easy access)
   const [profiles, setProfiles] = useState<ProfileInfo[]>([]);
   const [activeProfile, setActiveProfile] = useState<string | null>(null);
-  const hasProfiles = profiles.length > 0;
 
   const setIsLoading = useCallback((loading: boolean) => {
     setLoadState((prev) => {
@@ -197,14 +194,12 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     () => ({
       config,
       loadState,
-      isLoading: loadState === "loading",
       error,
       isDirty,
       profiles,
       activeProfile,
-      hasProfiles,
     }),
-    [config, loadState, error, isDirty, profiles, activeProfile, hasProfiles]
+    [config, loadState, error, isDirty, profiles, activeProfile]
   );
 
   const actionsValue = useMemo<ConfigInternalActions>(

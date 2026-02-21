@@ -23,8 +23,10 @@ export function KarabinerOnboarding({ onOnboardingStateChange }: KarabinerOnboar
   const { checkStatus } = useKarabinerActions();
   const { status } = useKanataState();
   const { openInputMonitoringSettings, start } = useKanataActions();
-  const { hasProfiles, isLoading } = useConfigState();
+  const { loadState, profiles } = useConfigState();
   const { isMac } = usePlatform();
+  const hasProfiles = profiles.length > 0;
+  const isLoading = loadState === "loading";
 
   const { showOnboarding, handleComplete } = useOnboardingFlow({
     readiness,

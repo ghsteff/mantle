@@ -11,11 +11,13 @@ import { qwertyPreset } from "../presets";
 import { cn } from "@/lib/utils";
 
 export function MainContent() {
-  const { isLoading, error, hasProfiles } = useConfigState();
+  const { loadState, error, profiles } = useConfigState();
   const { createProfile, switchProfile, refreshProfiles } = useProfile();
   const { setSelectedKey } = useUIActions();
   const { selectedKey } = useUIState();
   const defaultProfileBootstrapStateRef = useRef<"idle" | "in_progress" | "done">("idle");
+  const hasProfiles = profiles.length > 0;
+  const isLoading = loadState === "loading";
 
   useEffect(() => {
     if (defaultProfileBootstrapStateRef.current !== "idle") {
