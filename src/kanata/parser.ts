@@ -15,7 +15,7 @@ export interface ParseResult {
  * This parser handles:
  * - (defsrc ...) blocks for source keys
  * - (deflayer name ...) blocks for layers
- * - (defalias ...) blocks for aliases
+ * - (defalias ...) blocks for aliases (can appear multiple times)
  * - Comments (lines starting with ;;)
  */
 export function parseKbdFile(content: string): ParseResult {
@@ -26,7 +26,7 @@ export function parseKbdFile(content: string): ParseResult {
     // Extract blocks
     const defsrcBlock = extractBlock(cleanContent, "defsrc");
     const deflayerBlocks = extractAllBlocks(cleanContent, "deflayer");
-    const defaliasBlock = extractBlock(cleanContent, "defalias");
+    const defaliasBlocks = extractAllBlocks(cleanContent, "defalias");
 
     if (!defsrcBlock) {
       return { success: false, error: "No (defsrc) block found in file" };
@@ -57,8 +57,11 @@ export function parseKbdFile(content: string): ParseResult {
 
     // Parse aliases
     let aliases: Record<string, string> | undefined;
-    if (defaliasBlock) {
-      aliases = parseAliases(defaliasBlock);
+    if (defaliasBlocks.length > 0) {
+      // Deterministic merge: later blocks overwrite earlier aliases.
+      aliases = defaliasBlocks.reduce<Record<string, string>>((acc, block) => {
+        return { ...acc, ...parseAliases(block) };
+      }, {});
     }
 
     const config: KeyboardConfig = {
