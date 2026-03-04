@@ -167,6 +167,8 @@ export function DriverOnboardingModal({
       <DialogContent
         className="max-w-2xl max-h-[90vh] p-0 gap-0 bg-background border-border rounded-none shadow-none flex flex-col overflow-hidden"
         showCloseButton={false}
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
       >
         {/* Header */}
         <div className="h-12 border-b border-border flex items-center justify-between px-6 bg-card select-none">
@@ -248,19 +250,19 @@ export function DriverOnboardingModal({
                 <>
                   <Button
                     variant="outline"
-                    onClick={handleOpenSettings}
+                    onClick={handleDone}
                     className="font-mono text-xs rounded-none border-border hover:bg-secondary"
                   >
-                    OPEN SYSTEM SETTINGS
+                    DONE
                   </Button>
                   <Button
-                    onClick={handleDone}
+                    onClick={handleOpenSettings}
                     className={cn(
                       "font-mono text-xs rounded-none min-w-32 tracking-wide",
                       "bg-foreground text-background hover:bg-foreground/90"
                     )}
                   >
-                    DONE
+                    OPEN SYSTEM SETTINGS
                   </Button>
                 </>
               )}
