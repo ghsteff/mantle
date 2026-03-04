@@ -1358,6 +1358,7 @@ fn find_pkg_in_dir(path: &PathBuf) -> Option<String> {
 
 #[cfg(target_os = "macos")]
 fn karabiner_pkg_path() -> Option<String> {
+    // First check the Caskroom (populated by `brew install --cask`)
     for base in [KARABINER_CASKROOM_ARM64, KARABINER_CASKROOM_X64] {
         let path = PathBuf::from(base);
         if let Some(found) = find_pkg_in_dir(&path) {
@@ -1365,6 +1366,71 @@ fn karabiner_pkg_path() -> Option<String> {
         }
     }
     None
+}
+
+/// Get the pkg path from the brew cache DMG after `brew fetch`.
+/// Mounts the DMG, copies the .pkg to a temp location, then unmounts.
+#[cfg(target_os = "macos")]
+fn extract_pkg_from_brew_cache(brew: &str) -> Option<String> {
+    // Get the cached DMG path
+    let output = Command::new(brew)
+        .args(["--cache", "--cask", "karabiner-elements"])
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let dmg_path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if !PathBuf::from(&dmg_path).exists() {
+        return None;
+    }
+
+    // Mount the DMG
+    let mount_output = Command::new("hdiutil")
+        .args(["attach", "-nobrowse", "-readonly", &dmg_path])
+        .output()
+        .ok()?;
+    if !mount_output.status.success() {
+        return None;
+    }
+
+    // Parse mount point from hdiutil output (last line, last column)
+    let mount_text = String::from_utf8_lossy(&mount_output.stdout);
+    let mount_point = mount_text
+        .lines()
+        .last()?
+        .split('\t')
+        .last()?
+        .trim()
+        .to_string();
+
+    let mount_dir = PathBuf::from(&mount_point);
+    if !mount_dir.exists() {
+        return None;
+    }
+
+    // Find .pkg in the mounted volume
+    let pkg_in_dmg = find_pkg_in_dir(&mount_dir);
+
+    let result = if let Some(src_pkg) = pkg_in_dmg {
+        // Copy pkg to temp so we can unmount the DMG
+        let dest = std::env::temp_dir().join("mantle-karabiner.pkg");
+        let _ = fs::remove_file(&dest);
+        if fs::copy(&src_pkg, &dest).is_ok() {
+            Some(dest.display().to_string())
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    // Unmount
+    let _ = Command::new("hdiutil")
+        .args(["detach", &mount_point])
+        .output();
+
+    result
 }
 
 #[cfg(target_os = "macos")]
@@ -1632,7 +1698,9 @@ fn run_driver_install_flow(
     }
 
     // Step 3: Extract the DriverKit subpackage
-    let Some(pkg_path) = karabiner_pkg_path() else {
+    // Try Caskroom first, then fall back to extracting from the brew cache DMG
+    let pkg_path = karabiner_pkg_path().or_else(|| extract_pkg_from_brew_cache(&brew));
+    let Some(pkg_path) = pkg_path else {
         emit_driver_install_complete(
             &app,
             false,
@@ -1687,6 +1755,13 @@ fn run_driver_install_flow(
     set_karabiner_install_state(&karabiner_state, false, false, None);
 
     let _ = activate_driver();
+
+    // Bring the window back to front after activation (macOS may steal focus
+    // for the system extension approval dialog).
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
 }
 
 #[cfg(target_os = "macos")]
