@@ -172,6 +172,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         setActiveLayer(newConfig.layers[0]?.name || "base");
         setIsDirty(false);
         setSelectedKey(null);
+        setError(null);
         await refreshProfiles();
         return true;
       }

@@ -79,8 +79,8 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     try {
       const loadedConfig = await loadConfigFromRuntime();
       if (!loadedConfig) {
-        setLoadState("error");
-        setErrorState("Failed to load config");
+        // No config yet (e.g. first run before profile creation) — not an error
+        setLoadState("ready");
         return null;
       }
 
