@@ -4,20 +4,25 @@ import { LayerTabs } from "./editor";
 import { ProfileSwitcher, ImportExportButton } from "./profiles";
 import { StatusIndicator } from "./status";
 import { Button } from "./ui";
-import { useConfigActions, useConfigState, useProfile } from "../contexts";
+import { useConfigActions, useConfigState, useKanataActions, useKanataState, useProfile } from "../contexts";
 import { cn } from "@/lib/utils";
 
 export function Header() {
   const { isDirty, profiles } = useConfigState();
   const { applyChanges, discardChanges } = useConfigActions();
   const { refreshProfiles } = useProfile();
+  const { isRunning } = useKanataState();
+  const { restart } = useKanataActions();
   const [isApplying, setIsApplying] = useState(false);
   const hasProfiles = profiles.length > 0;
 
   const handleApply = async () => {
     setIsApplying(true);
     try {
-      await applyChanges(refreshProfiles);
+      const success = await applyChanges(refreshProfiles);
+      if (success && isRunning) {
+        await restart();
+      }
     } finally {
       setIsApplying(false);
     }
