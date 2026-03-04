@@ -30,7 +30,7 @@ function formatTimestamp(timestamp: number) {
 }
 
 export function LogPanel() {
-  const { logs, issue } = useKanataState();
+  const { logs, issue, status } = useKanataState();
   const {
     start,
     clearLogs,
@@ -42,6 +42,12 @@ export function LogPanel() {
   const previousLogCountRef = useRef(logs.length);
   const [isConsoleOpen, setIsConsoleOpen] = useState(false);
   const [unreadLogCount, setUnreadLogCount] = useState(0);
+
+  useEffect(() => {
+    if (status === "error") {
+      setIsConsoleOpen(true);
+    }
+  }, [status]);
 
   const visibleLogs = useMemo(
     () => (logs.length > MAX_VISIBLE_LOGS ? logs.slice(-MAX_VISIBLE_LOGS) : logs),
