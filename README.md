@@ -12,38 +12,19 @@ Build complex keyboard layouts with an intuitive GUI instead of writing Lisp con
 
 ## Features
 
-- 🎹 **Visual Keyboard Editor** — Click keys to configure them, see your layout at a glance
-- 🔄 **Tap-Hold Actions** — Easily set up dual-function keys (e.g., Caps Lock → Escape on tap, Control on hold)
-- 📚 **Layer Management** — Create and switch between multiple keyboard layers
-- 🔍 **Key Autocomplete** — Searchable dropdown with all Kanata key codes organized by category
-- ⚡ **Live Reload** — Changes apply immediately when Kanata is running
-- 💾 **Auto-Save** — Configuration persists automatically
-- 🍎 **macOS** — Currently supported platform
+- **Visual Keyboard Editor** — Click keys to configure them, see your layout at a glance
+- **Tap-Hold Actions** — Easily set up dual-function keys (e.g., Caps Lock → Escape on tap, Control on hold)
+- **Layer Management** — Create and switch between multiple keyboard layers
+- **Key Autocomplete** — Searchable dropdown with all Kanata key codes organized by category
+- **Live Reload** — Changes apply immediately when Kanata is running
+- **Auto-Save** — Configuration persists automatically
+- **macOS** — Currently supported platform
 
 ## Installation
 
 ### Download
 
 Download the latest release from the Releases page.
-
-### macOS Setup
-
-Mantle requires elevated permissions on macOS to intercept keyboard input:
-
-1. **Install Karabiner Virtual HID Device** (required for Mantle to work):
-
-   ```bash
-   brew install --cask karabiner-elements
-   ```
-
-   You only need the driver — quit Karabiner-Elements after installation.
-
-2. **Grant Input Monitoring permission**:
-   - Open **System Settings → Privacy & Security → Input Monitoring**
-   - Click **+** and add the `kanata` binary from the app's Resources folder
-    - Or when you see a "not permitted" error, click the **Open Input Monitoring Settings** button in the app; this will open the settings pane and reveal the `kanata` binary in Finder so you can easily drag and drop it into the list.
-
-3. **Important**: Quit Karabiner-Elements before using Mantle — they can't both control the keyboard simultaneously.
 
 ## Usage
 
