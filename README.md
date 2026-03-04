@@ -1,7 +1,9 @@
+<br>
 <div align="center">
-  <img src="public/logo.png" width="64" /><br/>
+  <img src="public/logo.png" width="64" />
   <h1>mantle</h1>
 </div>
+<br>
 
 A visual keyboard configurator for [Kanata](https://github.com/jtroo/kanata) — the cross-platform software keyboard remapper.
 
