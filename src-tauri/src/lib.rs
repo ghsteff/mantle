@@ -840,34 +840,44 @@ fn install_passwordless_launchdaemon(
     let temp_vhid_plist = temp_vhid_plist_path.to_string_lossy().to_string();
     let temp_sudoers = temp_sudoers_path.to_string_lossy().to_string();
 
-    // Install plist + sudoers files (requires admin privileges).
-    run_admin_command("/bin/mkdir", &["-p", DAEMON_LOG_DIR]).map(|_| ())?;
-
-    run_admin_command("/bin/cp", &[&temp_plist, DAEMON_PLIST_PATH]).map(|_| ())?;
-    run_admin_command("/usr/sbin/chown", &["root:wheel", DAEMON_PLIST_PATH]).map(|_| ())?;
-    run_admin_command("/bin/chmod", &["644", DAEMON_PLIST_PATH]).map(|_| ())?;
-
-    run_admin_command("/bin/cp", &[&temp_vhid_plist, VHID_DAEMON_PLIST_PATH]).map(|_| ())?;
-    run_admin_command("/usr/sbin/chown", &["root:wheel", VHID_DAEMON_PLIST_PATH]).map(|_| ())?;
-    run_admin_command("/bin/chmod", &["644", VHID_DAEMON_PLIST_PATH]).map(|_| ())?;
-
-    run_admin_command("/bin/cp", &[&temp_sudoers, SUDOERS_PATH]).map(|_| ())?;
-    run_admin_command("/usr/sbin/chown", &["root:wheel", SUDOERS_PATH]).map(|_| ())?;
-    run_admin_command("/bin/chmod", &["440", SUDOERS_PATH]).map(|_| ())?;
-
-    // Restart daemons. `bootout` fails if not loaded; ignore and continue.
     let vhid_target = format!("system/{VHID_DAEMON_LABEL}");
     let daemon_target = format!("system/{DAEMON_LABEL}");
-    let _ = run_admin_command("/bin/launchctl", &["bootout", &vhid_target]);
-    run_admin_command("/bin/launchctl", &["bootstrap", "system/", VHID_DAEMON_PLIST_PATH])
-        .map(|_| ())?;
-    let _ = run_admin_command("/bin/launchctl", &["bootout", &daemon_target]);
-    run_admin_command("/bin/launchctl", &["bootstrap", "system/", DAEMON_PLIST_PATH]).map(|_| ())?;
 
-    let result = Ok(());
+    // Build a single shell script so the user only sees one admin password prompt.
+    let q = shell_single_quote;
+    let script = format!(
+        "\
+/bin/mkdir -p {log_dir} && \
+/bin/cp {tmp_plist} {dst_plist} && \
+/usr/sbin/chown root:wheel {dst_plist} && \
+/bin/chmod 644 {dst_plist} && \
+/bin/cp {tmp_vhid} {dst_vhid} && \
+/usr/sbin/chown root:wheel {dst_vhid} && \
+/bin/chmod 644 {dst_vhid} && \
+/bin/cp {tmp_sudoers} {dst_sudoers} && \
+/usr/sbin/chown root:wheel {dst_sudoers} && \
+/bin/chmod 440 {dst_sudoers} && \
+/bin/launchctl bootout {vhid_target} 2>/dev/null; \
+/bin/launchctl bootstrap system/ {dst_vhid} && \
+/bin/launchctl bootout {daemon_target} 2>/dev/null; \
+/bin/launchctl bootstrap system/ {dst_plist}",
+        log_dir = q(DAEMON_LOG_DIR),
+        tmp_plist = q(&temp_plist),
+        dst_plist = q(DAEMON_PLIST_PATH),
+        tmp_vhid = q(&temp_vhid_plist),
+        dst_vhid = q(VHID_DAEMON_PLIST_PATH),
+        tmp_sudoers = q(&temp_sudoers),
+        dst_sudoers = q(SUDOERS_PATH),
+        vhid_target = q(&vhid_target),
+        daemon_target = q(&daemon_target),
+    );
+
+    let result = run_admin_shell(&script).map(|_| ());
+
     let _ = fs::remove_file(temp_plist_path);
     let _ = fs::remove_file(temp_vhid_plist_path);
     let _ = fs::remove_file(temp_sudoers_path);
+
     result
 }
 
