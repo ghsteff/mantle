@@ -2474,6 +2474,9 @@ fn open_main_window(app_handle: &tauri::AppHandle) {
         return;
     };
 
+    #[cfg(target_os = "macos")]
+    let _ = app_handle.set_activation_policy(tauri::ActivationPolicy::Regular);
+
     let _ = window.show();
     let _ = window.unminimize();
     let _ = window.set_focus();
@@ -2539,9 +2542,6 @@ pub fn run() {
         .setup(|app| {
             build_tray(app)?;
 
-            #[cfg(target_os = "macos")]
-            app.set_activation_policy(tauri::ActivationPolicy::Accessory);
-
             open_main_window(app.handle());
 
             if cfg!(debug_assertions) {
@@ -2567,6 +2567,8 @@ pub fn run() {
                 if let Some(window) = app_handle.get_webview_window("main") {
                     let _ = window.hide();
                 }
+                #[cfg(target_os = "macos")]
+                let _ = app_handle.set_activation_policy(tauri::ActivationPolicy::Accessory);
             }
         }
         tauri::RunEvent::Exit => {
