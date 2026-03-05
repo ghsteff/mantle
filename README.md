@@ -108,15 +108,6 @@ mantle/
 └── vite.*.config.ts       # Vite configs
 ```
 
-## Tech Stack
-
-- **Tauri** — Desktop runtime + Rust backend
-- **React** — UI framework
-- **Vite** — Build tool
-- **Tailwind CSS** — Styling
-- **TypeScript** — Type safety
-- **cmdk** — Command palette / autocomplete
-
 ## Contributing
 
 Contributions are welcome! Please open an issue first to discuss what you'd like to change.
