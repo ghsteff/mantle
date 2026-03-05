@@ -72,8 +72,8 @@ jobs:
       - name: Build, sign, notarize, and draft release
         uses: tauri-apps/tauri-action@v0
         with:
-          tagName: "tauri-v__VERSION__"
-          releaseName: "Mantle Tauri v__VERSION__"
+          tagName: ${{ github.ref_name }}
+          releaseName: "Mantle ${{ github.ref_name }}"
           releaseBody: "Automated signed/notarized macOS Tauri release (Apple Silicon + Intel)."
           releaseDraft: true
           prerelease: true
