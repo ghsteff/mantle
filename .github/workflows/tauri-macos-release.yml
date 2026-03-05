@@ -75,6 +75,6 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: "Mantle ${{ github.ref_name }}"
           releaseBody: "Automated signed/notarized macOS Tauri release (Apple Silicon + Intel)."
-          releaseDraft: true
-          prerelease: true
+          releaseDraft: false
+          prerelease: false
           args: "--target ${{ matrix.target }}"
