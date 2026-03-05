@@ -38,6 +38,10 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
+    ],
+    "resources": [
+      "../bin/kanata_macos_arm64",
+      "../bin/kanata_macos_x64"
     ]
   }
 }
