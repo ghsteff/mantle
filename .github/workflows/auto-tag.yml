@@ -24,3 +24,9 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           tag_prefix: "tauri-v"
           default_bump: false
+
+      - name: Trigger release workflow
+        if: steps.tag.outputs.new_tag
+        run: gh workflow run tauri-macos-release.yml --ref ${{ steps.tag.outputs.new_tag }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

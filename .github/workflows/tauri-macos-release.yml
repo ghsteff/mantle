@@ -2,9 +2,6 @@ name: tauri-macos-release
 
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - "tauri-v*"
 
 permissions:
   contents: write
