@@ -39,9 +39,9 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "resources": [
-      "../bin/kanata_macos_arm64",
-      "../bin/kanata_macos_x64"
-    ]
+    "resources": {
+      "../bin/kanata_macos_arm64": "kanata_macos_arm64",
+      "../bin/kanata_macos_x64": "kanata_macos_x64"
+    }
   }
 }
