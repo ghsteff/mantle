@@ -16,7 +16,7 @@ jobs:
           - runner: macos-14
             target: aarch64-apple-darwin
             arch_label: apple-silicon
-          - runner: macos-13
+          - runner: macos-15-intel
             target: x86_64-apple-darwin
             arch_label: intel
     runs-on: ${{ matrix.runner }}
