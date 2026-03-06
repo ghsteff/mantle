@@ -49,6 +49,17 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Download kanata binaries
+        env:
+          KANATA_VERSION: "1.10.1"
+        run: |
+          mkdir -p bin
+          curl -sL "https://github.com/jtroo/kanata/releases/download/v${KANATA_VERSION}/kanata-macos-binaries-arm64-v${KANATA_VERSION}.zip" -o /tmp/kanata-arm64.zip
+          curl -sL "https://github.com/jtroo/kanata/releases/download/v${KANATA_VERSION}/kanata-macos-binaries-x64-v${KANATA_VERSION}.zip" -o /tmp/kanata-x64.zip
+          unzip -j /tmp/kanata-arm64.zip kanata_macos_arm64 -d bin/
+          unzip -j /tmp/kanata-x64.zip kanata_macos_x64 -d bin/
+          chmod +x bin/kanata_macos_arm64 bin/kanata_macos_x64
+
       - name: Import Apple Developer certificate
         run: |
           CERT_PATH=$RUNNER_TEMP/certificate.p12
