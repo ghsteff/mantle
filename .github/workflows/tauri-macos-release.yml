@@ -32,6 +32,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#tauri-v}" >> $GITHUB_OUTPUT
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
 
@@ -84,7 +88,7 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: "Mantle ${{ github.ref_name }}"
+          releaseName: "${{ steps.version.outputs.version }}"
           releaseBody: "Automated signed/notarized macOS Tauri release (Apple Silicon + Intel)."
           releaseDraft: false
           prerelease: false
