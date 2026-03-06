@@ -1,4 +1,6 @@
-# Internal docs (not for public repo)
+# Internal docs and scripts (not for public repo)
+docs/
+scripts/
 AGENTS.md
 BRANDING_GUIDELINES.md
 bugs.md
