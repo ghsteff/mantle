@@ -1,6 +1,11 @@
 # Internal docs and scripts (not for public repo)
 docs/
 scripts/
+bin/
+images/
+migration-metrics/
+out/
+dist-tauri/
 AGENTS.md
 BRANDING_GUIDELINES.md
 bugs.md
