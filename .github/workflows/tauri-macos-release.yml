@@ -34,7 +34,9 @@ jobs:
 
       - name: Extract version from tag
         id: version
-        run: echo "version=${GITHUB_REF_NAME#tauri-v}" >> $GITHUB_OUTPUT
+        run: |
+          echo "version=${GITHUB_REF_NAME#tauri-v}" >> $GITHUB_OUTPUT
+          echo "notes=$(git log -1 --pretty=format:'%s%n%n%b')" >> $GITHUB_OUTPUT
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -89,7 +91,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "${{ steps.version.outputs.version }}"
-          releaseBody: "Automated signed/notarized macOS Tauri release (Apple Silicon + Intel)."
+          releaseBody: "${{ steps.version.outputs.notes }}"
           releaseDraft: false
           prerelease: false
           args: "--target ${{ matrix.target }}"
