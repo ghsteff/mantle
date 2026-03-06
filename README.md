@@ -8,7 +8,7 @@ A visual keyboard configurator for [Kanata](https://github.com/jtroo/kanata) —
 
 Build complex keyboard layouts with an intuitive GUI instead of writing Lisp configuration files by hand.
 
-![Mantle Screenshot](docs/screenshot.png)
+![Mantle Screenshot](.github/assets/screenshot.png)
 
 ## Features
 
@@ -94,7 +94,6 @@ Outputs are in `src-tauri/target/release/bundle/`.
 
 ```
 mantle/
-├── bin/                    # Kanata binaries for each platform
 ├── src/
 │   ├── renderer.tsx       # React entry point
 │   ├── App.tsx            # Main React component
