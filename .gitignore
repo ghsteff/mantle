@@ -1,3 +1,13 @@
+# Internal docs (not for public repo)
+AGENTS.md
+BRANDING_GUIDELINES.md
+bugs.md
+DriverKit-spike.md
+PLANS.md
+PRD.md
+REFACTORS.md
+TYPOGRAPHY_GUIDE.md
+
 # Logs
 logs
 *.log
