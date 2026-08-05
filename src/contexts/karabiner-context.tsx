@@ -22,6 +22,7 @@ import {
 export type DriverReadiness =
   | "checking"
   | "missing-driver"
+  | "incompatible-driver"
   | "awaiting-approval"
   | "ready";
 
@@ -59,6 +60,13 @@ export function KarabinerProvider({ children }: { children: ReactNode }) {
   const checkStatusTimeoutRef = useRef<number | null>(null);
 
   const mapReadiness = useCallback((nextStatus: DriverStatus): DriverReadiness => {
+    if (!nextStatus.versionCompatible) {
+      // Files may exist but speak the wrong IPC protocol for bundled Kanata.
+      if (nextStatus.installedVersion) {
+        return "incompatible-driver";
+      }
+      return "missing-driver";
+    }
     if (nextStatus.driverInstalled && nextStatus.driverActivated) {
       return "ready";
     }

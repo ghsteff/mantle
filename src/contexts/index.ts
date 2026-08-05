@@ -19,3 +19,4 @@ export {
   useKarabinerActions,
   useKarabinerState,
 } from "./karabiner-context";
+export type { DriverReadiness, DriverInstallFlow } from "./karabiner-context";

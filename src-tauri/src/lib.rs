@@ -18,7 +18,7 @@ use std::io::{BufRead, BufReader};
 #[cfg(not(target_os = "macos"))]
 use std::process::Stdio;
 #[cfg(target_os = "macos")]
-use std::process::Stdio;
+use std::process::{ExitStatus, Stdio};
 use std::{
     fs,
     path::PathBuf,
@@ -45,11 +45,22 @@ const KARABINER_DRIVER_PATH: &str =
 const VHID_MANAGER_PATH: &str = "/Applications/.Karabiner-VirtualHIDDevice-Manager.app/Contents/MacOS/Karabiner-VirtualHIDDevice-Manager";
 const VHID_DAEMON_PATH: &str = "/Library/Application Support/org.pqrs/Karabiner-DriverKit-VirtualHIDDevice/Applications/Karabiner-VirtualHIDDevice-Daemon.app/Contents/MacOS/Karabiner-VirtualHIDDevice-Daemon";
 const DRIVERKIT_PKG_ID: &str = "org.pqrs.Karabiner-DriverKit-VirtualHIDDevice";
-const DRIVERKIT_PKG_COMPONENT: &str = "Karabiner-DriverKit-VirtualHIDDevice";
 const HOMEBREW_ARM64_PATH: &str = "/opt/homebrew/bin/brew";
 const HOMEBREW_X64_PATH: &str = "/usr/local/bin/brew";
 const KARABINER_CASKROOM_ARM64: &str = "/opt/homebrew/Caskroom/karabiner-elements";
 const KARABINER_CASKROOM_X64: &str = "/usr/local/Caskroom/karabiner-elements";
+/// Must match the VirtualHIDDevice IPC that the bundled Kanata binary speaks.
+const SUPPORTED_VHID_PACKAGE_VERSION: &str = "6.2.0";
+const VHID_MANAGER_INFO_PLIST: &str =
+    "/Applications/.Karabiner-VirtualHIDDevice-Manager.app/Contents/Info.plist";
+const TRUSTED_VHID_PKG_SIGNER: &str = "Fumihiko Takayama";
+
+#[cfg(target_os = "macos")]
+fn vhid_pkg_download_url() -> String {
+    format!(
+        "https://github.com/pqrs-org/Karabiner-DriverKit-VirtualHIDDevice/releases/download/v{SUPPORTED_VHID_PACKAGE_VERSION}/Karabiner-DriverKit-VirtualHIDDevice-{SUPPORTED_VHID_PACKAGE_VERSION}.pkg"
+    )
+}
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -74,6 +85,9 @@ struct DriverStatusPayload {
     driver_pending_approval: bool,
     pkg_available: bool,
     homebrew_installed: bool,
+    installed_version: Option<String>,
+    supported_version: String,
+    version_compatible: bool,
 }
 
 #[derive(Serialize)]
@@ -1066,10 +1080,7 @@ fn start_kanata_via_launchdaemon(
             if let Ok(log) = fs::read_to_string(DAEMON_STDOUT_LOG) {
                 if log.contains("connect_failed") {
                     stop_kanata_via_launchdaemon(app, kanata_state);
-                    emit_kanata_error(
-                        app,
-                        "Virtual keyboard driver service is not running. Enable Driver Extensions in System Settings, then reboot macOS once if it still fails.",
-                    );
+                    emit_kanata_error(app, connect_failed_error_message());
                     set_kanata_status(app, kanata_state, KANATA_STATUS_ERROR);
                     return false;
                 }
@@ -1378,71 +1389,6 @@ fn karabiner_pkg_path() -> Option<String> {
     None
 }
 
-/// Get the pkg path from the brew cache DMG after `brew fetch`.
-/// Mounts the DMG, copies the .pkg to a temp location, then unmounts.
-#[cfg(target_os = "macos")]
-fn extract_pkg_from_brew_cache(brew: &str) -> Option<String> {
-    // Get the cached DMG path
-    let output = Command::new(brew)
-        .args(["--cache", "--cask", "karabiner-elements"])
-        .output()
-        .ok()?;
-    if !output.status.success() {
-        return None;
-    }
-    let dmg_path = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    if !PathBuf::from(&dmg_path).exists() {
-        return None;
-    }
-
-    // Mount the DMG
-    let mount_output = Command::new("hdiutil")
-        .args(["attach", "-nobrowse", "-readonly", &dmg_path])
-        .output()
-        .ok()?;
-    if !mount_output.status.success() {
-        return None;
-    }
-
-    // Parse mount point from hdiutil output (last line, last column)
-    let mount_text = String::from_utf8_lossy(&mount_output.stdout);
-    let mount_point = mount_text
-        .lines()
-        .last()?
-        .split('\t')
-        .last()?
-        .trim()
-        .to_string();
-
-    let mount_dir = PathBuf::from(&mount_point);
-    if !mount_dir.exists() {
-        return None;
-    }
-
-    // Find .pkg in the mounted volume
-    let pkg_in_dmg = find_pkg_in_dir(&mount_dir);
-
-    let result = if let Some(src_pkg) = pkg_in_dmg {
-        // Copy pkg to temp so we can unmount the DMG
-        let dest = std::env::temp_dir().join("mantle-karabiner.pkg");
-        let _ = fs::remove_file(&dest);
-        if fs::copy(&src_pkg, &dest).is_ok() {
-            Some(dest.display().to_string())
-        } else {
-            None
-        }
-    } else {
-        None
-    };
-
-    // Unmount
-    let _ = Command::new("hdiutil")
-        .args(["detach", &mount_point])
-        .output();
-
-    result
-}
-
 #[cfg(target_os = "macos")]
 fn read_process_lines<R: std::io::Read>(
     app: tauri::AppHandle,
@@ -1463,6 +1409,47 @@ fn read_process_lines<R: std::io::Read>(
         }
         emit_driver_install_output(&app, trimmed.to_string());
     }
+}
+
+/// Spawn a command with piped stdout/stderr, stream lines to the install UI, and wait.
+#[cfg(target_os = "macos")]
+fn run_streamed(
+    mut command: Command,
+    app: &tauri::AppHandle,
+    karabiner_state: &Arc<Mutex<KarabinerInstallState>>,
+) -> Result<ExitStatus, String> {
+    command.stdout(Stdio::piped());
+    command.stderr(Stdio::piped());
+
+    let mut child = command
+        .spawn()
+        .map_err(|e| format!("Failed to start process: {e}"))?;
+
+    set_karabiner_install_state(karabiner_state, true, false, Some(child.id()));
+
+    let stdout_handle = child.stdout.take().map(|stdout| {
+        let app_handle = app.clone();
+        let state = karabiner_state.clone();
+        thread::spawn(move || read_process_lines(app_handle, stdout, state))
+    });
+    let stderr_handle = child.stderr.take().map(|stderr| {
+        let app_handle = app.clone();
+        let state = karabiner_state.clone();
+        thread::spawn(move || read_process_lines(app_handle, stderr, state))
+    });
+
+    let status = child
+        .wait()
+        .map_err(|e| format!("Failed to wait for process: {e}"))?;
+
+    if let Some(handle) = stdout_handle {
+        let _ = handle.join();
+    }
+    if let Some(handle) = stderr_handle {
+        let _ = handle.join();
+    }
+
+    Ok(status)
 }
 
 #[cfg(target_os = "macos")]
@@ -1509,52 +1496,162 @@ fn check_system_extension_status() -> SystemExtensionStatus {
 }
 
 #[cfg(target_os = "macos")]
-fn extract_driverkit_pkg(source_pkg: &str) -> Result<String, String> {
-    let tmp_dir = std::env::temp_dir().join("mantle-driver-install");
-    let flat_pkg = std::env::temp_dir().join("mantle-driverkit.pkg");
-
-    let _ = fs::remove_dir_all(&tmp_dir);
-    let _ = fs::remove_file(&flat_pkg);
-
-    let expand = Command::new("pkgutil")
-        .arg("--expand")
-        .arg(source_pkg)
-        .arg(&tmp_dir)
+fn read_pkgutil_driver_version() -> Option<String> {
+    let output = Command::new("pkgutil")
+        .args(["--pkg-info", DRIVERKIT_PKG_ID])
         .output()
-        .map_err(|e| format!("Failed to run pkgutil --expand: {e}"))?;
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
 
-    if !expand.status.success() {
-        let _ = fs::remove_dir_all(&tmp_dir);
+    String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .find_map(|line| {
+            line.strip_prefix("version:")
+                .map(|v| v.trim().to_string())
+                .filter(|v| !v.is_empty())
+        })
+}
+
+#[cfg(target_os = "macos")]
+fn read_manager_plist_version() -> Option<String> {
+    let output = Command::new("plutil")
+        .args([
+            "-extract",
+            "CFBundleShortVersionString",
+            "raw",
+            VHID_MANAGER_INFO_PLIST,
+        ])
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+
+    let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if version.is_empty() {
+        None
+    } else {
+        Some(version)
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn read_installed_driver_version() -> Option<String> {
+    // Prefer receipt version (package_version), then Manager app bundle version.
+    read_pkgutil_driver_version().or_else(read_manager_plist_version)
+}
+
+#[cfg(target_os = "macos")]
+fn is_driver_version_compatible(installed_version: Option<&str>) -> bool {
+    installed_version == Some(SUPPORTED_VHID_PACKAGE_VERSION)
+}
+
+#[cfg(target_os = "macos")]
+fn driver_files_present() -> bool {
+    PathBuf::from(KARABINER_DRIVER_PATH).exists() && PathBuf::from(VHID_MANAGER_PATH).exists()
+}
+
+#[cfg(target_os = "macos")]
+fn pinned_driver_pkg_path() -> PathBuf {
+    std::env::temp_dir().join(format!(
+        "mantle-Karabiner-DriverKit-VirtualHIDDevice-{SUPPORTED_VHID_PACKAGE_VERSION}.pkg"
+    ))
+}
+
+#[cfg(target_os = "macos")]
+fn connect_failed_error_message() -> String {
+    let ext = check_system_extension_status();
+    if !ext.activated {
+        return "Virtual keyboard driver service is not running. Enable Driver Extensions in System Settings, then reboot macOS once if it still fails.".to_string();
+    }
+
+    match read_installed_driver_version() {
+        Some(version) if version != SUPPORTED_VHID_PACKAGE_VERSION => {
+            format!(
+                "Installed virtual keyboard driver is v{version}; Mantle requires v{SUPPORTED_VHID_PACKAGE_VERSION}. Reinstall the driver from Mantle settings. If Karabiner-Elements is also installed, it may upgrade the driver again."
+            )
+        }
+        Some(_) => {
+            "Virtual keyboard daemon IPC failed (driver appears enabled). Try restarting Mantle, or reinstall the driver.".to_string()
+        }
+        None => {
+            format!(
+                "Could not verify virtual keyboard driver version. Mantle requires v{SUPPORTED_VHID_PACKAGE_VERSION}. Reinstall the driver from Mantle settings."
+            )
+        }
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn verify_driver_pkg_signature(pkg_path: &PathBuf) -> Result<(), String> {
+    let output = Command::new("pkgutil")
+        .args(["--check-signature", &pkg_path.display().to_string()])
+        .output()
+        .map_err(|e| format!("Failed to verify package signature: {e}"))?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let combined = format!("{stdout}\n{stderr}");
+
+    if !output.status.success() {
+        return Err(format!("Package signature check failed: {combined}"));
+    }
+
+    if !combined.contains(TRUSTED_VHID_PKG_SIGNER) {
         return Err(format!(
-            "pkgutil --expand failed: {}",
-            String::from_utf8_lossy(&expand.stderr)
+            "Package is not signed by the expected developer ({TRUSTED_VHID_PKG_SIGNER})"
         ));
     }
 
-    let component_dir = tmp_dir.join(format!("{DRIVERKIT_PKG_COMPONENT}.pkg"));
-    if !component_dir.exists() {
-        let _ = fs::remove_dir_all(&tmp_dir);
-        return Err("DriverKit component not found in package".to_string());
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn download_pinned_driver_pkg(
+    app: &tauri::AppHandle,
+    karabiner_state: &Arc<Mutex<KarabinerInstallState>>,
+    dest: &PathBuf,
+) -> Result<(), String> {
+    let _ = fs::remove_file(dest);
+
+    emit_driver_install_output(
+        app,
+        format!(
+            "Downloading Karabiner-DriverKit-VirtualHIDDevice v{SUPPORTED_VHID_PACKAGE_VERSION}..."
+        ),
+    );
+
+    let mut command = Command::new("curl");
+    command.args([
+        "-fL",
+        "--progress-bar",
+        "-o",
+        &dest.display().to_string(),
+        &vhid_pkg_download_url(),
+    ]);
+
+    let status = run_streamed(command, app, karabiner_state)?;
+
+    if is_cancelled(karabiner_state) {
+        let _ = fs::remove_file(dest);
+        return Err("Installation cancelled".to_string());
     }
 
-    let flatten = Command::new("pkgutil")
-        .arg("--flatten")
-        .arg(&component_dir)
-        .arg(&flat_pkg)
-        .output()
-        .map_err(|e| format!("Failed to run pkgutil --flatten: {e}"))?;
-
-    let _ = fs::remove_dir_all(&tmp_dir);
-
-    if !flatten.status.success() {
-        let _ = fs::remove_file(&flat_pkg);
+    if !status.success() {
+        let _ = fs::remove_file(dest);
         return Err(format!(
-            "pkgutil --flatten failed: {}",
-            String::from_utf8_lossy(&flatten.stderr)
+            "Download failed with exit code {}",
+            status.code().unwrap_or(-1)
         ));
     }
 
-    Ok(flat_pkg.display().to_string())
+    if !dest.exists() {
+        return Err("Download completed but package file is missing".to_string());
+    }
+
+    Ok(())
 }
 
 #[cfg(target_os = "macos")]
@@ -1605,9 +1702,15 @@ fn run_driver_install_flow(
         return;
     }
 
-    // Step 1: Check if driver is already installed and just needs activation
-    if PathBuf::from(KARABINER_DRIVER_PATH).exists() && PathBuf::from(VHID_MANAGER_PATH).exists() {
-        emit_driver_install_output(&app, "Driver already installed. Activating...");
+    let installed_version = read_installed_driver_version();
+    let version_compatible = is_driver_version_compatible(installed_version.as_deref());
+
+    // Compatible install only needs activation.
+    if driver_files_present() && version_compatible {
+        emit_driver_install_output(
+            &app,
+            format!("Driver v{SUPPORTED_VHID_PACKAGE_VERSION} already installed. Activating..."),
+        );
         match activate_driver() {
             Ok(()) => {
                 emit_driver_install_output(
@@ -1625,135 +1728,58 @@ fn run_driver_install_flow(
         return;
     }
 
-    // Step 2: Download the Karabiner pkg via Homebrew
-    let Some(brew) = homebrew_path() else {
+    if driver_files_present() && !version_compatible {
+        let current = installed_version
+            .as_deref()
+            .unwrap_or("unknown");
         emit_driver_install_output(
             &app,
-            "Homebrew not found. Install Homebrew (https://brew.sh), then retry.",
+            format!(
+                "Incompatible driver detected (v{current}). Installing v{SUPPORTED_VHID_PACKAGE_VERSION}..."
+            ),
         );
-        emit_driver_install_complete(&app, false, Some("Homebrew is not installed".to_string()));
-        set_karabiner_install_state(&karabiner_state, false, false, None);
-        return;
-    };
-
-    emit_driver_install_output(&app, "Downloading virtual keyboard driver package...");
-
-    let mut command = Command::new(brew);
-    command.arg("fetch").arg("--cask").arg("karabiner-elements");
-    command.env("HOMEBREW_NO_AUTO_UPDATE", "1");
-    command.stdout(Stdio::piped());
-    command.stderr(Stdio::piped());
-
-    let Ok(mut child) = command.spawn() else {
-        emit_driver_install_complete(
-            &app,
-            false,
-            Some("Failed to start download process".to_string()),
-        );
-        set_karabiner_install_state(&karabiner_state, false, false, None);
-        return;
-    };
-
-    set_karabiner_install_state(&karabiner_state, true, false, Some(child.id()));
-
-    let stdout_handle = child.stdout.take().map(|stdout| {
-        let app_handle = app.clone();
-        let state = karabiner_state.clone();
-        thread::spawn(move || read_process_lines(app_handle, stdout, state))
-    });
-    let stderr_handle = child.stderr.take().map(|stderr| {
-        let app_handle = app.clone();
-        let state = karabiner_state.clone();
-        thread::spawn(move || read_process_lines(app_handle, stderr, state))
-    });
-
-    let status = child.wait();
-    if let Some(handle) = stdout_handle {
-        let _ = handle.join();
     }
-    if let Some(handle) = stderr_handle {
-        let _ = handle.join();
+
+    let pkg_path = pinned_driver_pkg_path();
+    if let Err(error) = download_pinned_driver_pkg(&app, &karabiner_state, &pkg_path) {
+        emit_driver_install_complete(&app, false, Some(error));
+        set_karabiner_install_state(&karabiner_state, false, false, None);
+        return;
     }
 
     if is_cancelled(&karabiner_state) {
+        let _ = fs::remove_file(&pkg_path);
         emit_driver_install_complete(&app, false, Some("Installation cancelled".to_string()));
         set_karabiner_install_state(&karabiner_state, false, false, None);
         return;
     }
 
-    let brew_status = match status {
-        Ok(s) if s.success() => true,
-        Ok(s) => {
-            emit_driver_install_complete(
-                &app,
-                false,
-                Some(format!(
-                    "Download failed with exit code {}",
-                    s.code().unwrap_or(-1)
-                )),
-            );
-            set_karabiner_install_state(&karabiner_state, false, false, None);
-            return;
-        }
-        Err(e) => {
-            emit_driver_install_complete(&app, false, Some(format!("Download failed: {e}")));
-            set_karabiner_install_state(&karabiner_state, false, false, None);
-            return;
-        }
-    };
-
-    if !brew_status {
+    emit_driver_install_output(&app, "Verifying package signature...");
+    if let Err(error) = verify_driver_pkg_signature(&pkg_path) {
+        let _ = fs::remove_file(&pkg_path);
+        emit_driver_install_complete(&app, false, Some(error));
         set_karabiner_install_state(&karabiner_state, false, false, None);
         return;
     }
 
-    // Step 3: Extract the DriverKit subpackage
-    // Try Caskroom first, then fall back to extracting from the brew cache DMG
-    let pkg_path = karabiner_pkg_path().or_else(|| extract_pkg_from_brew_cache(&brew));
-    let Some(pkg_path) = pkg_path else {
-        emit_driver_install_complete(
-            &app,
-            false,
-            Some("Package was downloaded but could not be found".to_string()),
-        );
-        set_karabiner_install_state(&karabiner_state, false, false, None);
-        return;
-    };
+    emit_driver_install_output(
+        &app,
+        format!("Installing driver package v{SUPPORTED_VHID_PACKAGE_VERSION}..."),
+    );
 
-    emit_driver_install_output(&app, "Extracting virtual keyboard driver...");
-
-    let driverkit_pkg = match extract_driverkit_pkg(&pkg_path) {
-        Ok(path) => path,
-        Err(e) => {
-            emit_driver_install_complete(&app, false, Some(format!("Extraction failed: {e}")));
-            set_karabiner_install_state(&karabiner_state, false, false, None);
-            return;
-        }
-    };
-
-    if is_cancelled(&karabiner_state) {
-        let _ = fs::remove_file(&driverkit_pkg);
-        emit_driver_install_complete(&app, false, Some("Installation cancelled".to_string()));
-        set_karabiner_install_state(&karabiner_state, false, false, None);
-        return;
-    }
-
-    // Step 4: Install with admin privileges
-    emit_driver_install_output(&app, "Installing driver package...");
-
-    match install_pkg_elevated(&driverkit_pkg) {
+    match install_pkg_elevated(&pkg_path.display().to_string()) {
         Ok(()) => {
             emit_driver_install_output(&app, "Driver installed successfully.");
         }
         Err(e) => {
-            let _ = fs::remove_file(&driverkit_pkg);
+            let _ = fs::remove_file(&pkg_path);
             emit_driver_install_complete(&app, false, Some(e));
             set_karabiner_install_state(&karabiner_state, false, false, None);
             return;
         }
     }
 
-    let _ = fs::remove_file(&driverkit_pkg);
+    let _ = fs::remove_file(&pkg_path);
 
     // Mark install as done before activation so the frontend can transition to the approve step.
     // activate_driver() may block while macOS shows the "allow extension" dialog.
@@ -1778,12 +1804,24 @@ fn run_driver_install_flow(
 #[tauri::command]
 fn driver_check() -> DriverStatusPayload {
     let ext = check_system_extension_status();
+    let files_present = PathBuf::from(KARABINER_DRIVER_PATH).exists();
+    let installed_version = match read_installed_driver_version() {
+        Some(version) => Some(version),
+        None if files_present => Some("unknown".to_string()),
+        None => None,
+    };
+    let version_compatible = is_driver_version_compatible(installed_version.as_deref());
+
     DriverStatusPayload {
-        driver_installed: PathBuf::from(KARABINER_DRIVER_PATH).exists(),
-        driver_activated: ext.activated,
-        driver_pending_approval: ext.pending_approval,
-        pkg_available: karabiner_pkg_path().is_some(),
+        // Treat an incompatible install as not ready so onboarding offers repair.
+        driver_installed: files_present && version_compatible,
+        driver_activated: ext.activated && version_compatible,
+        driver_pending_approval: ext.pending_approval && version_compatible,
+        pkg_available: pinned_driver_pkg_path().exists() || karabiner_pkg_path().is_some(),
         homebrew_installed: homebrew_path().is_some(),
+        installed_version,
+        supported_version: SUPPORTED_VHID_PACKAGE_VERSION.to_string(),
+        version_compatible,
     }
 }
 
@@ -1796,6 +1834,9 @@ fn driver_check() -> DriverStatusPayload {
         driver_pending_approval: false,
         pkg_available: false,
         homebrew_installed: true,
+        installed_version: Some(SUPPORTED_VHID_PACKAGE_VERSION.to_string()),
+        supported_version: SUPPORTED_VHID_PACKAGE_VERSION.to_string(),
+        version_compatible: true,
     }
 }
 

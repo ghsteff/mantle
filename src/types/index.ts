@@ -119,6 +119,9 @@ export interface DriverStatus {
   driverPendingApproval: boolean;
   pkgAvailable: boolean;
   homebrewInstalled: boolean;
+  installedVersion: string | null;
+  supportedVersion: string;
+  versionCompatible: boolean;
 }
 
 /**

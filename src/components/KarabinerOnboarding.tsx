@@ -16,7 +16,7 @@ interface KarabinerOnboardingProps {
 
 /**
  * Driver onboarding flow shown when virtual keyboard driver is not ready (macOS only).
- * Triggers when the driver is not installed OR installed but not activated.
+ * Triggers when the driver is missing, incompatible with bundled Kanata, or not activated.
  */
 export function KarabinerOnboarding({ onOnboardingStateChange }: KarabinerOnboardingProps) {
   const { readiness } = useKarabinerState();

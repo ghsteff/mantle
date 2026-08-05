@@ -3,6 +3,7 @@ import { Button } from "../ui";
 import { Dialog, DialogContent } from "../ui/dialog";
 import { cn } from "../../lib/utils";
 import { useKarabinerActions, useKarabinerState } from "../../contexts";
+import { getDriverInstallStatus } from "./driver-install-status";
 
 type OnboardingStep = "install" | "approve" | "permission";
 
@@ -12,25 +13,37 @@ interface DriverOnboardingModalProps {
   onOpenInputMonitoringSettings: () => void;
 }
 
-const STEP_LABELS: Record<OnboardingStep, { number: string; title: string; description: string }> = {
-  install: {
-    number: "01",
-    title: "INSTALL VIRTUAL KEYBOARD DRIVER",
-    description: "Mantle needs a virtual keyboard driver to intercept and remap your keys.",
-  },
-  approve: {
-    number: "02",
-    title: "APPROVE SYSTEM EXTENSION",
-    description: "macOS requires you to approve the virtual keyboard driver before it can run. This is a one-time step.",
-  },
-  permission: {
-    number: "03",
-    title: "GRANT INPUT MONITORING",
-    description: "Grant Kanata permission to monitor keyboard input so remappings can take effect.",
-  },
-};
-
 const APPROVAL_POLL_INTERVAL_MS = 3000;
+
+function stepMeta(
+  step: OnboardingStep,
+  supportedVersion: string | null
+): { number: string; title: string; description: string } {
+  switch (step) {
+    case "install":
+      return {
+        number: "01",
+        title: "INSTALL VIRTUAL KEYBOARD DRIVER",
+        description: supportedVersion
+          ? `Mantle needs Karabiner VirtualHIDDevice v${supportedVersion} to intercept and remap your keys.`
+          : "Mantle needs a virtual keyboard driver to intercept and remap your keys.",
+      };
+    case "approve":
+      return {
+        number: "02",
+        title: "APPROVE SYSTEM EXTENSION",
+        description:
+          "macOS requires you to approve the virtual keyboard driver before it can run. This is a one-time step.",
+      };
+    case "permission":
+      return {
+        number: "03",
+        title: "GRANT INPUT MONITORING",
+        description:
+          "Grant Kanata permission to monitor keyboard input so remappings can take effect.",
+      };
+  }
+}
 
 export function DriverOnboardingModal({
   open,
@@ -56,12 +69,17 @@ export function DriverOnboardingModal({
   const driverInstalled = status?.driverInstalled ?? null;
   const driverActivated = status?.driverActivated ?? null;
   const driverPendingApproval = status?.driverPendingApproval ?? null;
-  const homebrewInstalled = status?.homebrewInstalled ?? null;
+  const installedVersion = status?.installedVersion ?? null;
+  const supportedVersion = status?.supportedVersion ?? null;
+  const versionCompatible = status?.versionCompatible ?? null;
+  const needsRepair = readiness === "incompatible-driver";
+  const driverReady = Boolean(driverInstalled) && !needsRepair;
   const isInstalling = installFlow.status === "installing";
   const installFailed = installFlow.status === "error";
   const installSucceeded = installFlow.status === "success";
   const installOutput = installFlow.output;
   const installError = installFlow.status === "error" ? installFlow.error : null;
+  const canProceed = installSucceeded || driverReady;
 
   useEffect(() => {
     if (terminalRef.current) {
@@ -93,6 +111,7 @@ export function DriverOnboardingModal({
     } else if (readiness === "awaiting-approval") {
       setStep("approve");
     } else {
+      // missing-driver and incompatible-driver both use the install/repair step
       setStep("install");
     }
   }, [open, readiness]);
@@ -145,7 +164,7 @@ export function DriverOnboardingModal({
   };
 
   const handleNext = () => {
-    if (step === "install" && driverInstalled) {
+    if (step === "install" && driverInstalled && versionCompatible !== false) {
       setStep(driverActivated ? "permission" : "approve");
     } else if (step === "approve" && driverActivated) {
       setStep("permission");
@@ -160,7 +179,7 @@ export function DriverOnboardingModal({
     onComplete();
   };
 
-  const currentStep = STEP_LABELS[step];
+  const currentStep = stepMeta(step, supportedVersion);
 
   return (
     <Dialog open={open}>
@@ -197,8 +216,11 @@ export function DriverOnboardingModal({
           <div className="flex-1 overflow-y-auto bg-secondary p-6">
             {step === "install" ? (
               <InstallStepContent
-                homebrewInstalled={homebrewInstalled}
                 driverInstalled={driverInstalled}
+                needsRepair={needsRepair}
+                canProceed={canProceed}
+                installedVersion={installedVersion}
+                supportedVersion={supportedVersion}
                 isInstalling={isInstalling}
                 installFailed={installFailed}
                 installSucceeded={installSucceeded}
@@ -232,9 +254,8 @@ export function DriverOnboardingModal({
                 <InstallStepFooter
                   isInstalling={isInstalling}
                   installFailed={installFailed}
-                  installSucceeded={installSucceeded}
-                  driverInstalled={driverInstalled}
-                  homebrewInstalled={homebrewInstalled}
+                  canProceed={canProceed}
+                  needsRepair={needsRepair}
                   onInstall={handleInstall}
                   onCancel={handleCancel}
                   onNext={handleNext}
@@ -275,8 +296,11 @@ export function DriverOnboardingModal({
 }
 
 function InstallStepContent({
-  homebrewInstalled,
   driverInstalled,
+  needsRepair,
+  canProceed,
+  installedVersion,
+  supportedVersion,
   isInstalling,
   installFailed,
   installSucceeded,
@@ -284,8 +308,11 @@ function InstallStepContent({
   installError,
   terminalRef,
 }: {
-  homebrewInstalled: boolean | null;
   driverInstalled: boolean | null;
+  needsRepair: boolean;
+  canProceed: boolean;
+  installedVersion: string | null;
+  supportedVersion: string | null;
   isInstalling: boolean;
   installFailed: boolean;
   installSucceeded: boolean;
@@ -293,30 +320,19 @@ function InstallStepContent({
   installError: string | null;
   terminalRef: React.RefObject<HTMLDivElement | null>;
 }) {
+  const { color, label } = getDriverInstallStatus({
+    driverInstalled,
+    needsRepair,
+    installedVersion,
+    supportedVersion,
+  });
+
   return (
     <div className="space-y-4">
       <div className="space-y-2 font-mono text-xs">
         <div className="flex items-center gap-2">
-          <span
-            className={cn(
-              "size-2 rounded-full",
-              homebrewInstalled ? "bg-status-success" : "bg-muted-foreground"
-            )}
-          />
-          <span className="text-text-secondary">
-            Homebrew: {homebrewInstalled ? "Installed" : homebrewInstalled === null ? "Checking..." : "Not installed"}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span
-            className={cn(
-              "size-2 rounded-full",
-              driverInstalled ? "bg-status-success" : "bg-muted-foreground"
-            )}
-          />
-          <span className="text-text-secondary">
-            Virtual Keyboard Driver: {driverInstalled ? "Installed" : driverInstalled === null ? "Checking..." : "Not installed"}
-          </span>
+          <span className={cn("size-2 rounded-full", color)} />
+          <span className="text-text-secondary">Virtual Keyboard Driver: {label}</span>
         </div>
       </div>
 
@@ -342,20 +358,32 @@ function InstallStepContent({
         </div>
       )}
 
-      {!isInstalling && installOutput.length === 0 && !installSucceeded && !driverInstalled && (
+      {needsRepair && !isInstalling && !installSucceeded && supportedVersion && (
+        <div className="bg-amber-500/10 border border-amber-500/30 p-3 font-mono text-xs text-amber-700 dark:text-amber-400">
+          Installed driver v{installedVersion ?? "unknown"} does not match Mantle&apos;s
+          required v{supportedVersion}. Repair installs the compatible driver. If
+          Karabiner-Elements is also installed, it may upgrade the driver again.
+        </div>
+      )}
+
+      {!isInstalling &&
+        installOutput.length === 0 &&
+        !canProceed &&
+        !needsRepair &&
+        supportedVersion && (
         <div className="border border-border bg-card p-4 space-y-3">
           <div className="font-mono text-xs text-muted-foreground uppercase tracking-wider">
             What will happen:
           </div>
           <ul className="font-mono text-xs text-text-secondary space-y-1 list-disc list-inside">
-            <li>Download the virtual keyboard driver package</li>
-            <li>Extract and install only the driver component</li>
-            <li>Activate the system extension</li>
+            <li>Download VirtualHIDDevice v{supportedVersion} from pqrs.org</li>
+            <li>Verify the package signature</li>
+            <li>Install and activate the system extension</li>
           </ul>
         </div>
       )}
 
-      {(installSucceeded || driverInstalled) && (
+      {canProceed && (
         <div className="bg-status-success/10 border border-status-success/30 p-3 font-mono text-xs text-status-success">
           Virtual keyboard driver is installed. Click Next to continue.
         </div>
@@ -439,18 +467,16 @@ function PermissionStepContent() {
 function InstallStepFooter({
   isInstalling,
   installFailed,
-  installSucceeded,
-  driverInstalled,
-  homebrewInstalled,
+  canProceed,
+  needsRepair,
   onInstall,
   onCancel,
   onNext,
 }: {
   isInstalling: boolean;
   installFailed: boolean;
-  installSucceeded: boolean;
-  driverInstalled: boolean | null;
-  homebrewInstalled: boolean | null;
+  canProceed: boolean;
+  needsRepair: boolean;
   onInstall: () => void;
   onCancel: () => void;
   onNext: () => void;
@@ -467,7 +493,7 @@ function InstallStepFooter({
     );
   }
 
-  if (installSucceeded || driverInstalled) {
+  if (canProceed) {
     return (
       <Button
         onClick={onNext}
@@ -502,9 +528,7 @@ function InstallStepFooter({
             "disabled:opacity-50 disabled:cursor-not-allowed"
           )}
         >
-          {homebrewInstalled === false
-            ? "INSTALL HOMEBREW & DRIVER"
-            : "INSTALL DRIVER"}
+          {needsRepair ? "REPAIR DRIVER" : "INSTALL DRIVER"}
         </Button>
       )}
     </>

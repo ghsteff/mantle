@@ -28,7 +28,11 @@ export function useOnboardingFlow({
 
   useEffect(() => {
     if (!enabled) return;
-    if (readiness === "missing-driver" && !onboardingStarted && !onboardingCompleted) {
+    if (
+      (readiness === "missing-driver" || readiness === "incompatible-driver") &&
+      !onboardingStarted &&
+      !onboardingCompleted
+    ) {
       setOnboardingStarted(true);
     }
   }, [readiness, onboardingStarted, onboardingCompleted, enabled]);

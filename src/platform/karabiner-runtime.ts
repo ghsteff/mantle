@@ -31,13 +31,7 @@ export async function checkDriverInRuntime() {
   const result = await invokeTauriCommand("driverCheck");
   if (!result.success || !result.data) {
     logRuntimeCommandError("Failed to check driver status in tauri runtime", result);
-    return {
-      driverInstalled: false,
-      driverActivated: false,
-      driverPendingApproval: false,
-      pkgAvailable: false,
-      homebrewInstalled: false,
-    };
+    throw new Error("Failed to check driver status");
   }
 
   return result.data;
