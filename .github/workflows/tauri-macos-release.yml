@@ -35,8 +35,13 @@ jobs:
       - name: Extract version from tag
         id: version
         run: |
-          echo "version=${GITHUB_REF_NAME#tauri-v}" >> $GITHUB_OUTPUT
-          echo "notes=$(git log -1 --pretty=format:'%s%n%n%b')" >> $GITHUB_OUTPUT
+          echo "version=${GITHUB_REF_NAME#tauri-v}" >> "$GITHUB_OUTPUT"
+          {
+            echo "notes<<EOF"
+            git log -1 --pretty=format:'%s%n%n%b'
+            echo
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
