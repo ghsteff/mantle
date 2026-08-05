@@ -1,0 +1,19 @@
+.github/workflows/tauri-macos-release.yml
+  s_02fdabeb52a104::t_a6f9a0a2856afa 38-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "407af118367441d8a25532a51cadafbbc2d65daf",
+  "prompts": {},
+  "sessions": {
+    "s_02fdabeb52a104": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "3154d379-8f05-4736-9f3a-c7f2d515ed2a",
+        "model": "unknown"
+      },
+      "human_author": "Grant Steffen <gsteffen1203@gmail.com>"
+    }
+  }
+}
