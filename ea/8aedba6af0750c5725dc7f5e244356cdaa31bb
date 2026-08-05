@@ -1,0 +1,55 @@
+src/components/KarabinerOnboarding.tsx
+  s_4d7f2d9032d20d::t_e91a62e85c4c8a 19
+src-tauri/src/lib.rs
+  s_4d7f2d9032d20d::t_651aca09a1edbd 1626-1635
+  s_4d7f2d9032d20d::t_4df0c5bf096e3d 54-55
+  s_4d7f2d9032d20d::t_1d8c98bf362931 21
+  s_4d7f2d9032d20d::t_8688cb6be8394c 1083
+  s_4d7f2d9032d20d::t_388123a80d8c6b 57-63
+  s_4d7f2d9032d20d::t_1b732647f7e3ae 88-90
+  s_4d7f2d9032d20d::t_3a2b6d70fa64f5 1499,1515,1517-1525,1527-1530,1532-1536,1538,1540-1543
+  s_4d7f2d9032d20d::t_04f2fa316b1209 1705-1713,1731-1734,1737-1739,1741,1743-1745,1751,1757-1760,1765-1768,1770,1775,1782,1807,1814,1816-1820,1822-1824,1837-1839
+  s_4d7f2d9032d20d::t_6912e95c68a6d0 1414-1454
+  s_4d7f2d9032d20d::t_1810cdac33eeb3 52-53,56
+  s_4d7f2d9032d20d::t_919b20763a0e0d 1500-1506,1508-1514,1544-1567,1570-1590,1592-1625,1637-1640,1642-1643,1645-1646,1650-1654
+  s_4d7f2d9032d20d::t_f24a3ecc4ece5e 1808-1813
+src/platform/karabiner-runtime.ts
+  s_4d7f2d9032d20d::t_c4c4f0647dff10 34
+src/components/onboarding/driver-onboarding-modal.tsx
+  s_4d7f2d9032d20d::t_cea93298fee921 220,222-223
+  s_4d7f2d9032d20d::t_ab948358ae4dbb 72,74-75
+  s_4d7f2d9032d20d::t_3d578641f0de12 114
+  s_4d7f2d9032d20d::t_82104e7e690cf0 167
+  s_4d7f2d9032d20d::t_e09ccbdf39017f 6,18-46,73,76,82,182,221,257,301,313,315,323-328,334-335,361,371-373,386,470,478,496
+  s_4d7f2d9032d20d::t_022609b2b65ff1 258
+  s_4d7f2d9032d20d::t_c0e92ecd42b3f7 300,302-303,312,314,329,362-370,379-381
+  s_4d7f2d9032d20d::t_8748e9d4f0a888 471,479,531
+  s_4d7f2d9032d20d::t_254db1c69ee21d 47
+src/components/onboarding/driver-install-status.ts
+  s_4d7f2d9032d20d::t_ad7f68b2c01105 1-31
+src/contexts/karabiner-context.tsx
+  s_4d7f2d9032d20d::t_8df57f7087ded0 63-69
+  s_4d7f2d9032d20d::t_182388b6705035 25
+src/hooks/use-onboarding-flow.ts
+  s_4d7f2d9032d20d::t_ecf76539caac4a 31-35
+src/contexts/index.ts
+  s_4d7f2d9032d20d::t_ddb12dd6acba1b 22
+src/types/index.ts
+  s_4d7f2d9032d20d::t_48f0bc0010bd27 122-124
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "ea8aedba6af0750c5725dc7f5e244356cdaa31bb",
+  "prompts": {},
+  "sessions": {
+    "s_4d7f2d9032d20d": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "5b8f6e40-338d-4966-b4b1-be1cc7be6c35",
+        "model": "grok-4.5"
+      },
+      "human_author": "Grant Steffen <gsteffen1203@gmail.com>"
+    }
+  }
+}
