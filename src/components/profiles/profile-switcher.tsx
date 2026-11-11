@@ -29,9 +29,12 @@ import {
 } from "../ui/command";
 import {
   ChevronsUpDown,
+  FileInputIcon,
+  FileOutputIcon,
   PlusIcon,
 } from "lucide-react";
 import { getProfileNameError } from "@/lib/profile-name";
+import { useKbdFileActions } from "./use-kbd-file-actions";
 
 export function ProfileSwitcher() {
   const { profiles, activeProfile } = useConfigState();
@@ -44,6 +47,7 @@ export function ProfileSwitcher() {
   const [newName, setNewName] = useState("");
   const [open, setOpen] = useState(false);
   const newNameError = getProfileNameError(newName);
+  const kbdFileActions = useKbdFileActions();
 
   const handleRenameClick = useCallback((name: string) => {
     setTargetProfile(name);
@@ -151,6 +155,26 @@ export function ProfileSwitcher() {
                   <PlusIcon className="size-3.5" />
                   Add New Profile
                 </CommandItem>
+                <CommandItem
+                  onSelect={() => {
+                    setOpen(false);
+                    kbdFileActions.startImport();
+                  }}
+                >
+                  <FileInputIcon className="size-3.5" />
+                  Import .kbd File…
+                </CommandItem>
+                {activeProfile && (
+                  <CommandItem
+                    onSelect={() => {
+                      setOpen(false);
+                      kbdFileActions.startExport();
+                    }}
+                  >
+                    <FileOutputIcon className="size-3.5" />
+                    Export “{activeProfile}” as .kbd…
+                  </CommandItem>
+                )}
               </CommandGroup>
             </CommandList>
           </Command>
@@ -223,6 +247,8 @@ export function ProfileSwitcher() {
         onComplete={handleCreateProfile}
         trigger={null}
       />
+
+      {kbdFileActions.dialogs}
     </>
   );
 }

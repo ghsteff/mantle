@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useProfile } from "../../contexts";
 import { Button } from "../ui";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,7 +19,6 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { Input } from "../ui/input";
-import { DownloadIcon, UploadIcon } from "lucide-react";
 
 interface KeyboardConfig {
   sourceKeys: string[];
@@ -32,7 +30,7 @@ type ErrorDialogState =
   | { kind: "closed" }
   | { kind: "open"; title: string; description: string };
 
-export function ImportExportButton() {
+export function useKbdFileActions() {
   const { exportKbd, importKbd, createProfile, switchProfile } = useProfile();
 
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -52,7 +50,7 @@ export function ImportExportButton() {
     setErrorDialog({ kind: "closed" });
   };
 
-  const handleExport = async () => {
+  const startExport = async () => {
     const result = await exportKbd();
     if (
       !result.success &&
@@ -63,7 +61,7 @@ export function ImportExportButton() {
     }
   };
 
-  const handleImport = async () => {
+  const startImport = async () => {
     const result = await importKbd();
     if (result.success && result.config) {
       setImportedConfig(result.config);
@@ -89,38 +87,8 @@ export function ImportExportButton() {
     setSuggestedImportName("");
   };
 
-  return (
+  const dialogs = (
     <>
-      <div className="flex items-center gap-0.5">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              className="text-muted-foreground hover:text-foreground"
-              onClick={handleImport}
-            >
-              <UploadIcon className="size-3.5" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Import .kbd</TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              className="text-muted-foreground hover:text-foreground"
-              onClick={handleExport}
-            >
-              <DownloadIcon className="size-3.5" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Export .kbd</TooltipContent>
-        </Tooltip>
-      </div>
-
       <AlertDialog
         open={errorDialog.kind === "open"}
         onOpenChange={(open) => {
@@ -183,4 +151,6 @@ export function ImportExportButton() {
       </Dialog>
     </>
   );
+
+  return { startImport, startExport, dialogs };
 }

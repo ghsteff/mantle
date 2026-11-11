@@ -1,7 +1,7 @@
 import { useState, type MouseEvent } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { LayerTabs } from "./editor";
-import { ProfileSwitcher, ImportExportButton } from "./profiles";
+import { ProfileSwitcher } from "./profiles";
 import { StatusIndicator } from "./status";
 import { Button } from "./ui";
 import { useConfigActions, useConfigState, useKanataActions, useKanataState, useProfile } from "../contexts";
@@ -86,7 +86,6 @@ export function Header() {
             {isApplying ? "Applying…" : "Apply"}
           </Button>
         </div>
-        <ImportExportButton />
         <StatusIndicator />
       </div>
     </header>
