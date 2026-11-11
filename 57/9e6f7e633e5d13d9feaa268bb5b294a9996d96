@@ -1,0 +1,28 @@
+src-tauri/src/lib.rs
+  s_f360301be6c629::t_41893007c1fc3d 2-3,1171-1183,1189-1191,2609-2616
+  s_f360301be6c629::t_a855ac70eaf2d9 1184-1188
+  s_f360301be6c629::t_97ad084932c562 2617
+src-tauri/Cargo.toml
+  s_f360301be6c629::t_41893007c1fc3d 27-29
+src-tauri/src/keyboard_watch.rs
+  s_f360301be6c629::t_7d49c8947042cf 1-48,51-112,115-167
+  s_f360301be6c629::t_a855ac70eaf2d9 49-50,113-114
+src-tauri/Cargo.lock
+  s_f360301be6c629::t_641dbb8edb0728 1856
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "579e6f7e633e5d13d9feaa268bb5b294a9996d96",
+  "prompts": {},
+  "sessions": {
+    "s_f360301be6c629": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5315ebb2-3cf4-469c-9686-72c9f09de4bf",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Grant Steffen <gsteffen1203@gmail.com>"
+    }
+  }
+}
