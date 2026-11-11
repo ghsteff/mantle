@@ -1,4 +1,6 @@
 mod events;
+#[cfg(target_os = "macos")]
+mod keyboard_watch;
 mod state;
 
 use events::{
@@ -1164,6 +1166,27 @@ fn stop_kanata_via_launchdaemon(
     set_kanata_status(app, kanata_state, KANATA_STATUS_IDLE);
     emit_kanata_log(app, "stdout", "Kanata stopped");
     true
+}
+
+/// Kanata on macOS only grabs keyboards that are connected when it starts.
+#[cfg(target_os = "macos")]
+fn restart_kanata_for_new_keyboard(
+    app: &tauri::AppHandle,
+    kanata_state: &Arc<Mutex<KanataProcessState>>,
+) {
+    let is_changing_state = kanata_state.lock().map_or(true, |state| {
+        state.status == KANATA_STATUS_STARTING || state.status == KANATA_STATUS_STOPPING
+    });
+    if is_changing_state || find_kanata_pid().is_none() {
+        return;
+    }
+
+    emit_kanata_log(
+        app,
+        "stdout",
+        "Keyboard connected, restarting Kanata to remap it",
+    );
+    start_kanata_via_launchdaemon(app, kanata_state);
 }
 
 fn stop_kanata_process(
@@ -2582,6 +2605,15 @@ pub fn run() {
         ])
         .setup(|app| {
             build_tray(app)?;
+
+            #[cfg(target_os = "macos")]
+            {
+                let app_handle = app.handle().clone();
+                let kanata_state = app.state::<AppState>().kanata.clone();
+                keyboard_watch::watch_keyboard_connections(move || {
+                    restart_kanata_for_new_keyboard(&app_handle, &kanata_state);
+                });
+            }
 
             open_main_window(app.handle());
 
