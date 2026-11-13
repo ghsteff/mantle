@@ -1,0 +1,83 @@
+src/components/keyboard/utils/format-action.ts
+  s_38364944f30f6b::t_42db7c62b62c58 109-110
+  s_38364944f30f6b::t_e5c02abca0c770 1,3-12,20-22,25-30,33-36,38-40,42-46,48-51,53-54,56-59,61-65,67-83,85,87-94,96,98-108,111-115
+  s_38364944f30f6b::t_360aa3292f8374 116
+src/components/keyboard/components/key/index.tsx
+  s_38364944f30f6b::t_0ee2cdd3e34436 3-5,12-13,16-18,20-24,31,34-35,38,43-44,46-48,50-55,61-65,71-73,75-76,78,84-85,87,92-93,96-101,106-108,111,114,116-117,119,125
+  s_38364944f30f6b::t_dec5db0aded905 127,131-132
+src/components/editor/action-editor/components/key-picker.tsx
+  s_38364944f30f6b::t_72158eef58fa53 1-326
+  s_38364944f30f6b::t_290bef0c39b4c4 327-340,342-348
+src/components/editor/key-inspector.tsx
+  s_38364944f30f6b::t_67a43be2d13f77 2,10,12-19,43-44,46-50,60-62,64,69-79,84-114
+  s_38364944f30f6b::t_6a62a32fdd1077 115-176
+src/components/Header.tsx
+  s_38364944f30f6b::t_4c169e4681267b 1,3,7-15,18-21,23-24,27-28,32,35-51,53-62,66-80,83-111,145-155
+  s_38364944f30f6b::t_601ff511697381 156-182,184,191-206
+src/components/editor/layer-tabs.tsx
+  s_38364944f30f6b::t_d7162939408314 1-2,6,11-12,23-30,32-38,40-46,48-61,63-70,72-82,84-87,89-90,92-129,131,133-142,144-146,148-151,156-158,160-172,176-187,189-198,200-201,203-207,211-214,216-217,220-223,225-252,255-289,291,293,300-301
+  s_38364944f30f6b::t_fdee0d28e323f5 152,154-155
+  s_38364944f30f6b::t_73ce9bbdffb166 298,302,307-308
+src/contexts/toast-context.tsx
+  s_38364944f30f6b::t_7439c4808d08a7 1-144
+src/kanata/key-action.ts
+  s_38364944f30f6b::t_3959f4ad3ff25a 1-278
+src/components/editor/action-editor/hooks/use-action-editor.ts
+  s_38364944f30f6b::t_cd2610caa02865 1-18,20-21,26,29,32-41,44-47,49-53,55,57-61,64,66-82,86-93,96-108
+  s_38364944f30f6b::t_cd5bdee3685511 109,112-113
+src/components/editor/action-editor/index.tsx
+  s_38364944f30f6b::t_24c3530e1c154c 1-4,14-15,21-60,63-128,136,138-155,157-164,168-186,188-194,196,198-205,209-240,243,245-249,251-261,263-265,267-294,296-298,301-309
+  s_38364944f30f6b::t_4ba51b0ca5638e 311-313
+src/App.tsx
+  s_38364944f30f6b::t_9c429db203874c 14,38-58
+src/components/MainContent.tsx
+  s_38364944f30f6b::t_44d4c3446e08dc 4,6,16-17,19-20,25-49,74,77-87,92,95-98
+src/components/editor/index.ts
+  s_38364944f30f6b::t_6d71917739616c 4
+src/components/editor/kanata-keys.ts
+  s_38364944f30f6b::t_f356a975dab2fa 48-51,58,63,70-73,85,94-104,122-123,126,128-129
+src/components/keyboard/components/keyboard-grid.tsx
+  s_38364944f30f6b::t_4371718619a3a4 1,4-5,9,16-34,36-56,59,61-66,74-106,122-147,150-153,165,174,177-178,183-190
+src/components/keyboard/utils/layout.ts
+  s_38364944f30f6b::t_2c63b0eaccc7bd 1-2,91,108-110,112-114,116,272-314
+src/components/onboarding/driver-onboarding-modal.tsx
+  s_38364944f30f6b::t_14e64c17a6225a 3,21,25-26,33-34,40-41,187,193-210,212-213,215,218,244-245,278,283,329,332,339,353,359,371-373,375,384-385,401-402,409,414,425,427,430,443,445,487,497,505-506,514,537,548,553
+src/components/presets/new-profile-dialog.tsx
+  s_38364944f30f6b::t_ec01d1f544f58b 23-24,51-60,67,106,108,119,128,141,154,156-158,184,187
+src/components/profiles/profile-switcher.tsx
+  s_38364944f30f6b::t_757129c9b4b728 36,52-60,75-77,81,184,193,204,206,214,216,231,242,244,255
+src/components/profiles/use-kbd-file-actions.tsx
+  s_38364944f30f6b::t_6d7880542707fb 2-3,36-37,58-64,80-89,91-97,130,132-135,143,145,148-150,163-164
+src/components/status/status-indicator.tsx
+  s_38364944f30f6b::t_6ede070f635bbd 2,7,17,25,33,41,50-51,76-98
+src/components/ui/dialog.tsx
+  s_38364944f30f6b::t_23d90eae388c0a 114
+src/contexts/config-context.tsx
+  s_38364944f30f6b::t_1b684853be2645 6,8,15-23,31-32,43,46-51,68-76,81,84-85,91-188,222-237,241-242,244-247,253-266,268,271,274,276-277,279-298,301,304-307,309-330,334-335,338,340-345,352,355,357,359-362,364-368,376-377,381,390-393,411-414,451-454
+src/contexts/index.ts
+  s_38364944f30f6b::t_edcb72724aac16 23
+src/contexts/profile-context.tsx
+  s_38364944f30f6b::t_e95290c71897b2 14,67-71,142,148-150,162,165,170,192,195,198,203,209-211,221,224,227-229,236-237,241,244
+src/contexts/ui-context.tsx
+  s_38364944f30f6b::t_3f44f982644486 32,40
+src/index.css
+  s_38364944f30f6b::t_3f848a1f83f5ce 69-70
+tailwind.config.js
+  s_38364944f30f6b::t_49c34844f6be5e 24-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c8083983b3b5648ef8b9eb1320fa1e572eb133ef",
+  "prompts": {},
+  "sessions": {
+    "s_38364944f30f6b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1f3a5166-7012-4551-a8b4-36d9196ae390",
+        "model": "unknown"
+      },
+      "human_author": "Grant Steffen <gsteffen1203@gmail.com>"
+    }
+  }
+}
