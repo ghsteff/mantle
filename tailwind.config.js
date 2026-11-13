@@ -21,6 +21,8 @@ module.exports = {
           bg: "var(--key-bg)",
           "bg-hover": "var(--key-bg-hover)",
           "bg-selected": "var(--key-bg-selected)",
+          "bg-modified": "var(--key-bg-modified)",
+          "border-modified": "var(--key-border-modified)",
           border: "var(--key-border)",
           "border-hover": "var(--key-border-hover)",
           "border-selected": "var(--key-border-selected)",

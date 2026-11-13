@@ -3,13 +3,24 @@ import {
   useContext,
   useState,
   useCallback,
+  useEffect,
   useMemo,
+  useRef,
   type ReactNode,
 } from "react";
 import type { KeyboardConfig, KeyboardLayer, ProfileInfo } from "../types";
 import { toErrorMessage, assertContext } from "../lib/errors";
 import { loadConfigFromRuntime } from "../platform/config-loader";
 import { saveConfigToRuntime } from "../platform/config-saver";
+import {
+  aliasesReferencingLayer,
+  defaultActionFor,
+  referencesAlias,
+  referencesLayer,
+  renameLayerReferences,
+  repairLegacyActions,
+} from "../kanata/key-action";
+import { useToast } from "./toast-context";
 
 // State values for components
 interface ConfigState {
@@ -17,6 +28,8 @@ interface ConfigState {
   loadState: "loading" | "ready" | "error";
   error: string | null;
   isDirty: boolean;
+  canUndo: boolean;
+  canRedo: boolean;
   // Profile state (read-only, managed by ProfileContext)
   profiles: ProfileInfo[];
   activeProfile: string | null;
@@ -27,9 +40,15 @@ interface ConfigActions {
   // Layer operations
   updateKey: (layerName: string, keyId: string, action: string) => void;
   addLayer: (name: string) => void;
-  removeLayer: (name: string, currentActiveLayer: string) => void;
+  removeLayer: (name: string) => void;
   renameLayer: (oldName: string, newName: string, currentActiveLayer: string) => string;
   // Config operations
+  undo: () => void;
+  redo: () => void;
+  /** Number of steps that can currently be undone. */
+  getUndoDepth: () => number;
+  /** Undoes only if nothing else happened since the history was at `depth`. */
+  undoFrom: (depth: number) => boolean;
   applyChanges: (onSuccess?: () => Promise<void>) => Promise<boolean>;
   discardChanges: () => Promise<void>;
   reloadConfig: () => Promise<KeyboardConfig | null>;
@@ -46,18 +65,126 @@ interface ConfigInternalActions extends ConfigActions {
   loadConfig: () => Promise<KeyboardConfig | null>;
 }
 
+interface HistoryEntry {
+  config: KeyboardConfig;
+  isDirty: boolean;
+}
+
+const MAX_HISTORY = 100;
+// Edits to the same key this close together (e.g. dragging a slider) undo as one step.
+const MERGE_EDITS_WITHIN_MS = 1000;
+
 const ConfigStateContext = createContext<ConfigState | null>(null);
 const ConfigActionsContext = createContext<ConfigInternalActions | null>(null);
 
 export function ConfigProvider({ children }: { children: ReactNode }) {
-  const [config, setConfig] = useState<KeyboardConfig | null>(null);
+  const [config, setConfigState] = useState<KeyboardConfig | null>(null);
   const [loadState, setLoadState] = useState<ConfigState["loadState"]>("loading");
   const [error, setErrorState] = useState<string | null>(null);
-  const [isDirty, setIsDirty] = useState(false);
+  const [isDirty, setIsDirtyState] = useState(false);
+  const { showToast } = useToast();
 
   // Profile state (managed by ProfileContext but stored here for easy access)
   const [profiles, setProfiles] = useState<ProfileInfo[]>([]);
   const [activeProfile, setActiveProfile] = useState<string | null>(null);
+
+  // Refs mirror the latest state so edits fired in quick succession build on each other.
+  const configRef = useRef<KeyboardConfig | null>(null);
+  const isDirtyRef = useRef(false);
+  const pastRef = useRef<HistoryEntry[]>([]);
+  const futureRef = useRef<HistoryEntry[]>([]);
+  const lastEditRef = useRef<{ mergeKey: string; at: number } | null>(null);
+  const [historySize, setHistorySize] = useState({ past: 0, future: 0 });
+
+  const syncHistorySize = useCallback(() => {
+    setHistorySize({ past: pastRef.current.length, future: futureRef.current.length });
+  }, []);
+
+  const showConfig = useCallback((next: KeyboardConfig | null, dirty: boolean) => {
+    configRef.current = next;
+    isDirtyRef.current = dirty;
+    setConfigState(next);
+    setIsDirtyState(dirty);
+  }, []);
+
+  const setIsDirty = useCallback((dirty: boolean) => {
+    isDirtyRef.current = dirty;
+    setIsDirtyState(dirty);
+  }, []);
+
+  // Replaces the config from outside the editor (load, profile switch), which starts a new history.
+  const setConfig = useCallback(
+    (next: KeyboardConfig | null) => {
+      configRef.current = next;
+      setConfigState(next);
+      pastRef.current = [];
+      futureRef.current = [];
+      lastEditRef.current = null;
+      syncHistorySize();
+    },
+    [syncHistorySize]
+  );
+
+  const edit = useCallback(
+    (transform: (current: KeyboardConfig) => KeyboardConfig, mergeKey?: string) => {
+      const current = configRef.current;
+      if (!current) return;
+      const next = transform(current);
+      if (next === current) return;
+
+      const now = Date.now();
+      const last = lastEditRef.current;
+      const mergesWithLast =
+        mergeKey !== undefined &&
+        last?.mergeKey === mergeKey &&
+        now - last.at < MERGE_EDITS_WITHIN_MS &&
+        pastRef.current.length > 0;
+      if (!mergesWithLast) {
+        pastRef.current = [
+          ...pastRef.current,
+          { config: current, isDirty: isDirtyRef.current },
+        ].slice(-MAX_HISTORY);
+      }
+      futureRef.current = [];
+      lastEditRef.current = mergeKey ? { mergeKey, at: now } : null;
+      showConfig(next, true);
+      syncHistorySize();
+    },
+    [showConfig, syncHistorySize]
+  );
+
+  const undo = useCallback(() => {
+    const previous = pastRef.current[pastRef.current.length - 1];
+    const current = configRef.current;
+    if (!previous || !current) return;
+    pastRef.current = pastRef.current.slice(0, -1);
+    futureRef.current = [...futureRef.current, { config: current, isDirty: isDirtyRef.current }];
+    lastEditRef.current = null;
+    showConfig(previous.config, previous.isDirty);
+    syncHistorySize();
+  }, [showConfig, syncHistorySize]);
+
+  const getUndoDepth = useCallback(() => pastRef.current.length, []);
+
+  const undoFrom = useCallback(
+    (depth: number) => {
+      if (pastRef.current.length !== depth || futureRef.current.length > 0) return false;
+      undo();
+      return true;
+    },
+    [undo]
+  );
+
+  const redo = useCallback(() => {
+    const next = futureRef.current[futureRef.current.length - 1];
+    const current = configRef.current;
+    if (!next || !current) return;
+    futureRef.current = futureRef.current.slice(0, -1);
+    pastRef.current = [...pastRef.current, { config: current, isDirty: isDirtyRef.current }];
+    lastEditRef.current = null;
+    showConfig(next.config, next.isDirty);
+    syncHistorySize();
+  }, [showConfig, syncHistorySize]);
 
   const setIsLoading = useCallback((loading: boolean) => {
     setLoadState((prev) => {
@@ -92,103 +219,153 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
       setErrorState(toErrorMessage(err, "Failed to load config"));
       return null;
     }
-  }, []);
+  }, [setConfig]);
 
-  // Update a key in a specific layer
+  // Configs saved by older versions can hold actions Kanata rejects; fix them on sight.
+  useEffect(() => {
+    if (!config) return;
+    const { config: repaired, repairedCount } = repairLegacyActions(config);
+    if (repairedCount === 0) return;
+    configRef.current = repaired;
+    setConfigState(repaired);
+    setIsDirty(true);
+    showToast({
+      tone: "info",
+      title: `Updated ${repairedCount} ${repairedCount === 1 ? "key" : "keys"} for Kanata`,
+      description: "One-shot layer keys were saved in a format Kanata can’t load. Apply to save the fix.",
+    });
+  }, [config, setIsDirty, showToast]);
+
   const updateKey = useCallback(
     (layerName: string, keyId: string, action: string) => {
-      setConfig((prev) => {
-        if (!prev) return prev;
-        return {
+      edit(
+        (prev) => ({
           ...prev,
+          // Kanata only remaps keys listed in defsrc, which is built from sourceKeys.
+          sourceKeys: prev.sourceKeys.includes(keyId)
+            ? prev.sourceKeys
+            : [...prev.sourceKeys, keyId],
           layers: prev.layers.map((layer) =>
             layer.name === layerName
               ? { ...layer, keys: { ...layer.keys, [keyId]: action } }
               : layer
           ),
+        }),
+        `key:${layerName}:${keyId}`
+      );
+    },
+    [edit]
+  );
+
+  const addLayer = useCallback(
+    (name: string) => {
+      edit((prev) => {
+        if (prev.layers.find((l) => l.name === name)) return prev;
+        const newLayer: KeyboardLayer = {
+          name,
+          keys: Object.fromEntries(prev.sourceKeys.map((k) => [k, "_"])),
         };
+        return { ...prev, layers: [...prev.layers, newLayer] };
       });
-      setIsDirty(true);
     },
-    []
+    [edit]
   );
 
-  // Add a new layer
-  const addLayer = useCallback((name: string) => {
-    setConfig((prev) => {
-      if (!prev) return prev;
-      // Don't add duplicate
-      if (prev.layers.find((l) => l.name === name)) return prev;
-      // Create transparent layer
-      const newLayer: KeyboardLayer = {
-        name,
-        keys: Object.fromEntries(prev.sourceKeys.map((k) => [k, "_"])),
-      };
-      return { ...prev, layers: [...prev.layers, newLayer] };
-    });
-    setIsDirty(true);
-  }, []);
-
-  // Remove a layer - returns the new active layer name if the removed layer was active
+  // Keys that switch to a removed layer are reset so the config stays valid.
   const removeLayer = useCallback(
-    (name: string, currentActiveLayer: string) => {
-      let newActiveLayer = currentActiveLayer;
-      setConfig((prev) => {
-        if (!prev) return prev;
-        // Don't remove if only one layer
+    (name: string) => {
+      edit((prev) => {
         if (prev.layers.length <= 1) return prev;
-        const filtered = prev.layers.filter((l) => l.name !== name);
-        // If removing active layer, switch to first remaining layer
-        if (currentActiveLayer === name && filtered.length > 0) {
-          newActiveLayer = filtered[0].name;
-        }
-        return { ...prev, layers: filtered };
+        const staleAliases = aliasesReferencingLayer(prev.aliases, name);
+        const layers = prev.layers
+          .filter((l) => l.name !== name)
+          .map((layer, index) => ({
+            ...layer,
+            keys: Object.fromEntries(
+              Object.entries(layer.keys).map(([keyId, action]) => [
+                keyId,
+                referencesLayer(action, name) || referencesAlias(action, staleAliases)
+                  ? defaultActionFor(keyId, index === 0)
+                  : action,
+              ])
+            ),
+          }));
+        const aliases = prev.aliases
+          ? Object.fromEntries(
+              Object.entries(prev.aliases).filter(([alias]) => !staleAliases.includes(alias))
+            )
+          : prev.aliases;
+        return { ...prev, aliases, layers };
       });
-      setIsDirty(true);
-      return newActiveLayer;
     },
-    []
+    [edit]
   );
 
-  // Rename a layer - returns the new name if the renamed layer was active
-  const renameLayer = useCallback((oldName: string, newName: string, currentActiveLayer: string): string => {
-    setConfig((prev) => {
-      if (!prev) return prev;
-      return {
+  // Renames the layer and every key action that switches to it.
+  const renameLayer = useCallback(
+    (oldName: string, newName: string, currentActiveLayer: string): string => {
+      edit((prev) => ({
         ...prev,
-        layers: prev.layers.map((layer) =>
-          layer.name === oldName ? { ...layer, name: newName } : layer
-        ),
-      };
-    });
-    setIsDirty(true);
-    return currentActiveLayer === oldName ? newName : currentActiveLayer;
-  }, []);
+        aliases: prev.aliases
+          ? Object.fromEntries(
+              Object.entries(prev.aliases).map(([alias, action]) => [
+                alias,
+                renameLayerReferences(action, oldName, newName),
+              ])
+            )
+          : prev.aliases,
+        layers: prev.layers.map((layer) => ({
+          name: layer.name === oldName ? newName : layer.name,
+          keys: Object.fromEntries(
+            Object.entries(layer.keys).map(([keyId, action]) => [
+              keyId,
+              renameLayerReferences(action, oldName, newName),
+            ])
+          ),
+        })),
+      }));
+      return currentActiveLayer === oldName ? newName : currentActiveLayer;
+    },
+    [edit]
+  );
 
   // Apply all pending changes - saves to disk and restarts Kanata
   const applyChanges = useCallback(async (onSuccess?: () => Promise<void>): Promise<boolean> => {
-    if (!config) return false;
+    const current = configRef.current;
+    if (!current) return false;
 
     try {
-      const success = await saveConfigToRuntime(config);
+      const success = await saveConfigToRuntime(current);
       if (success) {
-        setIsDirty(false);
+        // History entries are now dirty unless they are exactly what was saved.
+        const markSaved = (entry: HistoryEntry) => ({ ...entry, isDirty: entry.config !== current });
+        pastRef.current = pastRef.current.map(markSaved);
+        futureRef.current = futureRef.current.map(markSaved);
+        lastEditRef.current = null;
+        setIsDirty(configRef.current !== current);
         if (onSuccess) {
           await onSuccess();
         }
       }
       return success;
     } catch (err) {
-      setError(toErrorMessage(err, "Failed to save config"));
+      console.error("Failed to save config:", toErrorMessage(err, "unknown error"));
       return false;
     }
-  }, [config]);
+  }, [setIsDirty]);
 
-  // Discard all pending changes - reload from disk
+  // Reloads the saved config; the discarded edits stay one undo away.
   const discardChanges = useCallback(async (): Promise<void> => {
+    const discarded = configRef.current;
+    const wasDirty = isDirtyRef.current;
+    const reloaded = await loadConfig();
+    if (!reloaded) return;
     setIsDirty(false);
-    await loadConfig();
-  }, [loadConfig]);
+    if (discarded) {
+      pastRef.current = [{ config: discarded, isDirty: wasDirty }];
+      syncHistorySize();
+    }
+  }, [loadConfig, setIsDirty, syncHistorySize]);
 
   const stateValue = useMemo<ConfigState>(
     () => ({
@@ -196,10 +373,12 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
       loadState,
       error,
       isDirty,
+      canUndo: historySize.past > 0,
+      canRedo: historySize.future > 0,
       profiles,
       activeProfile,
     }),
-    [config, loadState, error, isDirty, profiles, activeProfile]
+    [config, loadState, error, isDirty, historySize, profiles, activeProfile]
   );
 
   const actionsValue = useMemo<ConfigInternalActions>(
@@ -208,6 +387,10 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
       addLayer,
       removeLayer,
       renameLayer,
+      undo,
+      redo,
+      getUndoDepth,
+      undoFrom,
       applyChanges,
       discardChanges,
       reloadConfig: loadConfig,
@@ -225,6 +408,10 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
       addLayer,
       removeLayer,
       renameLayer,
+      undo,
+      redo,
+      getUndoDepth,
+      undoFrom,
       applyChanges,
       discardChanges,
       loadConfig,
@@ -261,6 +448,10 @@ export function useConfigActions(): ConfigActions {
       addLayer: context.addLayer,
       removeLayer: context.removeLayer,
       renameLayer: context.renameLayer,
+      undo: context.undo,
+      redo: context.redo,
+      getUndoDepth: context.getUndoDepth,
+      undoFrom: context.undoFrom,
       applyChanges: context.applyChanges,
       discardChanges: context.discardChanges,
       reloadConfig: context.reloadConfig,

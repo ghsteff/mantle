@@ -11,6 +11,7 @@ import {
 import type { KeyboardConfig, ExportResult, ImportResult } from "../types";
 import { useConfigActionsInternal, useConfigState } from "./config-context";
 import { useUIActions, useUIState } from "./ui-context";
+import { useToast } from "./toast-context";
 import { toErrorMessage, assertContext } from "../lib/errors";
 import { getProfileNameError } from "../lib/profile-name";
 import {
@@ -63,6 +64,11 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   } = useConfigActionsInternal();
 
   const { activeLayer } = useUIState();
+  const { showToast } = useToast();
+  const showError = useCallback(
+    (title: string, description?: string) => showToast({ tone: "error", title, description }),
+    [showToast]
+  );
   const { setActiveLayer, setSelectedKey } = useUIActions();
   const hasInitialized = useRef(false);
   const discardChangesResolverRef = useRef<((confirmed: boolean) => void) | null>(
@@ -133,12 +139,15 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const createProfile = useCallback(async (name: string, profileConfig: KeyboardConfig): Promise<boolean> => {
     const nameError = getProfileNameError(name);
     if (nameError) {
-      setError(nameError);
+      showError("Couldn’t create profile", nameError);
       return false;
     }
     try {
       const trimmedName = name.trim();
       const success = await createProfileInRuntime(trimmedName, profileConfig);
+      if (!success) {
+        showError("Couldn’t create profile", `A profile named “${trimmedName}” may already exist.`);
+      }
       if (success) {
         await refreshProfiles();
         // If this is the first profile or it became active, load it
@@ -150,15 +159,15 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       }
       return success;
     } catch (err) {
-      setError(toErrorMessage(err, "Failed to create profile"));
+      showError("Couldn’t create profile", toErrorMessage(err, "Unknown error"));
       return false;
     }
-  }, [refreshProfiles, setConfig, setActiveLayer, setError]);
+  }, [refreshProfiles, setConfig, setActiveLayer, showError]);
 
   const switchProfile = useCallback(async (name: string): Promise<boolean> => {
     const nameError = getProfileNameError(name);
     if (nameError) {
-      setError(nameError);
+      showError("Couldn’t switch profile", nameError);
       return false;
     }
     // Don't switch if there are unsaved changes
@@ -180,22 +189,26 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         await refreshProfiles();
         return true;
       }
+      showError("Couldn’t switch profile", `“${trimmedName}” could not be loaded.`);
       return false;
     } catch (err) {
-      setError(toErrorMessage(err, "Failed to switch profile"));
+      showError("Couldn’t switch profile", toErrorMessage(err, "Unknown error"));
       return false;
     }
-  }, [confirmDiscardUnsavedChanges, isDirty, refreshProfiles, setConfig, setActiveProfile, setActiveLayer, setIsDirty, setSelectedKey, setError]);
+  }, [confirmDiscardUnsavedChanges, isDirty, refreshProfiles, setConfig, setActiveProfile, setActiveLayer, setIsDirty, setSelectedKey, setError, showError]);
 
   const deleteProfileAction = useCallback(async (name: string): Promise<boolean> => {
     const nameError = getProfileNameError(name);
     if (nameError) {
-      setError(nameError);
+      showError("Couldn’t delete profile", nameError);
       return false;
     }
     try {
       const trimmedName = name.trim();
       const success = await deleteProfileInRuntime(trimmedName);
+      if (!success) {
+        showError("Couldn’t delete profile", `“${trimmedName}” could not be removed.`);
+      }
       if (success) {
         await refreshProfiles();
         // If we deleted the active profile, reload config
@@ -205,33 +218,30 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       }
       return success;
     } catch (err) {
-      setError(toErrorMessage(err, "Failed to delete profile"));
+      showError("Couldn’t delete profile", toErrorMessage(err, "Unknown error"));
       return false;
     }
-  }, [activeProfile, loadConfig, refreshProfiles, setError]);
+  }, [activeProfile, loadConfig, refreshProfiles, showError]);
 
   const renameProfileAction = useCallback(async (oldName: string, newName: string): Promise<boolean> => {
-    const oldNameError = getProfileNameError(oldName);
-    if (oldNameError) {
-      setError(oldNameError);
-      return false;
-    }
-    const newNameError = getProfileNameError(newName);
-    if (newNameError) {
-      setError(newNameError);
+    const nameError = getProfileNameError(oldName) ?? getProfileNameError(newName);
+    if (nameError) {
+      showError("Couldn’t rename profile", nameError);
       return false;
     }
     try {
       const success = await renameProfileInRuntime(oldName.trim(), newName.trim());
       if (success) {
         await refreshProfiles();
+      } else {
+        showError("Couldn’t rename profile", `A profile named “${newName.trim()}” may already exist.`);
       }
       return success;
     } catch (err) {
-      setError(toErrorMessage(err, "Failed to rename profile"));
+      showError("Couldn’t rename profile", toErrorMessage(err, "Unknown error"));
       return false;
     }
-  }, [refreshProfiles, setError]);
+  }, [refreshProfiles, showError]);
 
   // Switches to the new copy without asking to discard unsaved changes; the
   // duplicate dialog warns about that before calling this.

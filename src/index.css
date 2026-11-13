@@ -66,6 +66,8 @@
   --key-bg: #111114;
   --key-bg-hover: #16161a;
   --key-bg-selected: rgba(255, 255, 255, 0.06);
+  --key-bg-modified: #17171b;
+  --key-border-modified: rgba(255, 255, 255, 0.11);
   --key-border: rgba(255, 255, 255, 0.06);
   --key-border-hover: rgba(255, 255, 255, 0.12);
   --key-border-selected: rgba(255, 255, 255, 0.25);

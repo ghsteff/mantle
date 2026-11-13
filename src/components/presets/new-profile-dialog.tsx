@@ -20,7 +20,8 @@ import {
   DialogTrigger,
 } from "../ui/dialog";
 import { PlusIcon } from "lucide-react";
-import { getProfileNameError } from "@/lib/profile-name";
+import { findProfileNameConflict, getProfileNameError } from "@/lib/profile-name";
+import { useConfigState } from "@/contexts";
 
 interface NewProfileDialogProps {
   onComplete: (profileName: string, preset: Preset) => Promise<void>;
@@ -47,14 +48,23 @@ export function NewProfileDialog({
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
   const [profileName, setProfileName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
-  const profileNameError = getProfileNameError(profileName);
+  const { profiles } = useConfigState();
+  const nameConflict = findProfileNameConflict(
+    profileName,
+    profiles.map((profile) => profile.name)
+  );
+  const profileNameError = profileName.trim()
+    ? (getProfileNameError(profileName) ??
+      (nameConflict ? `A profile named “${nameConflict}” already exists.` : null))
+    : null;
+  const canCreate = Boolean(profileName.trim()) && !profileNameError;
 
   const selectedPreset = selectedPresetId
     ? ALL_PRESETS.find((p) => p.metadata.id === selectedPresetId) || null
     : null;
 
   const handleCreate = async () => {
-    if (!profileNameError) {
+    if (canCreate) {
       setIsCreating(true);
       try {
         // Use selected preset or default to QWERTY
@@ -93,9 +103,9 @@ export function NewProfileDialog({
       )}
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Create New Profile</DialogTitle>
+          <DialogTitle>New profile</DialogTitle>
           <DialogDescription>
-            Enter a name for your profile. Optionally select a template below.
+            Profiles are separate keyboard setups you can switch between.
           </DialogDescription>
         </DialogHeader>
 
@@ -106,7 +116,7 @@ export function NewProfileDialog({
               htmlFor="new-profile-name"
               className="text-sm font-medium text-foreground"
             >
-              Profile Name
+              Name
             </label>
             <Input
               id="new-profile-name"
@@ -115,7 +125,7 @@ export function NewProfileDialog({
               placeholder="e.g., work, gaming, ergonomic"
               autoFocus
               onKeyDown={(e) => {
-                if (e.key === "Enter" && !profileNameError && !isCreating) {
+                if (e.key === "Enter" && canCreate && !isCreating) {
                   handleCreate();
                 }
               }}
@@ -128,7 +138,7 @@ export function NewProfileDialog({
           {/* Optional Template Selection */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-foreground">
-              Template (Optional)
+              Start from
             </label>
             <Select
               value={selectedPresetId || "none"}
@@ -141,9 +151,11 @@ export function NewProfileDialog({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">
-                  None (<span className="font-mono">QWERTY</span> default)
+                  Standard keyboard (no changes)
                 </SelectItem>
-                {ALL_PRESETS.map((preset) => (
+                {ALL_PRESETS.filter(
+                  (preset) => preset.metadata.id !== qwertyPreset.metadata.id
+                ).map((preset) => (
                   <SelectItem
                     key={preset.metadata.id}
                     value={preset.metadata.id}
@@ -169,10 +181,10 @@ export function NewProfileDialog({
           </Button>
           <Button
             onClick={handleCreate}
-            disabled={Boolean(profileNameError) || isCreating}
+            disabled={!canCreate || isCreating}
             className="min-w-24"
           >
-            {isCreating ? "Creating..." : "Create Profile"}
+            {isCreating ? "Creating…" : "Create profile"}
           </Button>
         </DialogFooter>
       </DialogContent>

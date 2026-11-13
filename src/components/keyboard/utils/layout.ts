@@ -1,3 +1,5 @@
+import { findKeyOption } from "../../editor/kanata-keys";
+
 /**
  * Key definition for the keyboard layout.
  */
@@ -86,7 +88,7 @@ export const KEY_LABELS: Record<string, { label: string; subLabel?: string }> =
     l: { label: "L" },
     ";": { label: ";", subLabel: ":" },
     "'": { label: "'", subLabel: '"' },
-    ret: { label: "Enter" },
+    ret: { label: "Return" },
 
     // Bottom row
     lsft: { label: "Shift" },
@@ -103,14 +105,15 @@ export const KEY_LABELS: Record<string, { label: string; subLabel?: string }> =
     rsft: { label: "Shift" },
 
     // Modifier row
-    lctl: { label: "Ctrl" },
-    lmet: { label: "⌘", subLabel: "Win" },
-    lalt: { label: "Alt" },
+    lctl: { label: "⌃", subLabel: "Control" },
+    lmet: { label: "⌘", subLabel: "Command" },
+    lalt: { label: "⌥", subLabel: "Option" },
     spc: { label: "Space" },
-    ralt: { label: "Alt" },
-    rmet: { label: "⌘", subLabel: "Win" },
-    rctl: { label: "Ctrl" },
+    ralt: { label: "⌥", subLabel: "Option" },
+    rmet: { label: "⌘", subLabel: "Command" },
+    rctl: { label: "⌃", subLabel: "Control" },
     menu: { label: "Menu" },
+    fn: { label: "fn" },
 
     // Navigation cluster
     ins: { label: "Ins" },
@@ -264,6 +267,49 @@ export function getKeyLabel(keyId: string): {
   subLabel?: string;
 } {
   return KEY_LABELS[keyId] || { label: keyId.toUpperCase() };
+}
+
+const MACBOOK_FUNCTION_KEY_WIDTH = 1.125;
+
+/**
+ * MacBook-style ANSI layout: no navigation cluster, fn in the corner and
+ * half-height up/down arrows.
+ */
+export const MACBOOK_LAYOUT: KeyDef[] = [
+  { id: "esc", label: "Esc", width: 1.5, row: 0, col: 0 },
+  ...Array.from({ length: 12 }, (_, index) => ({
+    id: `f${index + 1}`,
+    label: `F${index + 1}`,
+    width: MACBOOK_FUNCTION_KEY_WIDTH,
+    row: 0,
+    col: 1.5 + index * MACBOOK_FUNCTION_KEY_WIDTH,
+  })),
+
+  ...TKL_LAYOUT.filter((key) => key.row >= 1 && key.row <= 4 && key.col < 15),
+
+  { id: "fn", label: "fn", width: 1, row: 5, col: 0 },
+  { id: "lctl", label: "⌃", width: 1, row: 5, col: 1 },
+  { id: "lalt", label: "⌥", width: 1, row: 5, col: 2 },
+  { id: "lmet", label: "⌘", width: 1.25, row: 5, col: 3 },
+  { id: "spc", label: "Space", width: 5, row: 5, col: 4.25 },
+  { id: "rmet", label: "⌘", width: 1.25, row: 5, col: 9.25 },
+  { id: "ralt", label: "⌥", width: 1, row: 5, col: 10.5 },
+  { id: "left", label: "←", width: 1, row: 5, col: 11.5 },
+  { id: "up", label: "↑", width: 1, height: 0.5, row: 5, col: 12.5 },
+  { id: "down", label: "↓", width: 1, height: 0.5, row: 5.5, col: 12.5 },
+  { id: "right", label: "→", width: 1, row: 5, col: 13.5 },
+];
+
+export const KEYBOARD_LAYOUTS = [
+  { id: "macbook", name: "MacBook", keys: MACBOOK_LAYOUT },
+  { id: "tkl", name: "Full-size (tenkeyless)", keys: TKL_LAYOUT },
+] as const;
+
+export type KeyboardLayoutId = (typeof KEYBOARD_LAYOUTS)[number]["id"];
+
+/** Human-readable key name, e.g. "Caps Lock" or "Left Command". */
+export function getKeyName(keyId: string): string {
+  return findKeyOption(keyId)?.label ?? getKeyLabel(keyId).label;
 }
 
 /**

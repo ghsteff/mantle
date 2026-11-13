@@ -1,8 +1,10 @@
 import { useKanataActions, useKanataState } from "../../contexts";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui";
 import { cn } from "@/lib/utils";
 
 type StatusConfig = {
   label: string;
+  hint: string;
   dotClass: string;
   textClass: string;
   bgClass: string;
@@ -12,6 +14,7 @@ type StatusConfig = {
 const STATUS_MAP: Record<string, StatusConfig> = {
   running: {
     label: "Live",
+    hint: "Remapping is on. Click to turn it off.",
     dotClass: "bg-status-success animate-pulse-dot",
     textClass: "text-status-success",
     bgClass: "",
@@ -19,6 +22,7 @@ const STATUS_MAP: Record<string, StatusConfig> = {
   },
   starting: {
     label: "Starting",
+    hint: "Starting Kanata…",
     dotClass: "bg-status-warning animate-pulse-warning",
     textClass: "text-status-warning",
     bgClass: "",
@@ -26,6 +30,7 @@ const STATUS_MAP: Record<string, StatusConfig> = {
   },
   stopping: {
     label: "Stopping",
+    hint: "Stopping Kanata…",
     dotClass: "bg-status-warning animate-pulse-warning",
     textClass: "text-status-warning",
     bgClass: "",
@@ -33,6 +38,7 @@ const STATUS_MAP: Record<string, StatusConfig> = {
   },
   error: {
     label: "Error",
+    hint: "Kanata stopped with an error. Click to try again; the console has details.",
     dotClass: "bg-status-error",
     textClass: "text-status-error",
     bgClass: "",
@@ -41,7 +47,8 @@ const STATUS_MAP: Record<string, StatusConfig> = {
 };
 
 const DEFAULT_STATUS: StatusConfig = {
-  label: "Stopped",
+  label: "Off",
+  hint: "Remapping is off. Click to turn it on.",
   dotClass: "bg-muted-foreground",
   textClass: "text-muted-foreground",
   bgClass: "",
@@ -66,29 +73,28 @@ export function StatusIndicator() {
   const config = STATUS_MAP[status] ?? DEFAULT_STATUS;
 
   return (
-    <button
-      type="button"
-      onClick={handleClick}
-      disabled={!canToggle}
-      className={cn(
-        "flex items-center gap-2 px-3 py-1.5 rounded-full",
-        "text-[11px] font-medium tracking-wide",
-        "transition-all duration-300 ease-out",
-        "disabled:opacity-50",
-        config.bgClass,
-        config.textClass,
-        canToggle && cn(config.hoverClass, "active:scale-[0.97]"),
-      )}
-      title={
-        isTransitioning
-          ? "Kanata transition in progress"
-          : isRunning
-            ? "Click to stop Kanata"
-            : "Click to start Kanata"
-      }
-    >
-      <span className={cn("size-1.5 rounded-full", config.dotClass)} />
-      <span>{config.label}</span>
-    </button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          onClick={handleClick}
+          disabled={!canToggle}
+          aria-label={`Kanata: ${config.label}. ${config.hint}`}
+          className={cn(
+            "flex items-center gap-2 px-3 py-1.5 rounded-full",
+            "text-[11px] font-medium tracking-wide",
+            "transition-all duration-300 ease-out",
+            "disabled:opacity-50",
+            config.bgClass,
+            config.textClass,
+            canToggle && cn(config.hoverClass, "active:scale-[0.97]"),
+          )}
+        >
+          <span className={cn("size-1.5 rounded-full", config.dotClass)} />
+          <span>{config.label}</span>
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" align="end">{config.hint}</TooltipContent>
+    </Tooltip>
   );
 }

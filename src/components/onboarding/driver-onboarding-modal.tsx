@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../ui";
-import { Dialog, DialogContent } from "../ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "../ui/dialog";
 import { cn } from "../../lib/utils";
 import { useKarabinerActions, useKarabinerState } from "../../contexts";
 import { getDriverInstallStatus } from "./driver-install-status";
@@ -18,27 +18,27 @@ const APPROVAL_POLL_INTERVAL_MS = 3000;
 function stepMeta(
   step: OnboardingStep,
   supportedVersion: string | null
-): { number: string; title: string; description: string } {
+): { number: number; title: string; description: string } {
   switch (step) {
     case "install":
       return {
-        number: "01",
-        title: "INSTALL VIRTUAL KEYBOARD DRIVER",
+        number: 1,
+        title: "Install the keyboard driver",
         description: supportedVersion
           ? `Mantle needs Karabiner VirtualHIDDevice v${supportedVersion} to intercept and remap your keys.`
           : "Mantle needs a virtual keyboard driver to intercept and remap your keys.",
       };
     case "approve":
       return {
-        number: "02",
-        title: "APPROVE SYSTEM EXTENSION",
+        number: 2,
+        title: "Allow the system extension",
         description:
           "macOS requires you to approve the virtual keyboard driver before it can run. This is a one-time step.",
       };
     case "permission":
       return {
-        number: "03",
-        title: "GRANT INPUT MONITORING",
+        number: 3,
+        title: "Allow Input Monitoring",
         description:
           "Grant Kanata permission to monitor keyboard input so remappings can take effect.",
       };
@@ -184,36 +184,38 @@ export function DriverOnboardingModal({
   return (
     <Dialog open={open}>
       <DialogContent
-        className="max-w-2xl max-h-[90vh] p-0 gap-0 bg-background border-border rounded-none shadow-none flex flex-col overflow-hidden"
+        className="max-w-xl max-h-[90vh] p-0 gap-0 flex flex-col overflow-hidden rounded-xl"
         showCloseButton={false}
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
-        {/* Header */}
-        <div className="h-12 border-b border-border flex items-center justify-between px-6 bg-card select-none">
-          <div className="flex items-center gap-4">
-            <div className="size-3 bg-primary" />
-            <h1 className="font-mono text-sm font-bold tracking-wider uppercase text-foreground">
-              System Setup
-            </h1>
-          </div>
-          <div className="font-mono text-xs text-muted-foreground">
-            Step {currentStep.number} / 03
-          </div>
-        </div>
-
-        {/* Content */}
         <div className="flex-1 overflow-hidden flex flex-col">
-          <div className="px-6 py-6 border-b border-border bg-background">
-            <h2 className="font-mono text-lg font-bold text-foreground mb-2">
+          <div className="px-6 pt-6 pb-5 border-b border-border">
+            <div className="mb-4 flex items-center justify-between">
+              <span className="text-[11px] font-medium text-muted-foreground">
+                Set up Mantle · Step {currentStep.number} of 3
+              </span>
+              <div className="flex gap-1" aria-hidden>
+                {[1, 2, 3].map((n) => (
+                  <span
+                    key={n}
+                    className={cn(
+                      "h-1 w-6 rounded-full",
+                      n <= currentStep.number ? "bg-foreground" : "bg-white/10"
+                    )}
+                  />
+                ))}
+              </div>
+            </div>
+            <DialogTitle className="text-base font-semibold text-foreground mb-1.5">
               {currentStep.title}
-            </h2>
-            <p className="font-mono text-xs text-muted-foreground max-w-xl">
+            </DialogTitle>
+            <DialogDescription className="text-xs leading-relaxed text-muted-foreground max-w-xl">
               {currentStep.description}
-            </p>
+            </DialogDescription>
           </div>
 
-          <div className="flex-1 overflow-y-auto bg-secondary p-6">
+          <div className="flex-1 overflow-y-auto p-6">
             {step === "install" ? (
               <InstallStepContent
                 driverInstalled={driverInstalled}
@@ -239,8 +241,8 @@ export function DriverOnboardingModal({
           </div>
 
           {/* Footer */}
-          <div className="p-4 border-t border-border bg-card flex items-center justify-between">
-            <div className="font-mono text-xs text-muted-foreground flex items-center gap-2">
+          <div className="px-6 py-4 border-t border-border flex items-center justify-between">
+            <div className="text-xs text-muted-foreground flex items-center gap-2">
               {step === "install" && isInstalling && "Installing..."}
               {step === "install" && installFailed && "Installation failed"}
               {step === "install" && installSucceeded && "Driver installed"}
@@ -272,18 +274,13 @@ export function DriverOnboardingModal({
                   <Button
                     variant="outline"
                     onClick={handleDone}
-                    className="font-mono text-xs rounded-none border-border hover:bg-secondary"
                   >
-                    DONE
+                    Done
                   </Button>
                   <Button
                     onClick={handleOpenSettings}
-                    className={cn(
-                      "font-mono text-xs rounded-none min-w-32 tracking-wide",
-                      "bg-foreground text-background hover:bg-foreground/90"
-                    )}
                   >
-                    OPEN SYSTEM SETTINGS
+                    Open System Settings
                   </Button>
                 </>
               )}
@@ -329,17 +326,17 @@ function InstallStepContent({
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2 font-mono text-xs">
+      <div className="space-y-2 text-xs">
         <div className="flex items-center gap-2">
           <span className={cn("size-2 rounded-full", color)} />
-          <span className="text-text-secondary">Virtual Keyboard Driver: {label}</span>
+          <span className="text-text-secondary">Keyboard driver: {label}</span>
         </div>
       </div>
 
       {(isInstalling || installOutput.length > 0) && (
         <div
           ref={terminalRef}
-          className="bg-background border border-border p-3 font-mono text-xs h-64 overflow-y-auto"
+          className="rounded-md bg-background border border-border p-3 font-mono text-[11px] h-48 overflow-y-auto"
         >
           {installOutput.map((line, i) => (
             <div key={i} className="text-text-secondary whitespace-pre-wrap">
@@ -353,13 +350,13 @@ function InstallStepContent({
       )}
 
       {installFailed && installError && (
-        <div className="bg-status-error/10 border border-status-error/30 p-3 font-mono text-xs text-status-error">
+        <div className="rounded-md bg-status-error/10 border border-status-error/30 p-3 text-xs text-status-error">
           {installError}
         </div>
       )}
 
       {needsRepair && !isInstalling && !installSucceeded && supportedVersion && (
-        <div className="bg-amber-500/10 border border-amber-500/30 p-3 font-mono text-xs text-amber-700 dark:text-amber-400">
+        <div className="rounded-md bg-status-warning-bg border border-status-warning/30 p-3 text-xs leading-relaxed text-status-warning">
           Installed driver v{installedVersion ?? "unknown"} does not match Mantle&apos;s
           required v{supportedVersion}. Repair installs the compatible driver. If
           Karabiner-Elements is also installed, it may upgrade the driver again.
@@ -371,11 +368,11 @@ function InstallStepContent({
         !canProceed &&
         !needsRepair &&
         supportedVersion && (
-        <div className="border border-border bg-card p-4 space-y-3">
-          <div className="font-mono text-xs text-muted-foreground uppercase tracking-wider">
-            What will happen:
+        <div className="rounded-md border border-border bg-card p-4 space-y-2">
+          <div className="text-xs font-medium text-foreground">
+            What happens next
           </div>
-          <ul className="font-mono text-xs text-text-secondary space-y-1 list-disc list-inside">
+          <ul className="text-xs text-text-secondary space-y-1 list-disc list-inside">
             <li>Download VirtualHIDDevice v{supportedVersion} from pqrs.org</li>
             <li>Verify the package signature</li>
             <li>Install and activate the system extension</li>
@@ -384,8 +381,8 @@ function InstallStepContent({
       )}
 
       {canProceed && (
-        <div className="bg-status-success/10 border border-status-success/30 p-3 font-mono text-xs text-status-success">
-          Virtual keyboard driver is installed. Click Next to continue.
+        <div className="rounded-md bg-status-success/10 border border-status-success/30 p-3 text-xs text-status-success">
+          The keyboard driver is installed. Continue to the next step.
         </div>
       )}
     </div>
@@ -401,20 +398,20 @@ function ApproveStepContent({
 }) {
   if (driverActivated) {
     return (
-      <div className="bg-status-success/10 border border-status-success/30 p-3 font-mono text-xs text-status-success">
-        System extension approved. Click Next to continue.
+      <div className="rounded-md bg-status-success/10 border border-status-success/30 p-3 text-xs text-status-success">
+        The system extension is allowed. Continue to the next step.
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 font-mono text-xs">
+      <div className="flex items-center gap-2 text-xs">
         <span
           className={cn(
             "size-2 rounded-full",
             driverPendingApproval
-              ? "bg-amber-500 animate-pulse"
+              ? "bg-status-warning animate-pulse"
               : "bg-muted-foreground"
           )}
         />
@@ -425,12 +422,12 @@ function ApproveStepContent({
         </span>
       </div>
 
-      <ol className="font-mono text-xs text-text-secondary list-decimal list-inside space-y-2">
+      <ol className="text-xs leading-relaxed text-text-secondary list-decimal list-inside space-y-2">
         <li>
-          Click <strong className="text-foreground">"Open System Settings"</strong> below
+          Click <strong className="text-foreground">Open System Settings</strong> below
         </li>
         <li>
-          Click <strong className="text-foreground">"Driver Extensions"</strong>
+          Click <strong className="text-foreground">Driver Extensions</strong>
         </li>
         <li>
           Toggle <strong className="text-foreground">Karabiner DriverKit VirtualHIDDevice</strong> to ON
@@ -443,9 +440,9 @@ function ApproveStepContent({
 function PermissionStepContent() {
   return (
     <div className="space-y-4">
-      <ol className="font-mono text-xs text-text-secondary list-decimal list-inside space-y-2">
+      <ol className="text-xs leading-relaxed text-text-secondary list-decimal list-inside space-y-2">
         <li>
-          Click <strong className="text-foreground">"Open System Settings"</strong> below — Finder will also reveal the kanata binary
+          Click <strong className="text-foreground">Open System Settings</strong> below. Finder also opens, showing the kanata binary
         </li>
         <li>
           Drag the <strong className="text-foreground">kanata binary</strong> from Finder into the Input Monitoring list
@@ -486,9 +483,8 @@ function InstallStepFooter({
       <Button
         variant="outline"
         onClick={onCancel}
-        className="font-mono text-xs rounded-none border-border hover:bg-secondary"
       >
-        CANCEL
+        Cancel
       </Button>
     );
   }
@@ -497,12 +493,8 @@ function InstallStepFooter({
     return (
       <Button
         onClick={onNext}
-        className={cn(
-          "font-mono text-xs rounded-none min-w-32 tracking-wide",
-          "bg-foreground text-background hover:bg-foreground/90"
-        )}
       >
-        NEXT &gt;
+        Continue
       </Button>
     );
   }
@@ -510,25 +502,16 @@ function InstallStepFooter({
   return (
     <>
       {installFailed && (
-        <Button
-          variant="outline"
-          onClick={onInstall}
-          className="font-mono text-xs rounded-none border-border hover:bg-secondary"
-        >
-          RETRY
+        <Button onClick={onInstall}>
+          Try again
         </Button>
       )}
       {!installFailed && (
         <Button
           onClick={onInstall}
           disabled={isInstalling}
-          className={cn(
-            "font-mono text-xs rounded-none min-w-40 tracking-wide",
-            "bg-foreground text-background hover:bg-foreground/90",
-            "disabled:opacity-50 disabled:cursor-not-allowed"
-          )}
         >
-          {needsRepair ? "REPAIR DRIVER" : "INSTALL DRIVER"}
+          {needsRepair ? "Repair driver" : "Install driver"}
         </Button>
       )}
     </>
@@ -550,12 +533,8 @@ function ApproveStepFooter({
     return (
       <Button
         onClick={onNext}
-        className={cn(
-          "font-mono text-xs rounded-none min-w-32 tracking-wide",
-          "bg-foreground text-background hover:bg-foreground/90"
-        )}
       >
-        NEXT &gt;
+        Continue
       </Button>
     );
   }
@@ -565,18 +544,13 @@ function ApproveStepFooter({
       <Button
         variant="outline"
         onClick={onRetryActivation}
-        className="font-mono text-xs rounded-none border-border hover:bg-secondary"
       >
-        RETRY ACTIVATION
+        Retry activation
       </Button>
       <Button
         onClick={onOpenSettings}
-        className={cn(
-          "font-mono text-xs rounded-none min-w-48 tracking-wide",
-          "bg-foreground text-background hover:bg-foreground/90"
-        )}
       >
-        OPEN SYSTEM SETTINGS
+        Open System Settings
       </Button>
     </>
   );

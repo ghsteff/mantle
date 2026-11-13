@@ -45,75 +45,32 @@ const MODIFIERS: KeyOption[] = [
   { value: "rctl", label: "Right Control", category: "Modifiers" },
   { value: "lsft", label: "Left Shift", category: "Modifiers" },
   { value: "rsft", label: "Right Shift", category: "Modifiers" },
-  { value: "lalt", label: "Left Alt/Option", category: "Modifiers" },
-  { value: "ralt", label: "Right Alt/Option", category: "Modifiers" },
-  { value: "lmet", label: "Left Meta/Cmd/Win", category: "Modifiers" },
-  { value: "rmet", label: "Right Meta/Cmd/Win", category: "Modifiers" },
+  { value: "lalt", label: "Left Option", category: "Modifiers" },
+  { value: "ralt", label: "Right Option", category: "Modifiers" },
+  { value: "lmet", label: "Left Command", category: "Modifiers" },
+  { value: "rmet", label: "Right Command", category: "Modifiers" },
 ];
 
 // Common Modifier Combinations (presets)
 const MODIFIER_COMBOS: KeyOption[] = [
   {
     value: "(multi lctl lsft lalt)",
-    label: "Meh (Ctrl+Shift+Alt)",
+    label: "Meh (⌃⌥⇧)",
     category: "Modifier Combos",
   },
   {
     value: "(multi lctl lsft lalt lmet)",
-    label: "Hyper (Ctrl+Shift+Alt+Cmd)",
+    label: "Hyper (⌃⌥⇧⌘)",
     category: "Modifier Combos",
   },
 ];
 
-// Available modifiers for custom combos
-export const AVAILABLE_MODIFIERS = [
-  { key: "lctl", label: "Ctrl", short: "C" },
-  { key: "lsft", label: "Shift", short: "S" },
-  { key: "lalt", label: "Alt", short: "A" },
-  { key: "lmet", label: "Cmd/Meta", short: "M" },
-] as const;
-
-// Helper to build a multi expression from selected modifiers
-export function buildMultiModifier(modifiers: string[]): string {
-  if (modifiers.length === 0) return "";
-  if (modifiers.length === 1) return modifiers[0];
-  return `(multi ${modifiers.join(" ")})`;
-}
-
-// Helper to parse a multi expression back to modifier array
-export function parseMultiModifier(value: string): string[] {
-  if (!value) return [];
-
-  // Check if it's a multi expression
-  const multiMatch = value.match(/\(multi\s+(.+)\)/);
-  if (multiMatch) {
-    return multiMatch[1].split(/\s+/).filter(Boolean);
-  }
-
-  // Single modifier
-  if (AVAILABLE_MODIFIERS.some((m) => m.key === value)) {
-    return [value];
-  }
-
-  return [];
-}
-
-// Helper to get display label for a multi modifier
-export function getMultiModifierLabel(value: string): string {
-  const modifiers = parseMultiModifier(value);
-  if (modifiers.length === 0) return value;
-
-  return modifiers
-    .map((m) => AVAILABLE_MODIFIERS.find((am) => am.key === m)?.short || m)
-    .join("+");
-}
-
 // Navigation
 const NAVIGATION: KeyOption[] = [
-  { value: "up", label: "↑ Up", category: "Navigation" },
-  { value: "down", label: "↓ Down", category: "Navigation" },
-  { value: "left", label: "← Left", category: "Navigation" },
-  { value: "right", label: "→ Right", category: "Navigation" },
+  { value: "up", label: "Up Arrow", category: "Navigation" },
+  { value: "down", label: "Down Arrow", category: "Navigation" },
+  { value: "left", label: "Left Arrow", category: "Navigation" },
+  { value: "right", label: "Right Arrow", category: "Navigation" },
   { value: "home", label: "Home", category: "Navigation" },
   { value: "end", label: "End", category: "Navigation" },
   { value: "pgup", label: "Page Up", category: "Navigation" },
@@ -125,7 +82,7 @@ const EDITING: KeyOption[] = [
   { value: "bspc", label: "Backspace", category: "Editing" },
   { value: "del", label: "Delete", category: "Editing" },
   { value: "ins", label: "Insert", category: "Editing" },
-  { value: "ret", label: "Enter/Return", category: "Editing" },
+  { value: "ret", label: "Return", category: "Editing" },
   { value: "tab", label: "Tab", category: "Editing" },
   { value: "spc", label: "Space", category: "Editing" },
   { value: "esc", label: "Escape", category: "Editing" },
@@ -134,17 +91,17 @@ const EDITING: KeyOption[] = [
 
 // Punctuation & Symbols
 const SYMBOLS: KeyOption[] = [
-  { value: "grv", label: "` Grave/Backtick", category: "Symbols" },
-  { value: "-", label: "- Minus", category: "Symbols" },
-  { value: "=", label: "= Equals", category: "Symbols" },
-  { value: "[", label: "[ Left Bracket", category: "Symbols" },
-  { value: "]", label: "] Right Bracket", category: "Symbols" },
-  { value: "\\", label: "\\ Backslash", category: "Symbols" },
-  { value: ";", label: "; Semicolon", category: "Symbols" },
-  { value: "'", label: "' Quote", category: "Symbols" },
-  { value: ",", label: ", Comma", category: "Symbols" },
-  { value: ".", label: ". Period", category: "Symbols" },
-  { value: "/", label: "/ Slash", category: "Symbols" },
+  { value: "grv", label: "Backtick", category: "Symbols" },
+  { value: "-", label: "Minus", category: "Symbols" },
+  { value: "=", label: "Equals", category: "Symbols" },
+  { value: "[", label: "Left Bracket", category: "Symbols" },
+  { value: "]", label: "Right Bracket", category: "Symbols" },
+  { value: "\\", label: "Backslash", category: "Symbols" },
+  { value: ";", label: "Semicolon", category: "Symbols" },
+  { value: "'", label: "Quote", category: "Symbols" },
+  { value: ",", label: "Comma", category: "Symbols" },
+  { value: ".", label: "Period", category: "Symbols" },
+  { value: "/", label: "Slash", category: "Symbols" },
 ];
 
 // System/Media
@@ -162,13 +119,14 @@ const MEDIA: KeyOption[] = [
 
 // Special
 const SPECIAL: KeyOption[] = [
-  { value: "_", label: "_ Transparent", category: "Special" },
-  { value: "XX", label: "XX Block/No-op", category: "Special" },
+  { value: "_", label: "Same as base layer", category: "Special" },
+  { value: "XX", label: "Nothing (disable key)", category: "Special" },
   { value: "prnt", label: "Print Screen", category: "Special" },
   { value: "slck", label: "Scroll Lock", category: "Special" },
-  { value: "pause", label: "Pause/Break", category: "Special" },
+  { value: "pause", label: "Pause", category: "Special" },
   { value: "nlck", label: "Num Lock", category: "Special" },
-  { value: "menu", label: "Menu/App", category: "Special" },
+  { value: "menu", label: "Menu", category: "Special" },
+  { value: "fn", label: "Function (fn)", category: "Special" },
 ];
 
 // Numpad

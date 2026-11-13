@@ -33,7 +33,7 @@ import {
   FileInputIcon,
   PlusIcon,
 } from "lucide-react";
-import { getProfileNameError } from "@/lib/profile-name";
+import { findProfileNameConflict, getProfileNameError } from "@/lib/profile-name";
 import { useKbdFileActions } from "./use-kbd-file-actions";
 
 export function ProfileSwitcher() {
@@ -49,7 +49,15 @@ export function ProfileSwitcher() {
   const [targetProfile, setTargetProfile] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
   const [open, setOpen] = useState(false);
-  const newNameError = getProfileNameError(newName);
+  const otherProfileNames = profiles
+    .map((profile) => profile.name)
+    .filter((name) => name !== targetProfile);
+  const newNameConflict = findProfileNameConflict(newName, otherProfileNames);
+  const newNameError = newName.trim()
+    ? (getProfileNameError(newName) ??
+      (newNameConflict ? `A profile named “${newNameConflict}” already exists.` : null))
+    : null;
+  const canRename = Boolean(newName.trim()) && !newNameError && newName.trim() !== targetProfile;
   const kbdFileActions = useKbdFileActions();
 
   const handleRenameClick = useCallback((name: string) => {
@@ -64,13 +72,13 @@ export function ProfileSwitcher() {
   }, []);
 
   const handleRename = useCallback(async () => {
-    if (targetProfile && !newNameError && newName.trim() !== targetProfile) {
-      await renameProfile(targetProfile, newName);
-    }
+    if (!targetProfile || !canRename) return;
+    const renamed = await renameProfile(targetProfile, newName);
+    if (!renamed) return;
     setRenameDialogOpen(false);
     setTargetProfile(null);
     setNewName("");
-  }, [newName, newNameError, renameProfile, targetProfile]);
+  }, [canRename, newName, renameProfile, targetProfile]);
 
   const handleDelete = useCallback(async () => {
     if (targetProfile) {
@@ -173,7 +181,7 @@ export function ProfileSwitcher() {
                   }}
                 >
                   <PlusIcon className="size-3.5" />
-                  New Profile…
+                  New profile…
                 </CommandItem>
                 <CommandItem
                   onSelect={() => {
@@ -182,7 +190,7 @@ export function ProfileSwitcher() {
                   }}
                 >
                   <FileInputIcon className="size-3.5" />
-                  Import .kbd File…
+                  Import .kbd file…
                 </CommandItem>
               </CommandGroup>
             </CommandList>
@@ -193,9 +201,9 @@ export function ProfileSwitcher() {
       <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Rename Profile</DialogTitle>
+            <DialogTitle>Rename profile</DialogTitle>
             <DialogDescription>
-              Enter a new name for "{targetProfile}".
+              Enter a new name for “{targetProfile}”.
             </DialogDescription>
           </DialogHeader>
           <Input
@@ -203,8 +211,9 @@ export function ProfileSwitcher() {
             onChange={(e) => setNewName(e.target.value)}
             placeholder="Profile name"
             onKeyDown={(e) => {
-              if (e.key === "Enter") handleRename();
+              if (e.key === "Enter") void handleRename();
             }}
+            aria-invalid={Boolean(newNameError)}
             autoFocus
           />
           {newNameError && (
@@ -219,7 +228,7 @@ export function ProfileSwitcher() {
             </Button>
             <Button
               onClick={handleRename}
-              disabled={Boolean(newNameError) || newName.trim() === targetProfile}
+              disabled={!canRename}
             >
               Rename
             </Button>
@@ -230,10 +239,9 @@ export function ProfileSwitcher() {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Profile</DialogTitle>
+            <DialogTitle>Delete “{targetProfile}”?</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{targetProfile}"?
-              This cannot be undone.
+              The profile and its key mappings will be deleted. This can’t be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -244,7 +252,7 @@ export function ProfileSwitcher() {
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleDelete}>
-              Delete
+              Delete profile
             </Button>
           </DialogFooter>
         </DialogContent>

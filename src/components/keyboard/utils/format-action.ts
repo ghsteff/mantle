@@ -1,8 +1,15 @@
+import { findKeyOption } from "../../editor/kanata-keys";
 import {
-  parseMultiModifier,
-  AVAILABLE_MODIFIERS,
-  findKeyOption,
-} from "../../editor/kanata-keys";
+  MODIFIER_LABELS,
+  MODIFIER_ORDER,
+  MODIFIER_SHORT_LABELS,
+  MODIFIER_SYMBOLS,
+  TRANSPARENT,
+  modifierNameOf,
+  parseKeyAction,
+  parseKeyOutput,
+  type LayerMode,
+} from "../../../kanata/key-action";
 import { getKeyLabel } from "./layout";
 
 export interface FormattedAction {
@@ -10,168 +17,102 @@ export interface FormattedAction {
   secondary?: string;
 }
 
-/**
- * Maps modifier keys to their display labels.
- */
-const MODIFIER_LABELS: Record<string, string> = {
-  lctl: "LCtrl",
-  rctl: "RCtrl",
-  lsft: "LShift",
-  rsft: "RShift",
-  lalt: "LAlt",
-  ralt: "RAlt",
-  lmet: "LCmd",
-  rmet: "RCmd",
+function modifierNames(modifiers: string[]) {
+  const names = new Set(modifiers.map(modifierNameOf));
+  return MODIFIER_ORDER.filter((name) => names.has(name));
+}
+
+function formatModifiersOnly(modifiers: string[]): string {
+  const names = modifierNames(modifiers);
+  if (names.length === 4) return "Hyper";
+  if (names.length === 3 && !names.includes("cmd")) return "Meh";
+  if (names.length === 1) return MODIFIER_SHORT_LABELS[names[0]];
+  return names.map((name) => MODIFIER_SYMBOLS[name]).join("");
+}
+
+/** Compact label for a key output, e.g. `⌘C`, `Hyper`, `Esc`. */
+export function formatKeyOutput(value: string): string {
+  if (value === TRANSPARENT) return "—";
+  if (value === "XX") return "None";
+
+  const { modifiers, keys, expression } = parseKeyOutput(value);
+  if (expression) return expression;
+  if (keys.length === 0) return formatModifiersOnly(modifiers);
+
+  const symbols = modifierNames(modifiers)
+    .map((name) => MODIFIER_SYMBOLS[name])
+    .join("");
+  return symbols + keys.map((key) => getKeyLabel(key).label).join(" ");
+}
+
+/** Spelled-out label for a key output, e.g. `Command + C`. */
+export function describeKeyOutput(value: string): string {
+  if (value === TRANSPARENT) return "the base layer’s key";
+  if (value === "XX") return "nothing";
+
+  const { modifiers, keys, expression } = parseKeyOutput(value);
+  if (expression) return expression;
+
+  const modifierText = modifierNames(modifiers).map((name) => MODIFIER_LABELS[name]);
+  const keyText = keys.map((key) => findKeyOption(key)?.label ?? getKeyLabel(key).label);
+  return [...modifierText, ...keyText].join(" + ");
+}
+
+const LAYER_MODE_SHORT: Record<LayerMode, string> = {
+  "while-held": "hold",
+  switch: "switch",
+  "one-shot": "one-shot",
 };
 
-/**
- * Formats a multi-modifier expression to a human-readable string.
- * Example: "(multi lctl lsft lalt)" → "LCtrl + LShift + LAlt"
- */
-function formatMultiModifier(multiExpr: string): string {
-  const modifiers = parseMultiModifier(multiExpr);
-  if (modifiers.length === 0) return multiExpr;
-
-  return modifiers
-    .map((m) => {
-      // Check AVAILABLE_MODIFIERS first (left-side only)
-      const availableMod = AVAILABLE_MODIFIERS.find((am) => am.key === m);
-      if (availableMod) {
-        return MODIFIER_LABELS[m] || availableMod.label;
-      }
-      // Handle right-side modifiers - use KEY_LABELS from layout for consistency
-      const keyLabel = getKeyLabel(m);
-      return MODIFIER_LABELS[m] || keyLabel.label || m;
-    })
-    .join(" + ");
-}
-
-/**
- * Formats a single action value (key or expression) to a display label.
- */
-function formatActionValue(value: string): string {
-  // Handle multi modifier expressions
-  if (value.startsWith("(multi ")) {
-    return formatMultiModifier(value);
-  }
-
-  // Handle nested expressions (like layer actions in tap-hold)
-  if (value.startsWith("(layer-while-held ")) {
-    const match = value.match(/\(layer-while-held\s+(\S+)\)/);
-    return match ? `${match[1]} (hold)` : value;
-  }
-
-  if (value.startsWith("(layer-toggle ")) {
-    const match = value.match(/\(layer-toggle\s+(\S+)\)/);
-    return match ? `${match[1]} (toggle)` : value;
-  }
-
-  if (value.startsWith("(one-shot ")) {
-    const match = value.match(/\(one-shot\s+(\S+)\)/);
-    return match ? `${match[1]} (one-shot)` : value;
-  }
-
-  // Simple key - use KEY_LABELS from layout for consistency
-  const keyLabel = getKeyLabel(value);
-  return keyLabel.label || value;
-}
-
-/**
- * Formats a kanata action string for display on the keyboard grid.
- *
- * Examples:
- * - "esc" → { primary: "Esc" }
- * - "(tap-hold 200 200 esc (multi lctl lsft lalt))" → { primary: "Esc", secondary: "LCtrl + LShift + LAlt" }
- * - "(layer-while-held nav)" → { primary: "nav", secondary: "Layer (hold)" }
- * - "(multi lctl lsft lalt)" → { primary: "LCtrl + LShift + LAlt" }
- * - "_" → { primary: "—" }
- */
+/** Label shown on a key cap: the main output plus what holding does. */
 export function formatAction(action: string): FormattedAction {
-  // Handle transparent
-  if (action === "_") {
-    return { primary: "—" };
-  }
+  const parsed = parseKeyAction(action);
 
-  // Handle tap-hold: (tap-hold timeout1 timeout2 tap hold)
-  const tapHoldMatch = action.match(
-    /\(tap-hold\s+\d+\s+\d+\s+(\S+|\([^)]+\))\s+(\S+|\([^)]+\))\)/
-  );
-  if (tapHoldMatch) {
-    const tapValue = tapHoldMatch[1];
-    const holdValue = tapHoldMatch[2];
-
-    // Format tap value (could be a key or nested expression)
-    let tapLabel: string;
-    if (tapValue.startsWith("(multi ")) {
-      tapLabel = formatMultiModifier(tapValue);
-    } else {
-      // Use KEY_LABELS for consistency with physical key display
-      const keyLabel = getKeyLabel(tapValue);
-      tapLabel = keyLabel.label || tapValue;
+  switch (parsed.kind) {
+    case "key":
+      return { primary: formatKeyOutput(parsed.output) };
+    case "tap-hold": {
+      const holdLayer = parseKeyAction(parsed.hold);
+      return {
+        primary: formatKeyOutput(parsed.tap),
+        secondary:
+          holdLayer.kind === "layer" ? `${holdLayer.layer} layer` : formatKeyOutput(parsed.hold),
+      };
     }
-
-    // Format hold value
-    const holdLabel = formatActionValue(holdValue);
-
-    return {
-      primary: tapLabel,
-      secondary: holdLabel,
-    };
+    case "layer":
+      return { primary: parsed.layer, secondary: `layer · ${LAYER_MODE_SHORT[parsed.mode]}` };
   }
+}
 
-  // Handle layer actions
-  const layerHeldMatch = action.match(/\(layer-while-held\s+(\S+)\)/);
-  if (layerHeldMatch) {
-    return {
-      primary: layerHeldMatch[1],
-      secondary: "Layer (hold)",
-    };
+function describeLayer(layer: string, mode: LayerMode) {
+  switch (mode) {
+    case "while-held":
+      return `turns on the “${layer}” layer while held`;
+    case "switch":
+      return `switches to the “${layer}” layer`;
+    case "one-shot":
+      return `turns on the “${layer}” layer for the next key`;
   }
+}
 
-  const layerToggleMatch = action.match(/\(layer-toggle\s+(\S+)\)/);
-  if (layerToggleMatch) {
-    return {
-      primary: layerToggleMatch[1],
-      secondary: "Layer (toggle)",
-    };
+/** One sentence describing what pressing the key does. */
+export function describeAction(action: string): string {
+  const parsed = parseKeyAction(action);
+
+  switch (parsed.kind) {
+    case "key":
+      if (parsed.output === TRANSPARENT) return "Does whatever the base layer does";
+      if (parsed.output === "XX") return "Does nothing";
+      return `Sends ${describeKeyOutput(parsed.output)}`;
+    case "tap-hold": {
+      const hold = parseKeyAction(parsed.hold);
+      const holdText =
+        hold.kind === "layer" ? `the “${hold.layer}” layer` : describeKeyOutput(parsed.hold);
+      return `Tap for ${describeKeyOutput(parsed.tap)}, hold for ${holdText}`;
+    }
+    case "layer": {
+      const text = describeLayer(parsed.layer, parsed.mode);
+      return text.charAt(0).toUpperCase() + text.slice(1);
+    }
   }
-
-  const oneShotMatch = action.match(/\(one-shot\s+(\S+)\)/);
-  if (oneShotMatch) {
-    return {
-      primary: oneShotMatch[1],
-      secondary: "Layer (one-shot)",
-    };
-  }
-
-  // Handle multi-tap: (multi-tap timeout key1 key2 ...)
-  const multiTapMatch = action.match(/\(multi-tap\s+\d+\s+(.+)\)/);
-  if (multiTapMatch) {
-    const taps = multiTapMatch[1].split(/\s+\d+\s+/).filter(Boolean);
-    const labels = taps.map((tap) => {
-      const keyLabel = getKeyLabel(tap.trim());
-      return keyLabel.label || tap.trim();
-    });
-    return {
-      primary: labels[0] || action,
-      secondary: labels.length > 1 ? labels.slice(1).join(", ") : undefined,
-    };
-  }
-
-  // Handle multi modifier expressions
-  if (action.startsWith("(multi ")) {
-    return {
-      primary: formatMultiModifier(action),
-    };
-  }
-
-  // Simple key - use KEY_LABELS from layout for consistency with physical key display
-  const keyLabel = getKeyLabel(action);
-  if (keyLabel.label) {
-    return { primary: keyLabel.label };
-  }
-
-  // Fallback: try kanata-keys display label
-  const option = findKeyOption(action);
-  return { primary: option?.label || action };
 }

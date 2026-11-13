@@ -11,6 +11,7 @@ import {
   ProfileProvider,
   KanataProvider,
   KarabinerProvider,
+  ToastProvider,
 } from "./contexts";
 import { runTauriHealthCheck } from "./platform/tauri-health";
 
@@ -34,25 +35,27 @@ export function App() {
 
   return (
     <ErrorBoundary>
-      <ConfigProvider>
-        <UIProvider>
-          <ProfileProvider>
-            <KanataProvider>
-              <KarabinerProvider>
-                <div className="h-full flex flex-col bg-background">
-                  <KarabinerOnboarding
-                    onOnboardingStateChange={setOnboardingInProgress}
-                  />
-                  <AutoStartServer onboardingInProgress={onboardingInProgress} />
-                  <Header />
-                  <MainContent />
-                  <LogPanel />
-                </div>
-              </KarabinerProvider>
-            </KanataProvider>
-          </ProfileProvider>
-        </UIProvider>
-      </ConfigProvider>
+      <ToastProvider>
+        <ConfigProvider>
+          <UIProvider>
+            <ProfileProvider>
+              <KanataProvider>
+                <KarabinerProvider>
+                  <div className="h-full flex flex-col bg-background">
+                    <KarabinerOnboarding
+                      onOnboardingStateChange={setOnboardingInProgress}
+                    />
+                    <AutoStartServer onboardingInProgress={onboardingInProgress} />
+                    <Header />
+                    <MainContent />
+                    <LogPanel />
+                  </div>
+                </KarabinerProvider>
+              </KanataProvider>
+            </ProfileProvider>
+          </UIProvider>
+        </ConfigProvider>
+      </ToastProvider>
     </ErrorBoundary>
   );
 }

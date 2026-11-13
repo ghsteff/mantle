@@ -1,12 +1,15 @@
-import { useCallback, useState } from "react";
+import { useMemo, useState } from "react";
+import { ChevronDownIcon, PencilIcon, PlusIcon, TrashIcon } from "lucide-react";
 import {
   useConfigActions,
   useConfigState,
+  useToast,
   useUIActions,
   useUIState,
 } from "../../contexts";
-import { PlusIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { aliasesReferencingLayer, referencesAlias, referencesLayer } from "@/kanata/key-action";
+import type { KeyboardConfig } from "@/types";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,217 +20,296 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-type DeleteLayerDialogState =
-  | { kind: "closed" }
-  | { kind: "open"; layerName: string };
+function normalizeLayerName(raw: string) {
+  return raw
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9_-]/g, "");
+}
+
+function getLayerNameError(name: string, existing: string[], currentName?: string) {
+  if (!name) return null;
+  if (name !== currentName && existing.includes(name)) {
+    return `A layer named “${name}” already exists.`;
+  }
+  return null;
+}
+
+function countReferences(config: KeyboardConfig | null, layerName: string) {
+  if (!config) return 0;
+  const aliases = aliasesReferencingLayer(config.aliases, layerName);
+  return config.layers
+    .filter((layer) => layer.name !== layerName)
+    .reduce(
+      (count, layer) =>
+        count +
+        Object.values(layer.keys).filter(
+          (action) => referencesLayer(action, layerName) || referencesAlias(action, aliases),
+        ).length,
+      0,
+    );
+}
+
+interface LayerNameInputProps {
+  initialName: string;
+  existingNames: string[];
+  currentName?: string;
+  placeholder?: string;
+  onSubmit: (name: string) => void;
+  onCancel: () => void;
+}
+
+function LayerNameInput({
+  initialName,
+  existingNames,
+  currentName,
+  placeholder,
+  onSubmit,
+  onCancel,
+}: LayerNameInputProps) {
+  const [value, setValue] = useState(initialName);
+  const normalized = normalizeLayerName(value);
+  const error = getLayerNameError(normalized, existingNames, currentName);
+
+  const submit = () => {
+    if (!normalized || error) {
+      if (!normalized) onCancel();
+      return;
+    }
+    onSubmit(normalized);
+  };
+
+  return (
+    <div className="relative">
+      <input
+        type="text"
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        onBlur={() => (error || !normalized ? onCancel() : submit())}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") submit();
+          if (event.key === "Escape") onCancel();
+        }}
+        placeholder={placeholder}
+        aria-label="Layer name"
+        aria-invalid={Boolean(error)}
+        spellCheck={false}
+        className={cn(
+          "w-24 rounded-md border bg-card px-2.5 py-1 font-mono text-[11px] text-foreground outline-none",
+          error ? "border-status-error/60" : "border-white/20",
+        )}
+        autoFocus
+        onFocus={(event) => event.currentTarget.select()}
+      />
+      {(error || (normalized && normalized !== value.trim())) && (
+        <div
+          role={error ? "alert" : undefined}
+          className={cn(
+            "absolute left-0 top-full z-50 mt-1.5 whitespace-nowrap rounded-md border bg-popover px-2 py-1 text-[11px] shadow-md",
+            error ? "border-status-error/30 text-status-error" : "border-border text-muted-foreground",
+          )}
+        >
+          {error ?? (
+            <>
+              Will be saved as <span className="font-mono text-foreground">{normalized}</span>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function LayerTabs() {
   const { config } = useConfigState();
-  const { addLayer, removeLayer, renameLayer } = useConfigActions();
+  const { addLayer, removeLayer, renameLayer, getUndoDepth, undoFrom } = useConfigActions();
   const { activeLayer } = useUIState();
   const { setActiveLayer } = useUIActions();
+  const { showToast } = useToast();
   const [isAdding, setIsAdding] = useState(false);
-  const [newLayerName, setNewLayerName] = useState("");
   const [editingLayer, setEditingLayer] = useState<string | null>(null);
-  const [editName, setEditName] = useState("");
-  const [deleteLayerDialog, setDeleteLayerDialog] =
-    useState<DeleteLayerDialogState>({ kind: "closed" });
+  const [menuLayer, setMenuLayer] = useState<string | null>(null);
+  const [layerToDelete, setLayerToDelete] = useState<string | null>(null);
 
-  const layers = config?.layers || [];
+  const layers = useMemo(() => config?.layers ?? [], [config]);
+  const layerNames = layers.map((layer) => layer.name);
+  const deleteReferenceCount = layerToDelete ? countReferences(config, layerToDelete) : 0;
 
-  const handleAddLayer = useCallback(() => {
-    const normalizedName = newLayerName.trim().toLowerCase().replace(/\s+/g, "-");
-    if (normalizedName && !layers.find((l) => l.name === normalizedName)) {
-      addLayer(normalizedName);
-      setActiveLayer(normalizedName);
-      setNewLayerName("");
-      setIsAdding(false);
-    }
-  }, [addLayer, layers, newLayerName, setActiveLayer]);
-
-  const handleStartRename = useCallback((layerName: string) => {
-    setEditingLayer(layerName);
-    setEditName(layerName);
-  }, []);
-
-  const handleRename = useCallback(() => {
-    if (editingLayer && editName.trim() && editName !== editingLayer) {
-      const newName = editName.trim().toLowerCase().replace(/\s+/g, "-");
-      const newActiveLayer = renameLayer(editingLayer, newName, activeLayer);
-      setActiveLayer(newActiveLayer);
-    }
+  const handleRename = (oldName: string, newName: string) => {
     setEditingLayer(null);
-  }, [activeLayer, editName, editingLayer, renameLayer, setActiveLayer]);
-
-  const handleDeleteRequest = useCallback(
-    (layerName: string) => {
-      // Extra guard: UI should already hide delete with 1 layer.
-      if (layers.length <= 1) return;
-      setDeleteLayerDialog({ kind: "open", layerName });
-    },
-    [layers.length]
-  );
-
-  const closeDeleteLayerDialog = () => {
-    setDeleteLayerDialog({ kind: "closed" });
+    if (newName === oldName) return;
+    setActiveLayer(renameLayer(oldName, newName, activeLayer));
   };
 
-  const confirmDeleteLayer = useCallback(() => {
-    if (deleteLayerDialog.kind !== "open") return;
-
-    const { layerName } = deleteLayerDialog;
-    removeLayer(layerName, activeLayer);
-
-    if (activeLayer === layerName && layers.length > 1) {
-      const remaining = layers.filter((l) => l.name !== layerName);
-      if (remaining.length > 0) {
-        setActiveLayer(remaining[0].name);
-      }
+  const confirmDelete = () => {
+    if (!layerToDelete) return;
+    removeLayer(layerToDelete);
+    if (activeLayer === layerToDelete) {
+      setActiveLayer(layerNames.find((name) => name !== layerToDelete) ?? activeLayer);
     }
-
-    closeDeleteLayerDialog();
-  }, [activeLayer, deleteLayerDialog, layers, removeLayer, setActiveLayer]);
+    const depth = getUndoDepth();
+    showToast({
+      tone: "info",
+      title: `Deleted the “${layerToDelete}” layer`,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          if (!undoFrom(depth)) showToast({ tone: "info", title: "Use ⌘Z to step back through your edits" });
+        },
+      },
+    });
+    setLayerToDelete(null);
+  };
 
   return (
     <div className="flex items-center">
-      {/* Segmented pill container */}
-      <div className="flex items-center bg-muted/50 rounded-lg p-0.5">
-        {layers.map((layer) => (
-          <div key={layer.name} className="group relative">
-            {editingLayer === layer.name ? (
-              <input
-                type="text"
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                onBlur={handleRename}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleRename();
-                  if (e.key === "Escape") setEditingLayer(null);
-                }}
-                className={cn(
-                  "px-3 py-1 rounded-md text-[11px] font-mono w-20",
-                  "bg-card border border-accent/50 text-foreground outline-none",
-                )}
-                autoFocus
+      <div role="tablist" aria-label="Layers" className="flex items-center rounded-lg bg-muted/50 p-0.5">
+        {layers.map((layer, index) => {
+          const isActive = activeLayer === layer.name;
+          if (editingLayer === layer.name) {
+            return (
+              <LayerNameInput
+                key={layer.name}
+                initialName={layer.name}
+                currentName={layer.name}
+                existingNames={layerNames}
+                onSubmit={(name) => handleRename(layer.name, name)}
+                onCancel={() => setEditingLayer(null)}
               />
-            ) : (
-              <button
-                type="button"
-                onClick={() => setActiveLayer(layer.name)}
-                onDoubleClick={() => handleStartRename(layer.name)}
+            );
+          }
+          return (
+            <DropdownMenu
+              key={layer.name}
+              open={menuLayer === layer.name}
+              onOpenChange={(open) => setMenuLayer(open ? layer.name : null)}
+              modal={false}
+            >
+              <div
                 className={cn(
-                  "px-3 py-1 rounded-md text-[11px] font-medium",
-                  "transition-all duration-150 ease-out",
-                  activeLayer === layer.name
-                    ? "bg-card text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground/80",
+                  "flex items-center rounded-md transition-all duration-150 ease-out",
+                  isActive ? "bg-card shadow-sm" : "hover:bg-white/[0.03]",
                 )}
+                onContextMenu={(event) => {
+                  event.preventDefault();
+                  setActiveLayer(layer.name);
+                  setMenuLayer(layer.name);
+                }}
               >
-                {layer.name}
-              </button>
-            )}
-
-            {layers.length > 1 &&
-              activeLayer === layer.name &&
-              editingLayer !== layer.name && (
                 <button
                   type="button"
-                  onClick={() => handleDeleteRequest(layer.name)}
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => setActiveLayer(layer.name)}
+                  onDoubleClick={() => setEditingLayer(layer.name)}
                   className={cn(
-                    "absolute -top-1 -right-1 size-3.5 rounded-full",
-                    "bg-destructive/80 text-white text-[9px]",
-                    "flex items-center justify-center",
-                    "opacity-0 group-hover:opacity-100",
-                    "transition-opacity duration-150 ease-out",
+                    "py-1 text-[11px] font-medium outline-none rounded-md focus-visible:ring-1 focus-visible:ring-white/40",
+                    isActive ? "pl-3 pr-1 text-foreground" : "px-3 text-muted-foreground hover:text-foreground/80",
                   )}
-                  title="Delete layer"
                 >
-                  ×
+                  {layer.name}
+                  {index === 0 && (
+                    <span className="sr-only"> (base layer)</span>
+                  )}
                 </button>
-              )}
-          </div>
-        ))}
+                <DropdownMenuTrigger
+                  aria-label={`Options for the ${layer.name} layer`}
+                  className={cn(
+                    "mr-1 rounded p-0.5 text-muted-foreground outline-none hover:bg-white/[0.06] hover:text-foreground focus-visible:ring-1 focus-visible:ring-white/40",
+                    !isActive && "hidden",
+                  )}
+                >
+                  <ChevronDownIcon className="size-3" />
+                </DropdownMenuTrigger>
+              </div>
+              <DropdownMenuContent align="start" className="w-44 p-1">
+                <DropdownMenuItem onSelect={() => setEditingLayer(layer.name)}>
+                  <PencilIcon className="size-3.5" />
+                  Rename…
+                </DropdownMenuItem>
+                {layers.length > 1 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem variant="destructive" onSelect={() => setLayerToDelete(layer.name)}>
+                      <TrashIcon className="size-3.5" />
+                      Delete layer…
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          );
+        })}
       </div>
 
+      {isAdding ? (
+        <div className="ml-2 animate-fade-in">
+          <LayerNameInput
+            initialName=""
+            placeholder="layer name"
+            existingNames={layerNames}
+            onSubmit={(name) => {
+              addLayer(name);
+              setActiveLayer(name);
+              setIsAdding(false);
+            }}
+            onCancel={() => setIsAdding(false)}
+          />
+        </div>
+      ) : (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={() => setIsAdding(true)}
+              aria-label="Add layer"
+              className={cn(
+                "ml-1.5 rounded-md p-1 outline-none",
+                "text-muted-foreground hover:text-foreground focus-visible:ring-1 focus-visible:ring-white/40",
+                "hover:bg-muted/50 transition-all duration-150 ease-out",
+                "active:scale-[0.92]",
+              )}
+            >
+              <PlusIcon className="size-3.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Add layer</TooltipContent>
+        </Tooltip>
+      )}
+
       <AlertDialog
-        open={deleteLayerDialog.kind === "open"}
+        open={layerToDelete !== null}
         onOpenChange={(open) => {
-          if (!open) closeDeleteLayerDialog();
+          if (!open) setLayerToDelete(null);
         }}
       >
         <AlertDialogContent size="sm">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete layer?</AlertDialogTitle>
+            <AlertDialogTitle>Delete the “{layerToDelete}” layer?</AlertDialogTitle>
             <AlertDialogDescription>
-              {deleteLayerDialog.kind === "open"
-                ? `This will permanently delete "${deleteLayerDialog.layerName}".`
-                : ""}
+              {deleteReferenceCount > 0
+                ? `${deleteReferenceCount} ${deleteReferenceCount === 1 ? "key switches" : "keys switch"} to this layer. ${deleteReferenceCount === 1 ? "It" : "They"} will be reset to ${deleteReferenceCount === 1 ? "its" : "their"} default.`
+                : "Its key mappings will be removed."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={confirmDeleteLayer}>
-              Delete
+            <AlertDialogAction variant="destructive" onClick={confirmDelete}>
+              Delete layer
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {isAdding ? (
-        <div className="flex items-center gap-1 ml-2 animate-fade-in">
-          <input
-            type="text"
-            value={newLayerName}
-            onChange={(e) => setNewLayerName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleAddLayer();
-              if (e.key === "Escape") {
-                setIsAdding(false);
-                setNewLayerName("");
-              }
-            }}
-            placeholder="layer-name"
-            className={cn(
-              "px-2 py-1 rounded-md text-[11px] font-mono w-20",
-              "bg-muted/50 border border-border text-foreground outline-none",
-              "focus:border-accent/50 transition-colors duration-150",
-            )}
-            autoFocus
-          />
-          <button
-            type="button"
-            onClick={handleAddLayer}
-            className="px-2 py-1 rounded-md text-[11px] font-medium bg-card text-foreground shadow-sm transition-colors"
-          >
-            Add
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setIsAdding(false);
-              setNewLayerName("");
-            }}
-            className="px-2 py-1 rounded-md text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Cancel
-          </button>
-        </div>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setIsAdding(true)}
-          title="Add new layer"
-          className={cn(
-            "ml-1.5 p-1 rounded-md",
-            "text-muted-foreground hover:text-foreground",
-            "hover:bg-muted/50 transition-all duration-150 ease-out",
-            "active:scale-[0.92]",
-          )}
-        >
-          <PlusIcon className="size-3.5" />
-        </button>
-      )}
     </div>
   );
 }
