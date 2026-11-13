@@ -2007,16 +2007,30 @@ fn kanata_stop(app: tauri::AppHandle, state: State<AppState>) -> bool {
 
 #[tauri::command]
 fn kanata_restart(app: tauri::AppHandle, state: State<AppState>) -> bool {
-    // Run restart in the background to avoid blocking the UI thread on waits/sleeps.
-    // The frontend already listens to status/log events for actual progress.
+    spawn_kanata_restart(&app, &state.kanata);
+    true
+}
+
+// Runs in the background to avoid blocking the UI thread on waits/sleeps.
+// The frontend already listens to status/log events for actual progress.
+fn spawn_kanata_restart(app: &tauri::AppHandle, kanata_state: &Arc<Mutex<KanataProcessState>>) {
     let app_handle = app.clone();
-    let kanata_state = state.kanata.clone();
+    let kanata_state = kanata_state.clone();
     thread::spawn(move || {
         if stop_kanata_process(&app_handle, &kanata_state) {
             start_kanata_process(&app_handle, &kanata_state);
         }
     });
-    true
+}
+
+/// Kanata only reads its .kbd file at startup.
+fn restart_kanata_if_running(app: &tauri::AppHandle, kanata_state: &Arc<Mutex<KanataProcessState>>) {
+    let is_running = kanata_state
+        .lock()
+        .map_or(false, |state| state.status == KANATA_STATUS_RUNNING);
+    if is_running {
+        spawn_kanata_restart(app, kanata_state);
+    }
 }
 
 #[tauri::command]
@@ -2371,7 +2385,11 @@ fn profiles_create(
 }
 
 #[tauri::command]
-fn profiles_switch(app: tauri::AppHandle, name: String) -> Option<serde_json::Value> {
+fn profiles_switch(
+    app: tauri::AppHandle,
+    state: State<AppState>,
+    name: String,
+) -> Option<serde_json::Value> {
     if !is_valid_profile_name(&name) {
         return None;
     }
@@ -2399,11 +2417,12 @@ fn profiles_switch(app: tauri::AppHandle, name: String) -> Option<serde_json::Va
         return None;
     }
 
+    restart_kanata_if_running(&app, &state.kanata);
     Some(config)
 }
 
 #[tauri::command]
-fn profiles_delete(app: tauri::AppHandle, name: String) -> bool {
+fn profiles_delete(app: tauri::AppHandle, state: State<AppState>, name: String) -> bool {
     if !is_valid_profile_name(&name) {
         return false;
     }
@@ -2457,7 +2476,10 @@ fn profiles_delete(app: tauri::AppHandle, name: String) -> bool {
         let Some(next_config) = read_json(&next_config_path) else {
             return false;
         };
-        return write_kbd_file(&config_dir, &next_config);
+        if !write_kbd_file(&config_dir, &next_config) {
+            return false;
+        }
+        restart_kanata_if_running(&app, &state.kanata);
     }
 
     true
