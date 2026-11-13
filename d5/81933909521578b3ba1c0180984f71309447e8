@@ -1,0 +1,19 @@
+src-tauri/src/lib.rs
+  s_9106741b74a2a5::t_fe6ed78524598d 2010-2016,2018,2024-2033,2388-2392,2420,2425,2479-2482
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d581933909521578b3ba1c0180984f71309447e8",
+  "prompts": {},
+  "sessions": {
+    "s_9106741b74a2a5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f3f240e8-11d7-41ed-9c47-880db2611816",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Grant Steffen <gsteffen1203@gmail.com>"
+    }
+  }
+}
