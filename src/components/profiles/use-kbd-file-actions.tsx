@@ -50,8 +50,8 @@ export function useKbdFileActions() {
     setErrorDialog({ kind: "closed" });
   };
 
-  const startExport = async () => {
-    const result = await exportKbd();
+  const startExport = async (profileName: string) => {
+    const result = await exportKbd(profileName);
     if (
       !result.success &&
       result.error &&

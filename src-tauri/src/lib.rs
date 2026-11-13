@@ -211,15 +211,6 @@ fn read_active_profile_name(path: &PathBuf) -> Option<String> {
     Some(profiles_data.active_profile)
 }
 
-fn default_export_kbd_name(config_dir: &PathBuf) -> String {
-    let profiles_path = config_dir.join("profiles.json");
-    let active_profile_name = read_active_profile_name(&profiles_path);
-
-    active_profile_name
-        .map(|name| format!("{name}.kbd"))
-        .unwrap_or_else(|| "kanata.kbd".to_string())
-}
-
 fn current_timestamp_ms() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -2207,50 +2198,44 @@ fn config_save(app: tauri::AppHandle, config: serde_json::Value) -> bool {
 }
 
 #[tauri::command]
-fn config_export_kbd(app: tauri::AppHandle) -> ExportKbdResult {
-    let Some(config_dir) = tauri_config_dir(&app) else {
-        return ExportKbdResult {
-            success: false,
-            path: None,
-            error: Some("Failed to resolve app config directory".to_string()),
-        };
+fn config_export_kbd(app: tauri::AppHandle, profile_name: String) -> ExportKbdResult {
+    let failed = |error: &str| ExportKbdResult {
+        success: false,
+        path: None,
+        error: Some(error.to_string()),
     };
 
-    let kbd_path = config_dir.join("kanata.kbd");
-    if !kbd_path.exists() {
-        return ExportKbdResult {
-            success: false,
-            path: None,
-            error: Some("Failed to export file".to_string()),
-        };
+    if !is_valid_profile_name(&profile_name) {
+        return failed("Invalid profile name");
     }
+    let Some(config_dir) = tauri_config_dir(&app) else {
+        return failed("Failed to resolve app config directory");
+    };
+
+    let config_path = config_dir.join(format!("config-{profile_name}.json"));
+    let Some(kbd_content) = read_json(&config_path).and_then(|config| generate_kbd_config(&config))
+    else {
+        return failed("Failed to export file");
+    };
 
     let picked_path = rfd::FileDialog::new()
         .set_title("Export .kbd Configuration")
-        .set_file_name(&default_export_kbd_name(&config_dir))
+        .set_file_name(&format!("{profile_name}.kbd"))
         .add_filter("Kanata Config", &["kbd"])
         .save_file();
 
     let Some(target_path) = picked_path else {
-        return ExportKbdResult {
-            success: false,
-            path: None,
-            error: Some("Export cancelled".to_string()),
-        };
+        return failed("Export cancelled");
     };
 
-    if fs::copy(&kbd_path, &target_path).is_ok() {
-        return ExportKbdResult {
-            success: true,
-            path: Some(target_path.display().to_string()),
-            error: None,
-        };
+    if fs::write(&target_path, kbd_content).is_err() {
+        return failed("Failed to export file");
     }
 
     ExportKbdResult {
-        success: false,
-        path: None,
-        error: Some("Failed to export file".to_string()),
+        success: true,
+        path: Some(target_path.display().to_string()),
+        error: None,
     }
 }
 
@@ -2533,6 +2518,68 @@ fn profiles_rename(
     }
 }
 
+#[tauri::command]
+fn profiles_duplicate(
+    app: tauri::AppHandle,
+    source_name: String,
+    new_name: String,
+    created_at: String,
+) -> bool {
+    if !is_valid_profile_name(&source_name) || !is_valid_profile_name(&new_name) {
+        return false;
+    }
+    let Some(config_dir) = tauri_config_dir(&app) else {
+        return false;
+    };
+
+    let profiles_path = config_dir.join("profiles.json");
+    let Some(mut profiles_data) = read_profiles_data(&profiles_path) else {
+        return false;
+    };
+
+    let Some(source_index) = profiles_data
+        .profiles
+        .iter()
+        .position(|profile| profile.name == source_name)
+    else {
+        return false;
+    };
+
+    // Profile names become file names, and the default macOS file system is case-insensitive.
+    if profiles_data
+        .profiles
+        .iter()
+        .any(|profile| profile.name.eq_ignore_ascii_case(&new_name))
+    {
+        return false;
+    }
+
+    let Ok(source_config) = fs::read(config_dir.join(format!("config-{source_name}.json"))) else {
+        return false;
+    };
+
+    let new_config_path = config_dir.join(format!("config-{new_name}.json"));
+    if !write_file_atomic(&new_config_path, &source_config) {
+        return false;
+    }
+
+    profiles_data.profiles.insert(
+        source_index + 1,
+        ProfileInfo {
+            name: new_name,
+            created_at: created_at.clone(),
+            updated_at: created_at,
+        },
+    );
+
+    if !write_profiles_data(&profiles_path, &profiles_data) {
+        let _ = fs::remove_file(new_config_path);
+        return false;
+    }
+
+    true
+}
+
 fn open_main_window(app_handle: &tauri::AppHandle) {
     let Some(window) = app_handle.get_webview_window("main") else {
         return;
@@ -2601,7 +2648,8 @@ pub fn run() {
             profiles_create,
             profiles_switch,
             profiles_delete,
-            profiles_rename
+            profiles_rename,
+            profiles_duplicate
         ])
         .setup(|app| {
             build_tray(app)?;

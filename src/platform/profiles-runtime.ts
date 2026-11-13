@@ -85,3 +85,17 @@ export async function renameProfileInRuntime(oldName: string, newName: string) {
 
   return result.data ?? false;
 }
+
+export async function duplicateProfileInRuntime(sourceName: string, newName: string) {
+  const result = await invokeTauriCommand("profilesDuplicate", {
+    sourceName,
+    newName,
+    createdAt: new Date().toISOString(),
+  });
+  if (!result.success) {
+    logRuntimeCommandError("Failed to duplicate profile in tauri runtime", result);
+    return false;
+  }
+
+  return result.data ?? false;
+}

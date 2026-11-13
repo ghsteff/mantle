@@ -1,8 +1,8 @@
 import { parseKbdFile, suggestProfileName } from "../kanata/parser";
 import { invokeTauriCommand, logRuntimeCommandError } from "./runtime-command-result";
 
-export async function exportKbdFromRuntime() {
-  const result = await invokeTauriCommand("configExportKbd");
+export async function exportKbdFromRuntime(profileName: string) {
+  const result = await invokeTauriCommand("configExportKbd", { profileName });
   if (!result.success || !result.data) {
     logRuntimeCommandError("Failed to export kbd in tauri runtime", result);
     return { success: false, error: "Failed to export" };

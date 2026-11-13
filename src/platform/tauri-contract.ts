@@ -32,6 +32,7 @@ export const TAURI_COMMANDS = {
   profilesSwitch: "profiles_switch",
   profilesDelete: "profiles_delete",
   profilesRename: "profiles_rename",
+  profilesDuplicate: "profiles_duplicate",
   driverCheck: "driver_check",
   driverInstall: "driver_install",
   driverCancelInstall: "driver_cancel_install",
@@ -61,7 +62,7 @@ export interface TauriCommandContract {
   configBackup: { args: undefined; data: string | null };
   configListBackups: { args: undefined; data: string[] };
   configRestoreBackup: { args: { backupPath: string }; data: boolean };
-  configExportKbd: { args: undefined; data: ExportResult };
+  configExportKbd: { args: { profileName: string }; data: ExportResult };
   configImportKbd: { args: undefined; data: TauriImportKbdResult };
   profilesList: { args: undefined; data: ProfileInfo[] };
   profilesGetActive: { args: undefined; data: string | null };
@@ -79,6 +80,10 @@ export interface TauriCommandContract {
   profilesDelete: { args: { name: string }; data: boolean };
   profilesRename: {
     args: { oldName: string; newName: string; updatedAt: string };
+    data: boolean;
+  };
+  profilesDuplicate: {
+    args: { sourceName: string; newName: string; createdAt: string };
     data: boolean;
   };
   driverCheck: { args: undefined; data: DriverStatus };

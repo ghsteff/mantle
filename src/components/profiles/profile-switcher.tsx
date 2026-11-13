@@ -4,6 +4,7 @@ import { Button } from "../ui";
 import { NewProfileDialog } from "../presets/new-profile-dialog";
 import type { Preset } from "../../presets";
 import { ProfileListItem } from "./profile-list-item";
+import { DuplicateProfileDialog } from "./duplicate-profile-dialog";
 import {
   Dialog,
   DialogContent,
@@ -30,7 +31,6 @@ import {
 import {
   ChevronsUpDown,
   FileInputIcon,
-  FileOutputIcon,
   PlusIcon,
 } from "lucide-react";
 import { getProfileNameError } from "@/lib/profile-name";
@@ -43,6 +43,9 @@ export function ProfileSwitcher() {
   const [newProfileDialogOpen, setNewProfileDialogOpen] = useState(false);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
+  const [duplicateSource, setDuplicateSource] = useState<string | null>(null);
+  const [duplicateDialogKey, setDuplicateDialogKey] = useState(0);
   const [targetProfile, setTargetProfile] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
   const [open, setOpen] = useState(false);
@@ -100,6 +103,21 @@ export function ProfileSwitcher() {
     [handleRenameClick]
   );
 
+  const handleItemDuplicate = useCallback((name: string) => {
+    setDuplicateSource(name);
+    setDuplicateDialogKey((key) => key + 1);
+    setDuplicateDialogOpen(true);
+    setOpen(false);
+  }, []);
+
+  const handleItemExport = useCallback(
+    (name: string) => {
+      setOpen(false);
+      kbdFileActions.startExport(name);
+    },
+    [kbdFileActions]
+  );
+
   const handleItemDelete = useCallback(
     (name: string) => {
       handleDeleteClick(name);
@@ -140,6 +158,8 @@ export function ProfileSwitcher() {
                     canDelete={profiles.length > 1}
                     onSelect={handleSelectProfile}
                     onRename={handleItemRename}
+                    onDuplicate={handleItemDuplicate}
+                    onExport={handleItemExport}
                     onDelete={handleItemDelete}
                   />
                 ))}
@@ -153,7 +173,7 @@ export function ProfileSwitcher() {
                   }}
                 >
                   <PlusIcon className="size-3.5" />
-                  Add New Profile
+                  New Profile…
                 </CommandItem>
                 <CommandItem
                   onSelect={() => {
@@ -164,17 +184,6 @@ export function ProfileSwitcher() {
                   <FileInputIcon className="size-3.5" />
                   Import .kbd File…
                 </CommandItem>
-                {activeProfile && (
-                  <CommandItem
-                    onSelect={() => {
-                      setOpen(false);
-                      kbdFileActions.startExport();
-                    }}
-                  >
-                    <FileOutputIcon className="size-3.5" />
-                    Export “{activeProfile}” as .kbd…
-                  </CommandItem>
-                )}
               </CommandGroup>
             </CommandList>
           </Command>
@@ -247,6 +256,15 @@ export function ProfileSwitcher() {
         onComplete={handleCreateProfile}
         trigger={null}
       />
+
+      {duplicateSource && (
+        <DuplicateProfileDialog
+          key={duplicateDialogKey}
+          sourceName={duplicateSource}
+          open={duplicateDialogOpen}
+          onOpenChange={setDuplicateDialogOpen}
+        />
+      )}
 
       {kbdFileActions.dialogs}
     </>

@@ -24,7 +24,7 @@ export interface KanataApi {
   backupConfig: () => Promise<string | null>;
   listBackups: () => Promise<string[]>;
   restoreBackup: (backupPath: string) => Promise<boolean>;
-  exportKbd: () => Promise<ExportResult>;
+  exportKbd: (profileName: string) => Promise<ExportResult>;
   importKbd: () => Promise<ImportResult>;
 
   // Profile management
@@ -35,6 +35,7 @@ export interface KanataApi {
   switchProfile: (name: string) => Promise<KeyboardConfig | null>;
   deleteProfile: (name: string) => Promise<boolean>;
   renameProfile: (oldName: string, newName: string) => Promise<boolean>;
+  duplicateProfile: (sourceName: string, newName: string) => Promise<boolean>;
 
   // System
   openInputMonitoringSettings: () => Promise<void>;

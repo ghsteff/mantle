@@ -26,6 +26,7 @@ import {
 import {
   createProfileInRuntime,
   deleteProfileInRuntime,
+  duplicateProfileInRuntime,
   getActiveProfileFromRuntime,
   listProfilesFromRuntime,
   renameProfileInRuntime,
@@ -38,17 +39,20 @@ interface ProfileContextValue {
   switchProfile: (name: string) => Promise<boolean>;
   deleteProfile: (name: string) => Promise<boolean>;
   renameProfile: (oldName: string, newName: string) => Promise<boolean>;
+  duplicateProfile: (sourceName: string, newName: string) => Promise<DuplicateProfileResult>;
   refreshProfiles: () => Promise<void>;
-  exportKbd: () => Promise<ExportResult>;
+  exportKbd: (profileName: string) => Promise<ExportResult>;
   importKbd: () => Promise<ImportResult>;
 }
+
+export type DuplicateProfileResult = "switched" | "created" | "failed";
 
 const ProfileContext = createContext<ProfileContextValue | null>(null);
 
 type DiscardChangesDialogState = { kind: "closed" } | { kind: "open" };
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
-  const { isDirty, activeProfile } = useConfigState();
+  const { config, isDirty, activeProfile } = useConfigState();
   const {
     setConfig,
     setActiveProfile,
@@ -229,9 +233,53 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     }
   }, [refreshProfiles, setError]);
 
-  const exportKbd = useCallback(async (): Promise<ExportResult> => {
+  // Switches to the new copy without asking to discard unsaved changes; the
+  // duplicate dialog warns about that before calling this.
+  const duplicateProfile = useCallback(async (sourceName: string, newName: string): Promise<DuplicateProfileResult> => {
+    if (getProfileNameError(sourceName) || getProfileNameError(newName)) {
+      return "failed";
+    }
+    const trimmedSourceName = sourceName.trim();
+    const trimmedNewName = newName.trim();
+    const isForkingActiveProfile = trimmedSourceName === activeProfile;
+    const unsavedConfig = isForkingActiveProfile && isDirty ? config : null;
+
     try {
-      return await exportKbdFromRuntime();
+      const created = await duplicateProfileInRuntime(trimmedSourceName, trimmedNewName);
+      if (!created) return "failed";
+
+      const copiedConfig = await switchProfileInRuntime(trimmedNewName);
+      await refreshProfiles();
+      if (!copiedConfig) {
+        // profiles_switch can fail after it has already marked the copy active.
+        // Reload so Apply can't save another profile's edits into the copy.
+        const activeOnDisk = await getActiveProfileFromRuntime();
+        if (activeOnDisk === trimmedNewName && !unsavedConfig) {
+          setIsDirty(false);
+          const reloadedConfig = await loadConfig();
+          setActiveLayer(reloadedConfig?.layers[0]?.name || "base");
+          setSelectedKey(null);
+        }
+        return "created";
+      }
+
+      setConfig(unsavedConfig ?? copiedConfig);
+      setIsDirty(unsavedConfig !== null);
+      setError(null);
+      if (!isForkingActiveProfile) {
+        setActiveLayer(copiedConfig.layers[0]?.name || "base");
+        setSelectedKey(null);
+      }
+      return "switched";
+    } catch (err) {
+      console.error("Failed to duplicate profile:", err);
+      return "failed";
+    }
+  }, [activeProfile, config, isDirty, loadConfig, refreshProfiles, setConfig, setIsDirty, setError, setActiveLayer, setSelectedKey]);
+
+  const exportKbd = useCallback(async (profileName: string): Promise<ExportResult> => {
+    try {
+      return await exportKbdFromRuntime(profileName);
     } catch (err) {
       return {
         success: false,
@@ -256,6 +304,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     switchProfile,
     deleteProfile: deleteProfileAction,
     renameProfile: renameProfileAction,
+    duplicateProfile,
     refreshProfiles,
     exportKbd,
     importKbd,
@@ -264,6 +313,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     switchProfile,
     deleteProfileAction,
     renameProfileAction,
+    duplicateProfile,
     refreshProfiles,
     exportKbd,
     importKbd,
